@@ -1,0 +1,3 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),path=require('node:path');
+const {nativeExecutable,speechExecutable}=require('../desktop/runtime-paths.cjs');
+test('runtime paths select native Windows and macOS binaries',()=>{assert.equal(nativeExecutable('runtime','win32'),path.join('runtime','zlplay-audio.exe'));assert.equal(nativeExecutable('runtime','darwin'),path.join('runtime','zlplay-audio'));assert.equal(speechExecutable('speech',false,'darwin'),path.join('speech','whisper-cli'));assert.equal(speechExecutable('speech',true,'win32'),path.join('speech','whisper-cli-avx2.exe'));});

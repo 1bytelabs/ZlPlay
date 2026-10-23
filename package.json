@@ -1,0 +1,114 @@
+{
+  "name": "zlplay-desktop",
+  "productName": "ZLPlay",
+  "version": "2.8.0",
+  "description": "ZLPlay — multitracks e performance para computador",
+  "author": "1Byte Labs",
+  "private": true,
+  "main": "desktop/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "build:native": "node scripts/build-native.mjs",
+    "test": "node scripts/test.mjs",
+    "dist": "electron-builder",
+    "build:native:legacy": "powershell -ExecutionPolicy Bypass -File native/build.ps1",
+    "setup:speech": "node scripts/build-speech.mjs && node scripts/download-model.mjs",
+    "audit:publication": "node scripts/audit-publication.cjs",
+    "dist:win": "electron-builder --win nsis portable --x64",
+    "dist:mac": "electron-builder --mac dmg zip"
+  },
+  "devDependencies": {
+    "electron": "44.9.2",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.1bytelabs.zlplay",
+    "asar": true,
+    "directories": {
+      "output": "dist",
+      "app": "."
+    },
+    "files": [
+      "app/**",
+      "desktop/**",
+      "package.json",
+      "!app/pads/**"
+    ],
+    "extraResources": [
+      {
+        "from": "native/bin",
+        "to": "native",
+        "filter": [
+          "**/*",
+          "!pads/**"
+        ]
+      },
+      {
+        "from": "native/speech",
+        "to": "speech",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "desktop/icon.ico",
+      "signExecutable": false
+    },
+    "portable": {
+      "artifactName": "ZLPlay-${version}-portatil.${ext}"
+    },
+    "nsis": {
+      "artifactName": "ZLPlay-${version}-instalador.${ext}",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "ZLPlay",
+      "include": "desktop/installer.nsh",
+      "displayLanguageSelector": true,
+      "installerLanguages": [
+        "en_US",
+        "pt_BR",
+        "es_ES"
+      ]
+    },
+    "fileAssociations": [
+      {
+        "ext": "zlplay",
+        "name": "Projeto ZLPlay",
+        "role": "Editor"
+      },
+      {
+        "ext": "zlplaylibrary",
+        "name": "Repertório ZLPlay (legado)",
+        "role": "Editor"
+      },
+      {
+        "ext": "zlset",
+        "name": "Repertório ZLPlay",
+        "role": "Editor"
+      }
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.music",
+      "icon": "desktop/icon.png"
+    }
+  },
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/1bytelabs/ZlPlay.git"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

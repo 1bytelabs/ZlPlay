@@ -1,0 +1,10 @@
+// Report file names and rule names only: never print a matched credential.
+const fs=require('node:fs'),path=require('node:path'),{execFileSync}=require('node:child_process');
+const root=path.resolve(__dirname,'..');
+const git=args=>execFileSync('git',args,{cwd:root,maxBuffer:32*1024*1024}).toString('utf8');
+const staged=process.argv.includes('--staged'),files=(staged?git(['diff','--cached','--name-only','--diff-filter=ACMR','-z']):git(['ls-files','--cached','--others','--exclude-standard','-z'])).split('\0').filter(Boolean);
+const rules=[['private-key',/-----BEGIN (?:RSA |EC |OPENSSH |DSA |ENCRYPTED )?PRIVATE KEY-----/],['github-token',/\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,})\b/],['aws-key',/\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/],['slack-token',/\bxox[baprs]-[A-Za-z0-9-]{20,}\b/],['stripe-live',/\b[sr]k_live_[A-Za-z0-9]{16,}\b/],['credential-url',/https?:\/\/[^\s/@:]+:[^\s/@]+@/],['assigned-secret',/\b(?:password|api[_-]?key|client[_-]?secret|access[_-]?token)\b\s*[:=]\s*["'][A-Za-z0-9_+\/-]{20,}["']/i],['personal-path',/(?:[A-Z]:[\\/](?:Users|Documents)[\\/]|\/Users\/)[^\s"'<>]+/i]];
+rules.push(['google-api-key',/\bAIza[0-9A-Za-z_-]{35}\b/],['npm-token',/\bnpm_[A-Za-z0-9]{30,}\b/]);
+const findings=[];let bytes=0;
+for(const file of files){if(/(^|\/)(?:\.env(?:\..*)?|id_rsa|id_ed25519)$/.test(file)&&!/\.example$/.test(file))findings.push({file,rule:'private-config'});if(/\.(?:pem|pfx|p12|key|db|sqlite3?|rpp|zlplay|zlset|exe|dll|bin)$/i.test(file))findings.push({file,rule:'private-data-or-build-artifact'});const data=staged?execFileSync('git',['show',':'+file],{cwd:root,maxBuffer:16*1024*1024}):fs.readFileSync(path.join(root,file));bytes+=data.length;if(data.includes(0))continue;const lines=data.toString('utf8').split(/\r?\n/);for(let i=0;i<lines.length;i++)for(const [rule,pattern] of rules)if(pattern.test(lines[i]))findings.push({file,line:i+1,rule});}
+console.log(JSON.stringify({files:files.length,bytes,findings},null,2));if(findings.length)process.exitCode=1;

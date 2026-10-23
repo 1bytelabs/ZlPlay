@@ -1,0 +1,16 @@
+const {BrowserWindow}=require('electron');
+let about;
+function showAbout(parent,version,openExternal,language='pt-BR'){
+ if(about&&!about.isDestroyed()){about.focus();return;}
+ about=new BrowserWindow({parent,modal:true,show:false,width:530,height:480,resizable:false,minimizable:false,maximizable:false,autoHideMenuBar:true,title:language==='en'?'About ZLPlay':language==='es'?'Acerca de ZLPlay':'Sobre o ZLPlay',backgroundColor:'#10121c',webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false}});
+ about.once('ready-to-show',()=>{if(parent.isVisible())about.show();});
+ about.webContents.on('before-input-event',(_e,input)=>{if(input.type==='keyDown'&&input.key==='Escape')about.close();});
+ about.webContents.setWindowOpenHandler(({url})=>{openExternal(url);return {action:'deny'};});
+ about.webContents.on('will-navigate',e=>e.preventDefault());
+ const safe=String(version).replace(/[^0-9a-z.+-]/gi,'');
+ const tr=(pt,en,es)=>language==='pt-BR'?pt:language==='es'?es:en;
+ const html=`<!doctype html><html lang="${language}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline';"><title>${tr("Sobre o ZLPlay","About ZLPlay","Acerca de ZLPlay")}</title><style>*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top left,#28203c,#10121c 65%);color:#f4efff;font:14px 'Segoe UI',sans-serif;padding:32px}h1{font-size:38px;letter-spacing:-1.5px;margin:0 0 8px}p{line-height:1.6;color:#bbb4cc}small{display:block;color:#9690a4;margin-top:22px}.version{display:inline-block;padding:5px 10px;background:#8c54e52b;border:1px solid #7953aa;border-radius:20px;color:#d4bdff}.brand{margin:28px 0 8px;font-weight:700;color:#eee4ff}.links{display:flex;gap:10px;margin-top:22px}a{display:inline-block;text-decoration:none;border:1px solid #705296;border-radius:9px;padding:11px 14px;color:#efe6ff;background:#322346}a:focus-visible{outline:2px solid #7fd6ff}a:last-child{background:#6740b1}</style></head><body><h1>ZLPlay</h1><span class="version">${tr("Versão","Version","Versión")} ${safe}</span><p>${tr("Multitracks e performance ao vivo.<br>Prepare seu repertório e reproduza suas multitracks ao vivo.","Multitracks and live performance.<br>Prepare your setlist and play your multitracks live.","Multitracks y actuaciones en vivo.<br>Prepare su repertorio y reproduzca sus multitracks en vivo.")}</p><div class="brand">${tr("Desenvolvido pela","Developed by","Desarrollado por")} 1Byte Labs</div><div class="links"><a target="_blank" rel="noopener noreferrer" href="https://1bytelabs.com.br/">${tr("Visitar site","Visit website","Visitar sitio")}</a><a target="_blank" rel="noopener noreferrer" href="https://livepix.gg/1bytelabs">♡ ${tr("Apoiar projeto","Support the project","Apoyar el proyecto")}</a></div><small>${tr("Obrigado por fazer parte do projeto.","Thank you for being part of the project.","Gracias por ser parte del proyecto.")}</small></body></html>`;
+ about.loadURL('data:text/html;charset=utf-8,'+encodeURIComponent(html));
+ about.on('closed',()=>{about=null;});return about;
+}
+module.exports={showAbout};

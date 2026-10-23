@@ -1,0 +1,96 @@
+/* ZLPlay 2.2 — readable, restrained performance interface. */
+html,body{font-family:'Segoe UI',Inter,system-ui,sans-serif;background:#090d15;color:#edf0f8}
+#zosma-vs-study.vs-compact-layout{height:100dvh;min-height:0;--vs-fader-height:var(--zl-window-fader,clamp(60px,calc(18vh - 55px),130px))}
+#zosma-vs-study.vs-compact-layout:fullscreen{--vs-fader-height:var(--zl-fullscreen-fader,100px)}
+.vs-compact-layout .vs-study{height:100%;min-height:0;box-sizing:border-box;padding:8px 12px}
+.vs-compact-layout .vs-card{height:100%;box-sizing:border-box;display:flex;flex-direction:column;padding:8px 10px;background:#0b101b;border-color:#263044;border-radius:12px;box-shadow:none}
+.vs-compact-layout .vs-project.active{display:flex;flex-direction:column;flex:1;min-height:0;margin-top:10px}
+.vs-compact-layout .vs-project.active>*{flex-shrink:0}
+.vs-compact-layout button,.vs-compact-layout select{font-family:inherit;box-shadow:none}
+.vs-compact-layout .vs-mode,.vs-compact-layout .vs-btn.secondary{background:#141b29;border-color:#34405a;color:#e0e6f4;border-radius:7px;font-weight:600}
+.vs-compact-layout button:hover:not(:disabled){border-color:#a78ae3;background-color:#242739}
+.vs-compact-layout button:focus-visible,.vs-compact-layout select:focus-visible{outline:2px solid #8bd6f1;outline-offset:2px}
+.vs-compact-layout .vs-head{margin-bottom:3px;gap:8px;flex-wrap:wrap}
+.vs-compact-layout .vs-head h2{font-size:24px;letter-spacing:-1px}
+.vs-compact-layout .vs-head .vs-actions{flex:0 1 auto;gap:7px}
+.vs-compact-layout .vs-head-actions{margin-left:auto}
+.vs-compact-layout .vs-head .vs-actions>.vs-btn,.vs-compact-layout .zl-toolbar-save{font-size:13px;padding:9px 12px}
+.vs-compact-layout .vs-head-actions .vs-mode{font-size:12px;padding:8px 10px}
+.vs-compact-layout .zl-support-project{font-size:11px!important;padding:7px!important}
+.vs-compact-layout .vs-status{background:#111827;border-radius:6px;color:#9aabc5;font-size:11px;padding:4px 8px;margin:4px 0 0;min-height:0}
+.vs-compact-layout .vs-title-row{padding:10px 12px;gap:10px;border:1px solid #283247;border-radius:10px;background:#101624;margin-bottom:8px}
+.vs-compact-layout .vs-title{font-size:24px;line-height:1.2;letter-spacing:-.35px;font-weight:700}
+.vs-compact-layout .vs-meta{margin-top:5px;color:#aab8d0}
+.vs-compact-layout .vs-meta .vs-pill{font-size:12px;padding:0;margin:2px 12px 2px 0;background:none;color:#aab8d0;border:0;border-radius:0}
+.vs-compact-layout .vs-key{background:transparent;border-color:#34405a;border-radius:8px;color:#b7c4dc}
+.vs-compact-layout .vs-key label{font-size:12px;font-weight:600}.vs-compact-layout .vs-key select{background:#0e1522;border-color:#35425b;border-radius:6px;font-size:14px}
+.vs-compact-layout .vs-library-navigation button{font-size:13px;padding:9px 11px}
+.vs-compact-layout .vs-performance-bar{padding:10px 12px;background:#101624;border:1px solid #283247;border-radius:10px;gap:10px;margin-bottom:0}
+.vs-compact-layout .vs-transport{gap:6px!important;align-items:center}
+.vs-compact-layout .vs-transport .vs-btn{font-size:13px;min-height:38px;padding:8px 11px;border-radius:7px;white-space:nowrap}
+.vs-compact-layout .vs-transport [data-play]{background:#7541e6;border:1px solid #986aff;min-width:80px;font-weight:700}
+.vs-compact-layout .vs-transport [data-play]::before{content:'▶';margin-right:8px;font-size:13px}
+.vs-compact-layout .vs-transport [data-pause]::before{content:'Ⅱ';margin-right:6px}
+.vs-compact-layout .vs-transport [data-stop]::before{content:'■';margin-right:6px;font-size:11px}
+.vs-compact-layout .vs-bpm-edit{background:#101c2b;border-color:#28485c}.vs-compact-layout .vs-bpm-edit input{font-size:15px;width:56px;color:#f0f4ff}
+.vs-compact-layout [data-tap-tempo],.vs-compact-layout [data-apply-to-song]{font-size:13px;min-height:36px}
+.vs-compact-layout .vs-pad-note{min-width:31px;font-size:12px;border-radius:6px;background:#111a28;border-color:#35405a;min-height:34px}
+.vs-compact-layout .vs-pad-note.active{background:#6c42b7}.vs-compact-layout .vs-pad-panel>strong{font-size:12px;color:#b7c6df}
+.vs-compact-layout .vs-timeline-scroll{flex:1 1 0!important;min-height:145px;display:flex;flex-direction:column;box-sizing:border-box;margin:10px 0!important;padding:10px 12px!important;border:1px solid #283247!important;border-radius:10px!important;background:#0d1420!important;overflow-x:auto}
+.vs-compact-layout .vs-timeline-content{height:auto!important;min-height:0;flex:1 1 0;display:flex;flex-direction:column}
+.vs-compact-layout .vs-regions{flex:0 0 68px;min-height:68px!important;background:transparent;border-bottom:0!important}
+.vs-compact-layout .vs-regions-head{left:2px;right:2px;gap:10px}.vs-compact-layout .vs-regions-label{font-size:11px;color:#b1c0d7;letter-spacing:.04em}.vs-compact-layout .zl-wave-zoom{font-size:12px}
+.vs-compact-layout .vs-regions .vs-segment{top:27px!important;height:36px!important;padding:4px 7px!important;font-size:12px;box-shadow:none!important;border-radius:5px!important;background:color-mix(in srgb,var(--region-color,#5d539b) 42%,#111a28)!important;border:1px solid color-mix(in srgb,var(--region-color,#5d539b) 72%,#111a28)!important}
+.vs-compact-layout .vs-regions .vs-segment.active{outline:1px solid #cbb8ff;outline-offset:-1px}.vs-compact-layout .vs-regions .vs-segment small{font-size:10px;margin-top:0}
+.vs-compact-layout .vs-timeline{flex:1;min-height:55px!important;margin:0!important;background-color:#0b121c;border:0!important}
+.vs-compact-layout .vs-timeline-waveform{height:calc(100% - 24px)!important;bottom:0!important;opacity:.9}
+.vs-compact-layout .vs-timeline-ruler{height:22px;color:#a1b1c9;font-size:11px}.vs-timeline-ruler [hidden]{display:none!important}
+.vs-compact-layout .vs-timeline-ruler span{font-family:inherit;font-size:11px}
+.zl-timeline-clock{height:20px;flex:0 0 20px;display:flex;justify-content:space-between;align-items:end;color:#bac7de;font-size:12px;font-variant-numeric:tabular-nums;padding-top:3px;box-sizing:border-box;position:sticky;left:0}
+.vs-compact-layout .zl-mixer-card{margin-top:0!important;border:1px solid #283247;background:#0d1420;padding:10px;border-radius:10px;flex:0 0 auto}
+.vs-compact-layout .vs-mixer-tools{margin:0 0 8px!important}.vs-compact-layout .vs-mixer-tools>strong{font-size:16px;font-weight:650}
+.vs-compact-layout .vs-mixer-actions .vs-mode{font-size:12px;padding:7px 10px}
+.vs-compact-layout .vs-mixer-body{gap:10px}.vs-compact-layout .vs-mixer-console{gap:8px}
+.vs-compact-layout .vs-mixer-bank{background:#111a28;border-color:#34405a;border-radius:7px}
+.vs-compact-layout .vs-bank-title{background:#192337;color:#c8d2e8;height:24px;font-size:12px;font-weight:650;letter-spacing:.025em}
+.vs-compact-layout .vs-mix-scope{border:1px solid #51416f!important;border-radius:7px;padding:0 5px 5px;background:#0e1421}
+.vs-compact-layout .vs-scope-title{font-size:10px;color:#bca5e8;top:5px;font-weight:650;pointer-events:none}
+.vs-compact-layout .vs-vs-bus{margin-top:24px}
+.vs-compact-layout .vs-subgroup-bank{border:1px solid #34405a!important;border-radius:6px!important}
+.vs-compact-layout .vs-channel-strip{width:92px;min-width:92px;background:#111a27;border-color:#263044;grid-template-rows:24px 24px 38px minmax(0,1fr) 20px 30px;gap:2px;padding:5px 5px 7px}
+.vs-compact-layout .vs-channel-name{grid-row:1;font-size:13px;font-weight:600;color:#e4eaf5;line-height:24px}
+.vs-compact-layout .vs-channel-top{grid-row:2;min-height:24px}.vs-compact-layout .vs-channel-pan{grid-row:3;gap:0}.vs-compact-layout .vs-channel-pan>span{display:none}
+.vs-compact-layout .vs-channel-pan b{font-size:10px;color:#b2c4df}.vs-compact-layout .vs-channel-pan input{width:68px}
+.vs-compact-layout .vs-channel-fader-wrap{grid-row:4;height:calc(var(--vs-fader-height) + 4px)}
+.vs-compact-layout .vs-channel-value{grid-row:5;font-size:11px;color:#b7c6db}.vs-compact-layout .vs-channel-ms{grid-row:6;gap:5px}
+.vs-compact-layout .vs-channel-group{display:none}.vs-compact-layout .vs-channel-ms .vs-toggle{width:30px;height:27px;border-radius:5px;font-size:12px;font-weight:600;background:#131d2d;border-color:#3b4660}
+.vs-compact-layout .vs-channel-ms .vs-toggle.on{background:#7143c5;border-color:#a17ae5;color:#fff}
+.vs-compact-layout .vs-channel-menu summary,.vs-compact-layout .vs-bus-rename,.vs-compact-layout .vs-bus-delete{background:#182235;border-color:#34405a;border-radius:5px}
+.vs-compact-layout .vs-bus-strip{background:#191b30}.vs-compact-layout .vs-vs-bus{background:#241d3c}
+.vs-compact-layout .is-click,.vs-compact-layout .is-guide{background:#121f2a}
+.vs-compact-layout .vs-master-strip{background:#16192b;border:1px solid #4b4169;border-top:3px solid #9e70eb;border-radius:7px;width:92px;min-width:92px;gap:8px;padding:10px 6px}
+.vs-compact-layout .vs-master-strip strong{font-size:13px;font-weight:650}.vs-compact-layout .vs-master-strip small{font-size:10px;color:#a9b5ce}
+.vs-compact-layout .vs-master-fader-wrap{height:calc(var(--vs-fader-height) + 45px)}
+.vs-compact-layout .vs-master-strip .vs-channel-fader{height:calc(var(--vs-fader-height) + 37px)}
+.vs-compact-layout .zl-meter{right:7px;width:10px;background:#080f19}
+.zl-choice-list{display:grid;gap:12px}.zl-choice-list>button{text-align:left;padding:16px!important;background:#171f30!important;border:1px solid #3e4b65!important;border-radius:9px!important;color:#edf1fa}
+.zl-choice-list strong{display:block;font-size:16px;margin-bottom:7px}.zl-choice-list span{display:block;font-size:13px;line-height:1.5;color:#b8c4dc;font-weight:400}.zl-choice-list button:disabled{opacity:.5;cursor:not-allowed}
+.zl-small-dialog{max-width:500px!important}.zl-small-dialog button:focus-visible{outline:2px solid #8bd6f1;outline-offset:2px}
+.zl-save-fullscreen{display:none}#zosma-vs-study:fullscreen .zl-save-fullscreen{display:inline-block}
+#zosma-vs-study:fullscreen .vs-timeline-content{flex:1 1 0!important;height:auto!important}
+#zosma-vs-study:fullscreen .vs-timeline-scroll{margin:8px 0!important;padding:8px 10px!important;min-height:145px!important}
+#zosma-vs-study:fullscreen .vs-timeline-scroll .vs-regions{flex:0 0 68px;min-height:68px!important}
+@media(max-width:1500px){.vs-compact-layout .vs-title{font-size:21px}.vs-compact-layout .vs-performance-bar{gap:7px}.vs-compact-layout .vs-pad-row{flex-basis:100%;justify-content:flex-end}.vs-compact-layout .vs-head-actions .vs-mode{padding:7px 8px}.vs-compact-layout .vs-key label{font-size:11px}}
+@media(max-height:800px){
+ .vs-compact-layout .vs-title-row{padding:7px 10px}.vs-compact-layout .vs-title{font-size:20px}.vs-compact-layout .vs-meta .vs-pill{font-size:11px;margin-right:9px}
+ .vs-compact-layout .vs-performance-bar{padding:6px 10px;gap:5px}.vs-compact-layout .vs-transport .vs-btn{min-height:34px;font-size:12px;padding:7px 9px}
+ .vs-compact-layout .vs-pad-note{min-height:29px;min-width:30px}.vs-compact-layout .vs-channel-strip{grid-template-rows:21px 23px 30px minmax(0,1fr) 17px 28px;gap:1px}
+ .vs-compact-layout .vs-channel-name{font-size:12px;line-height:21px}.vs-compact-layout .vs-bank-title{height:22px;font-size:11px}
+ .vs-compact-layout .zl-mixer-card{padding:7px}.vs-compact-layout .vs-mixer-tools{margin-bottom:6px!important}
+ .vs-compact-layout .vs-timeline-scroll,#zosma-vs-study:fullscreen .vs-timeline-scroll{min-height:145px!important;margin:6px 0!important;padding:6px 9px!important}
+ .vs-compact-layout .vs-regions,#zosma-vs-study:fullscreen .vs-timeline-scroll .vs-regions{flex-basis:57px;min-height:57px!important}
+ .vs-compact-layout .vs-regions .vs-segment{top:23px!important;height:31px!important;font-size:11px;padding:2px 5px!important}
+ .vs-compact-layout .vs-timeline{min-height:42px!important}.zl-timeline-clock{font-size:11px;height:17px;flex-basis:17px}
+ .vs-compact-layout .vs-vs-bus{margin-top:22px}
+}
+@media(max-height:640px){#zosma-vs-study.vs-compact-layout:not(:fullscreen){height:auto;min-height:100dvh}.vs-compact-layout .vs-study,.vs-compact-layout .vs-card{height:auto;min-height:100dvh}.vs-compact-layout .vs-timeline-scroll{flex-basis:170px!important}#zosma-vs-study:fullscreen .vs-card{height:100%;min-height:0}}

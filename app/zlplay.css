@@ -1,0 +1,1662 @@
+.vs-study{max-width:980px;min-height:100vh;margin:0 auto;padding:28px 18px 48px;color:#f7f5ff;font-family:Inter,system-ui,sans-serif}.vs-card{background:linear-gradient(145deg,rgba(25,20,42,.97),rgba(9,11,18,.98));border:1px solid rgba(156,112,255,.28);border-radius:22px;padding:22px;box-shadow:0 22px 55px rgba(0,0,0,.3)}.vs-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.vs-head-main{display:flex;align-items:flex-start;gap:12px}.vs-head h2{margin:0 0 6px;font-size:clamp(1.35rem,4vw,1.85rem)}.vs-head p,.vs-muted{margin:0;color:#aaa4b9;font-size:.92rem}.vs-beta{font-size:.72rem;font-weight:800;letter-spacing:.08em;color:#d5c2ff;background:#6f3fd433;border:1px solid #9d72ff66;border-radius:99px;padding:6px 9px}.vs-back{appearance:none;border:1px solid #514967;border-radius:10px;background:#171522;color:#ddd6e8;padding:9px 11px;cursor:pointer;white-space:nowrap}.vs-entry-button{width:100%;margin-top:9px;border:0;border-radius:9px;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;padding:12px 16px;font-weight:800;cursor:pointer}.vs-actions{display:flex;flex-wrap:wrap;gap:10px}.vs-btn{appearance:none;border:1px solid #8d60ed;border-radius:12px;background:#7545d6;color:white;padding:11px 15px;font-weight:750;cursor:pointer}.vs-btn.secondary{background:#171522;border-color:#514967}.vs-btn:disabled{opacity:.45;cursor:not-allowed}.vs-file-input{display:none}.vs-status{margin:14px 0 0;padding:11px 13px;border-radius:11px;background:#ffffff0b;color:#c9c4d3;font-size:.88rem}.vs-status.error{background:#ff4d6d17;color:#ff9bad}.vs-rpp-picker{margin-top:15px;padding:16px;border:1px solid #9c6df052;border-radius:14px;background:#8a57ee12}.vs-rpp-picker h3{margin:0 0 5px;font-size:1rem}.vs-rpp-picker p{margin:0 0 12px;color:#aaa4b9;font-size:.85rem}.vs-rpp-row{display:grid;grid-template-columns:1fr auto;gap:10px}.vs-select{width:100%;min-width:0;border:1px solid #514967;border-radius:10px;background:#12101b;color:#f7f5ff;padding:10px}.vs-project{display:none;margin-top:20px}.vs-project.active{display:block}.vs-title-row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.vs-title{font-weight:850;font-size:1.1rem}.vs-key{color:#dccbff;background:#8a57ee2e;border:1px solid #9c6df05e;padding:6px 10px;border-radius:10px;font-weight:800}.vs-transport{display:grid;grid-template-columns:auto auto auto 1fr auto;gap:9px;align-items:center;margin:14px 0}.vs-time{font-variant-numeric:tabular-nums;color:#c9c4d3;font-size:.84rem}.vs-range{width:100%;accent-color:#9c6df0}.vs-loop{display:grid;grid-template-columns:auto 1fr auto 1fr auto;gap:8px;align-items:center;margin:12px 0 18px;color:#bdb7c9;font-size:.8rem}.vs-tracks{display:grid;gap:9px}.vs-track{display:grid;grid-template-columns:minmax(130px,1.4fr) auto auto minmax(100px,1fr) 52px;gap:9px;align-items:center;background:#ffffff09;border:1px solid #ffffff0e;border-radius:12px;padding:10px}.vs-track-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}.vs-track small{display:block;color:#8f899b;font-weight:500}.vs-toggle{border:1px solid #4d475c;background:#181621;color:#cfc9da;border-radius:8px;padding:7px 9px;font-weight:800;cursor:pointer}.vs-toggle.on{background:#7a46dc;border-color:#a57cf2;color:#fff}.vs-volume{text-align:right;color:#b8b1c4;font-variant-numeric:tabular-nums;font-size:.78rem}.vs-warning{margin-top:14px;color:#ffbd72;font-size:.83rem}.vs-master{display:grid;grid-template-columns:auto 1fr 48px;gap:10px;align-items:center;margin-top:16px;padding-top:15px;border-top:1px solid #ffffff17}.vs-empty{padding:18px;text-align:center;color:#9f99aa}.vs-pill{display:inline-block;margin:2px 5px 2px 0;border-radius:99px;padding:4px 8px;background:#ffffff0b;color:#bdb7c9;font-size:.75rem}@media(max-width:650px){.vs-card{padding:16px}.vs-head{align-items:center}.vs-head-main{align-items:center}.vs-head p{display:none}.vs-transport{grid-template-columns:repeat(3,1fr)}.vs-transport .vs-range{grid-column:1/-1}.vs-time{text-align:center}.vs-loop{grid-template-columns:auto 1fr auto}.vs-loop label:nth-of-type(2){grid-column:1}.vs-track{grid-template-columns:1fr auto auto}.vs-track .vs-range{grid-column:1/3}.vs-volume{grid-column:3}.vs-btn{min-height:44px}.vs-title-row{align-items:flex-start;flex-direction:column}.vs-rpp-row{grid-template-columns:1fr}}
+.vs-metronome{display:grid;grid-template-columns:auto auto auto auto minmax(100px,1fr) 48px;gap:10px;align-items:center;margin:12px 0 18px;padding:12px;border:1px solid #38bdf82e;border-radius:12px;background:#0ea5e90b}.vs-metronome strong{white-space:nowrap}.vs-bpm{font-weight:850;color:#7dd3fc;background:#0ea5e91a;border:1px solid #38bdf841;border-radius:9px;padding:6px 9px;white-space:nowrap}.vs-switch{display:flex;align-items:center;gap:6px;color:#c9c4d3;font-size:.82rem;white-space:nowrap}.vs-meter-select,.vs-accent-select{border:1px solid #514967;border-radius:9px;background:#12101b;color:#f7f5ff;padding:7px 8px}.vs-accent-group{display:flex;align-items:center;gap:7px}.vs-accent-group[hidden]{display:none}@media(max-width:760px){.vs-metronome{grid-template-columns:auto auto 1fr auto}.vs-metronome .vs-accent-group{grid-column:1/-1}.vs-metronome .vs-range{grid-column:1/4}.vs-metronome .vs-volume{grid-column:4}}
+.vs-section-loop{display:grid;grid-template-columns:auto minmax(160px,1fr) auto;gap:10px;align-items:center;margin:12px 0 18px;padding:12px;border:1px solid #a78bfa2e;border-radius:12px;background:#8b5cf60a}.vs-section-loop strong{white-space:nowrap}.vs-section-loop .vs-select:disabled{opacity:.5}.vs-section-note{grid-column:2/-1;color:#8f899b;font-size:.76rem}@media(max-width:650px){.vs-section-loop{grid-template-columns:1fr auto}.vs-section-loop strong{grid-column:1/-1}.vs-section-note{grid-column:1/-1}}
+.vs-pitch{display:inline-block;margin-left:6px;padding:2px 6px;border-radius:7px;background:#22c55e18;border:1px solid #22c55e3b;color:#86efac;font-size:.7rem;font-weight:850}.vs-pitch.zero{background:#ffffff08;border-color:#ffffff12;color:#8f899b}
+.vs-head-actions{display:flex;align-items:center;gap:8px}.vs-mode{appearance:none;border:1px solid #6d5a91;border-radius:10px;background:#211a31;color:#e7dcff;padding:7px 10px;font-size:.78rem;font-weight:800;cursor:pointer}.vs-progress{height:3px;margin-top:8px;border-radius:99px;background:#ffffff10;overflow:hidden}.vs-progress>i{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#38bdf8,#8b5cf6);transition:width .2s}.vs-status.done .vs-progress{display:none}.vs-timeline{display:flex;min-height:48px;margin:14px 0 8px;border:1px solid #ffffff16;border-radius:12px;overflow:hidden;background:#090b11}.vs-segment{position:relative;min-width:22px;border:0;border-right:1px solid #08090e;background:#332654;color:#d8caff;padding:8px 5px;overflow:hidden;cursor:pointer;font-size:.69rem}.vs-segment:nth-child(even){background:#253250;color:#cbe4ff}.vs-segment.active{background:#7844d7;color:#fff;box-shadow:inset 0 -3px #c4a7ff}.vs-segment span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vs-segment small{display:block;margin-top:3px;opacity:.65}.vs-transport{position:sticky;top:8px;z-index:15;padding:10px;border:1px solid #ffffff18;border-radius:13px;background:rgba(12,13,20,.94);backdrop-filter:blur(16px);box-shadow:0 10px 28px #0005}.vs-mixer-tools{display:flex;align-items:center;justify-content:space-between;margin:18px 0 9px}.vs-track-group{margin-bottom:8px;border:1px solid #ffffff10;border-radius:12px;overflow:hidden;background:#ffffff04}.vs-track-group summary{display:flex;align-items:center;justify-content:space-between;padding:9px 11px;color:#dcd5e8;font-weight:850;cursor:pointer;list-style:none}.vs-track-group summary::-webkit-details-marker{display:none}.vs-track-group summary small{color:#898395;font-weight:600}.vs-group-rows{display:grid;gap:1px;background:#ffffff09}.vs-group-rows .vs-track{border:0;border-radius:0;margin:0;background:#11121a}.vs-mode-rehearsal .vs-actions,.vs-mode-rehearsal .vs-status,.vs-mode-rehearsal .vs-rpp-picker,.vs-mode-rehearsal .vs-mixer-tools,.vs-mode-rehearsal .vs-tracks,.vs-mode-rehearsal .vs-master,.vs-mode-rehearsal .vs-warning{display:none!important}.vs-mode-rehearsal .vs-card{max-width:900px;margin:auto}.vs-mode-rehearsal .vs-timeline{min-height:76px}.vs-mode-rehearsal .vs-transport{position:relative;top:auto;padding:18px}.vs-mode-rehearsal .vs-title{font-size:clamp(1.35rem,5vw,2rem)}@media(max-width:650px){.vs-head-actions{flex-direction:column-reverse;align-items:flex-end}.vs-beta{font-size:.62rem}.vs-mode{padding:6px 8px}.vs-timeline{overflow-x:auto;justify-content:flex-start}.vs-segment{flex:0 0 92px!important}.vs-transport{top:4px}.vs-track-group summary{padding:10px}.vs-mode-rehearsal .vs-metronome{margin-top:18px}}
+.vs-segment.current{outline:2px solid #38bdf8;outline-offset:-2px}
+.vs-segment.pending{box-shadow:inset 0 -3px #fbbf24;animation:vsPending 1s ease-in-out infinite alternate}@keyframes vsPending{to{filter:brightness(1.3)}}
+.vs-main-group{margin-top:12px;border:1px solid #9c6df052;border-radius:14px;background:#8a57ee0b;padding:10px}.vs-main-group-head{display:flex;align-items:center;justify-content:space-between;padding:3px 4px 10px;color:#e8dcff;font-size:1rem}.vs-subgroups{display:grid;gap:8px}.vs-guide-track{margin-bottom:10px;border-color:#38bdf84a;background:#0ea5e90b}.vs-pan-control{display:flex;align-items:center;gap:5px;color:#aaa4b9;font-size:.7rem;white-space:nowrap}.vs-pan-control input{width:82px;accent-color:#38bdf8}.vs-pan-control span{display:inline-block;width:28px;color:#d8caff;font-weight:800}.vs-track-group summary .vs-pan-control{margin-left:auto}.vs-track-group summary .vs-pan-control input{width:70px}.vs-live-toggle.on{background:#7545d6;border-color:#a57cf2;color:#fff}.vs-metro-pan{grid-column:1/-1;border-top:1px solid #ffffff12;padding-top:7px}.vs-metro-pan input{flex:1;max-width:none}
+.vs-track{grid-template-columns:minmax(130px,1.4fr) auto auto minmax(100px,1fr) 52px minmax(150px,1fr)}
+.vs-transport{grid-template-columns:repeat(5,auto) minmax(120px,1fr) auto}
+.vs-timeline{position:relative;width:100vw;margin-left:calc(50% - 50vw);box-sizing:border-box;min-height:104px;padding:27px 12px 10px;gap:2px;border-radius:0;border-left:0;border-right:0;background-color:#080b11;background-image:repeating-linear-gradient(90deg,transparent 0,transparent calc(12.5% - 1px),#ffffff0b calc(12.5% - 1px),#ffffff0b 12.5%)}.vs-timeline::before{content:"REGIÕES DO PROJETO";position:absolute;left:14px;top:6px;color:#7f899b;font-size:.62rem;font-weight:800;letter-spacing:.12em}.vs-segment{flex:1 1 0;min-width:44px;height:67px;text-align:left;border:1px solid #ffffff18;border-radius:6px;background:linear-gradient(180deg,#263955,#182438);padding:9px 7px;font-size:.75rem;box-shadow:inset 0 2px #38bdf855}.vs-segment:nth-child(even){background:linear-gradient(180deg,#35265a,#241a3e)}.vs-segment.active{background:linear-gradient(180deg,#7947d8,#4c2a91)}.vs-segment.current{outline:2px solid #38bdf8;outline-offset:-2px;z-index:2}.vs-segment.pending{outline:2px solid #fbbf24;outline-offset:-2px}
+.vs-study{max-width:none;width:100%;padding-left:0;padding-right:0}.vs-card{max-width:none;border-radius:0}.vs-card>.vs-head,.vs-card>.vs-actions,.vs-card>.vs-status,.vs-card>.vs-rpp-picker,.vs-card>.vs-project>.vs-title-row,.vs-card>.vs-project>.vs-transport,.vs-card>.vs-project>.vs-metronome,.vs-card>.vs-project>.vs-section-loop,.vs-card>.vs-project>.vs-mixer-tools,.vs-card>.vs-project>.vs-main-group,.vs-card>.vs-project>.vs-master,.vs-card>.vs-project>.vs-warning{margin-left:auto;margin-right:auto;max-width:1180px}.vs-timeline-playhead{position:absolute;top:22px;bottom:4px;width:2px;background:#fff;box-shadow:0 0 10px #38bdf8,0 0 2px #fff;z-index:5;pointer-events:none;transition:left .05s linear}.vs-timeline-playhead:before{content:"";position:absolute;top:-5px;left:-4px;width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:0 0 9px #38bdf8}
+@media(max-width:650px){.vs-timeline{min-height:96px;padding-left:8px;padding-right:8px}.vs-segment{flex:0 0 104px!important;height:60px}}
+@media(max-width:760px){.vs-track{grid-template-columns:1fr auto auto}.vs-track [data-volume]{grid-column:1/3}.vs-track .vs-pan-control{grid-column:1/-1}.vs-main-group-head .vs-pan-control input{width:110px}.vs-transport .vs-live-toggle{grid-column:span 1}}
+.vs-key{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.vs-key label{display:flex;align-items:center;gap:6px;color:#cfc5df;font-size:.74rem}.vs-key select{border:1px solid #9c6df05e;border-radius:8px;background:#151020;color:#fff;padding:5px 7px;font-weight:800}
+.vs-pitch{display:none!important}
+.vs-card>.vs-head,.vs-card>.vs-actions,.vs-card>.vs-status,.vs-card>.vs-rpp-picker,.vs-card>.vs-project>.vs-title-row,.vs-card>.vs-project>.vs-transport,.vs-card>.vs-project>.vs-metronome,.vs-card>.vs-project>.vs-section-loop,.vs-card>.vs-project>.vs-mixer-tools,.vs-card>.vs-project>.vs-main-group,.vs-card>.vs-project>.vs-master,.vs-card>.vs-project>.vs-warning{max-width:none;width:100%;box-sizing:border-box}
+.vs-timeline{background-image:repeating-linear-gradient(90deg,transparent 0,transparent calc(var(--beat-width,4%) - 1px),#ffffff12 calc(var(--beat-width,4%) - 1px),#ffffff12 var(--beat-width,4%))}
+.vs-timeline-ruler{position:absolute;left:12px;right:12px;top:3px;height:20px;pointer-events:none;border-bottom:1px solid #ffffff20;z-index:3}
+.vs-timeline-ruler span{position:absolute;top:0;transform:translateX(-1px);height:100%;padding-left:4px;border-left:1px solid #ffffff35;color:#9da8bc;font-size:.62rem;font-weight:700;line-height:16px}
+.vs-regions{position:relative;display:block;width:100vw;margin-left:calc(50% - 50vw);box-sizing:border-box;min-height:82px;padding:7px 12px 5px;overflow:hidden;background:#11131d;border-top:1px solid #ffffff12;border-bottom:1px solid #ffffff18}
+.vs-regions::before{content:"REGIÕES";position:absolute;left:14px;top:2px;color:#7f899b;font-size:.58rem;font-weight:800;letter-spacing:.12em;pointer-events:none}
+.vs-regions .vs-segment{position:absolute;top:28px;margin:0;min-width:0;height:44px;padding:5px 6px;font-size:.68rem;border-radius:4px}
+.vs-regions .vs-segment small{margin-top:1px}
+.vs-timeline{margin-top:0;min-height:116px;padding-top:22px;border-radius:0;border-top:0;overflow:hidden}
+.vs-timeline-waveform{position:absolute;left:12px;right:12px;bottom:8px;width:calc(100% - 24px);height:76px;opacity:.9;pointer-events:none;z-index:1}
+.vs-segment{position:relative;z-index:2;opacity:.92}
+.vs-metro-pan{grid-column:auto;border:0;padding:0;min-width:120px}
+.vs-metro-pan input{width:66px!important;flex:none}
+.vs-metronome{grid-template-columns:auto auto auto minmax(170px,1fr) minmax(120px,1fr) auto;align-items:center}
+@media(max-width:760px){.vs-metronome{grid-template-columns:auto auto auto 1fr;}.vs-metro-pan{grid-column:auto}.vs-metro-pan input{width:54px!important}.vs-timeline-ruler{left:8px;right:8px}.vs-timeline{min-height:104px}.vs-timeline-waveform{height:64px}}
+.vs-metronome{display:flex!important;align-items:center;gap:10px;flex-wrap:nowrap;overflow-x:auto;white-space:nowrap}
+.vs-metronome .vs-range[data-metro-volume]{flex:1 1 180px;min-width:120px;width:auto}
+.vs-metronome .vs-volume[data-metro-label]{flex:0 0 auto;min-width:42px;text-align:right}
+.vs-metronome .vs-accent-group{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.vs-metronome .vs-metro-pan{display:flex;flex:0 0 auto;min-width:auto}
+#zosma-vs-study:fullscreen{background:#0b0c12;overflow:auto}
+#zosma-vs-study:fullscreen .vs-head,#zosma-vs-study:fullscreen .vs-actions,#zosma-vs-study:fullscreen .vs-status,#zosma-vs-study:fullscreen .vs-rpp-picker{display:none!important}
+#zosma-vs-study:fullscreen .vs-card{padding-top:10px}
+
+/* v1.3.1-beta: timeline/regions shared zoom surface */
+.vs-timeline-scroll{width:100vw;margin-left:calc(50% - 50vw);overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;background:#0b0d14;border-top:1px solid #ffffff12;border-bottom:1px solid #ffffff18}
+.vs-timeline-content{position:relative;width:100%;min-width:100%;box-sizing:border-box}
+.vs-timeline-scroll .vs-regions,.vs-timeline-scroll .vs-timeline{width:100%;margin-left:0;margin-right:0;box-sizing:border-box}
+.vs-timeline-scroll .vs-regions{position:relative;min-height:82px;padding:7px 0 5px;overflow:hidden;border-top:0;border-bottom:1px solid #ffffff18}
+.vs-timeline-scroll .vs-regions::before{left:10px;z-index:4}
+.vs-timeline-scroll .vs-regions .vs-segment{position:absolute;top:28px;min-width:0!important;max-width:none!important;flex:none!important;margin:0;height:44px;box-sizing:border-box;overflow:hidden;padding:5px 6px}
+.vs-timeline-scroll .vs-timeline{position:relative;display:block;min-height:116px;margin-top:0;margin-bottom:0;padding:22px 0 10px;overflow:hidden;border-left:0;border-right:0;border-top:0;border-radius:0;background-image:repeating-linear-gradient(90deg,transparent 0,transparent calc(var(--beat-width,4%) - 1px),#ffffff12 calc(var(--beat-width,4%) - 1px),#ffffff12 var(--beat-width,4%))}
+.vs-timeline-scroll .vs-timeline::before{content:"TIMELINE";left:10px;z-index:4}
+.vs-timeline-scroll .vs-timeline-ruler{left:0;right:0}
+.vs-timeline-scroll .vs-timeline-waveform{left:0;right:0;width:100%;bottom:8px}
+.vs-timeline-scroll .vs-timeline-playhead{top:22px;bottom:4px}
+.vs-zoom-controls{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.vs-zoom-controls .vs-btn{min-width:38px;padding:8px 10px}
+.vs-zoom-controls [data-zoom-label]{min-width:48px;text-align:center;color:#d8caff;font-size:.76rem;font-weight:800;font-variant-numeric:tabular-nums}
+.vs-transport{grid-template-columns:repeat(5,auto) auto minmax(120px,1fr) auto}
+@media(max-width:650px){
+  .vs-timeline-scroll .vs-regions .vs-segment{min-width:0!important;flex:none!important;height:48px}
+  .vs-timeline-scroll .vs-timeline{min-height:104px;padding-left:0;padding-right:0}
+  .vs-timeline-scroll .vs-timeline-ruler{left:0;right:0}
+  .vs-transport{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .vs-transport .vs-live-toggle{grid-column:auto}
+  .vs-transport .vs-zoom-controls{justify-content:center}
+  .vs-transport .vs-range{grid-column:1/-1}
+  .vs-transport .vs-time{grid-column:1/-1;text-align:center}
+}
+
+/* v1.4.0-beta: projetos .tomcerto, biblioteca e mapeamento */
+.vs-library-picker,.vs-region-mapper{max-width:1180px;margin:12px auto;border:1px solid #ffffff18;border-radius:14px;background:#10121b;padding:14px}
+.vs-library-picker h3{margin:0 0 4px;color:#f5f2ff}.vs-library-picker p{margin:0 0 12px;color:#9c97aa;font-size:.84rem}
+.vs-library-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}.vs-library-grid button{appearance:none;text-align:left;border:1px solid #ffffff16;border-radius:11px;background:#171a25;color:#eee9fa;padding:11px;cursor:pointer}.vs-library-grid button:hover{border-color:#8b5cf6;background:#201b31}.vs-library-grid strong,.vs-library-grid small{display:block}.vs-library-grid small{margin-top:3px;color:#858092;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vs-project-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.vs-title-row{gap:12px;flex-wrap:wrap}.vs-key{display:flex!important;gap:8px;align-items:center;flex-wrap:wrap}.vs-key label{display:flex;align-items:center;gap:6px;color:#aaa4b9;font-size:.75rem}.vs-key select,.vs-bpm-edit input,.vs-text-input{border:1px solid #514967;border-radius:9px;background:#12101b;color:#f7f5ff;padding:7px 8px}.vs-bpm-edit{display:flex;align-items:center;gap:5px}.vs-bpm-edit input{width:76px;padding:5px 6px;font-weight:850}
+.vs-mapper-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}.vs-mapper-head strong{color:#eee9fa}.vs-mapper-head span{color:#8f899b;font-size:.78rem}.vs-mapper-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.vs-mapper-controls .vs-text-input{min-width:180px;flex:1}.vs-mapper-list{display:grid;gap:6px;margin-top:10px}.vs-mapper-item{display:grid;grid-template-columns:72px minmax(120px,1fr) 70px;gap:6px;align-items:center}.vs-mapper-item button,.vs-mapper-item input{border:1px solid #ffffff17;border-radius:8px;background:#151823;color:#ddd7e8;padding:7px}.vs-mapper-item button{cursor:pointer}.vs-mapper-item button:first-child{font-variant-numeric:tabular-nums;color:#7dd3fc}.vs-mapper-item button:last-child{color:#f0a6ad}.vs-mapper-item button:disabled{opacity:.35;cursor:not-allowed}
+.vs-empty-regions{position:absolute;top:31px;left:10px;color:#747081;font-size:.72rem;font-style:italic;pointer-events:none}.vs-timeline{cursor:crosshair}
+@media(max-width:650px){.vs-project-actions{width:100%;justify-content:flex-start}.vs-key{width:100%}.vs-mapper-controls>*{flex:1 1 140px}.vs-mapper-item{grid-template-columns:64px minmax(100px,1fr) 62px}.vs-library-grid{grid-template-columns:1fr}}
+
+/* v1.4.1-beta: REAPER-like grid snap + fixed region palette */
+.vs-snap-toggle{appearance:none;border:1px solid #ffffff22;border-radius:10px;background:#171a24;color:#9ba3b4;padding:8px 11px;font-size:.78rem;font-weight:850;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.15s ease}
+.vs-snap-toggle.active{border-color:#38bdf888;background:#102431;color:#7dd3fc;box-shadow:inset 0 0 0 1px #38bdf833,0 0 14px #38bdf818}
+.vs-mapper-position{min-width:112px;color:#9da8bc;font-size:.76rem;font-variant-numeric:tabular-nums}
+.vs-region-menu{display:grid;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid #ffffff10}
+.vs-region-menu-group{display:grid;grid-template-columns:125px minmax(0,1fr);gap:9px;align-items:start}
+.vs-region-menu-group>strong{padding-top:7px;color:#a9a2b7;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}
+.vs-region-menu-group>div{display:flex;gap:6px;flex-wrap:wrap}
+.vs-region-menu-group button{appearance:none;position:relative;border:1px solid color-mix(in srgb,var(--region-color) 75%,#ffffff 10%);border-radius:8px;background:color-mix(in srgb,var(--region-color) 34%,#10131b);color:#fff;padding:7px 10px;font-size:.74rem;font-weight:800;cursor:pointer;box-shadow:inset 3px 0 var(--region-color)}
+.vs-region-menu-group button:hover{background:color-mix(in srgb,var(--region-color) 52%,#10131b);transform:translateY(-1px)}
+.vs-mapper-empty{padding:12px;border:1px dashed #ffffff18;border-radius:9px;color:#777184;font-size:.76rem;text-align:center}
+.vs-mapper-item{grid-template-columns:72px 8px minmax(120px,1fr) 70px}
+.vs-mark-color{width:8px;height:26px;border-radius:99px;background:var(--region-color);box-shadow:0 0 8px color-mix(in srgb,var(--region-color) 65%,transparent)}
+.vs-timeline-scroll .vs-regions .vs-segment[style*="--region-color"]{background:linear-gradient(180deg,color-mix(in srgb,var(--region-color) 72%,#ffffff 4%),color-mix(in srgb,var(--region-color) 48%,#080a10));box-shadow:inset 0 2px color-mix(in srgb,var(--region-color) 80%,#ffffff 15%)}
+@media(max-width:650px){.vs-region-menu-group{grid-template-columns:1fr}.vs-region-menu-group>strong{padding-top:0}.vs-region-menu-group button{flex:1 1 108px}.vs-mapper-item{grid-template-columns:62px 7px minmax(92px,1fr) 58px}}
+/* v1.4.2: Snap estilo REAPER, aplicado aos inícios de compasso */
+.vs-transport .vs-snap-toggle{width:38px;height:36px;padding:0;justify-content:center;flex:0 0 38px;border-radius:8px}
+.vs-snap-icon{display:block;position:relative;width:16px;height:18px;border:3px solid currentColor;border-top:0;border-radius:0 0 9px 9px;box-sizing:border-box}
+.vs-snap-icon::before,.vs-snap-icon::after{content:"";position:absolute;top:-3px;width:5px;height:5px;border-radius:1px;background:currentColor}
+.vs-snap-icon::before{left:-3px}.vs-snap-icon::after{right:-3px}
+.vs-mapper-controls .vs-text-input{min-width:190px;flex:1 1 240px}
+
+/* v1.4.3: grade, números de compasso e snap compartilham a mesma origem temporal */
+.vs-timeline-scroll .vs-timeline{
+  background-image:
+    repeating-linear-gradient(90deg,#ffffff32 0,#ffffff32 1px,transparent 1px,transparent var(--bar-width,16%)),
+    repeating-linear-gradient(90deg,#ffffff12 0,#ffffff12 1px,transparent 1px,transparent var(--beat-width,4%));
+}
+.vs-timeline-ruler span{border-left-color:#ffffff55;}
+
+/* v1.4.4-beta: compact region dropdown, beat-only grid, 800% zoom */
+.vs-timeline-scroll .vs-timeline{
+  background-image:repeating-linear-gradient(
+    90deg,
+    #ffffff20 0,
+    #ffffff20 1px,
+    transparent 1px,
+    transparent var(--beat-width,4%)
+  );
+}
+.vs-region-preset-select{min-width:210px;max-width:280px}
+.vs-go-start{min-width:44px;font-variant-numeric:tabular-nums;font-weight:900}
+@media(max-width:650px){
+  .vs-region-preset-select{min-width:0;max-width:none;flex:1 1 180px}
+}
+
+/* v1.4.6-beta: compact region editor + keyboard transport */
+.vs-region-editor{
+  display:grid;
+  grid-template-columns:minmax(180px,1fr) minmax(220px,2fr) auto auto;
+  gap:10px;
+  align-items:center;
+  margin-top:12px;
+  padding:12px;
+  border:1px solid #ffffff18;
+  border-radius:12px;
+  background:#ffffff05;
+}
+.vs-region-editor[hidden]{display:none}
+.vs-region-editor-info{display:flex;flex-direction:column;gap:3px;min-width:0}
+.vs-region-editor-info strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vs-region-editor-info span{font-size:12px;color:#a9a2b8}
+.vs-btn.danger{border-color:#ff6b7a55;color:#ff8793}
+.vs-mapper-empty[data-region-editor-empty]{margin-top:12px;padding:10px 12px;text-align:center}
+.vs-segment.editing{outline:2px solid #fff;outline-offset:-2px;filter:brightness(1.16)}
+@media(max-width:760px){
+  .vs-region-editor{grid-template-columns:1fr 1fr}
+  .vs-region-editor-info,.vs-region-editor .vs-text-input{grid-column:1/-1}
+}
+
+/* =========================================================
+   Performance 1.5.0 - Mixer vertical / grupos / add track
+   ========================================================= */
+.vs-mixer-tools{
+  gap:12px;
+  flex-wrap:wrap;
+}
+.vs-mixer-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.vs-tracks{
+  display:block!important;
+  width:100%;
+  overflow:hidden;
+  margin:0;
+}
+.vs-mixer-scroll{
+  width:100%;
+  overflow-x:auto;
+  overflow-y:visible;
+  padding:8px 0 14px;
+  scrollbar-gutter:stable;
+}
+.vs-mixer-console{
+  display:flex;
+  align-items:stretch;
+  gap:8px;
+  width:max-content;
+  min-width:100%;
+  padding:0 10px;
+  box-sizing:border-box;
+}
+.vs-mixer-bank{
+  flex:0 0 auto;
+  border:1px solid #ffffff18;
+  border-radius:10px;
+  overflow:visible;
+  background:#0e1017;
+}
+.vs-special-bank{border-color:#38bdf844}
+.vs-vs-bank{border-color:#9c6df066;background:#171225}
+.vs-bank-title{
+  height:28px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  padding:0 8px;
+  background:#ffffff10;
+  color:#d8d3e2;
+  font-size:.72rem;
+  font-weight:850;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  border-radius:9px 9px 0 0;
+}
+.vs-bank-title small{color:#8d8798;font-size:.65rem}
+.vs-bank-channels{
+  display:flex;
+  align-items:stretch;
+}
+.vs-channel-strip{
+  position:relative;
+  width:92px;
+  min-width:92px;
+  min-height:310px;
+  display:grid;
+  grid-template-rows:26px 48px 1fr 20px 34px 38px 23px;
+  align-items:center;
+  justify-items:center;
+  padding:7px 6px 0;
+  box-sizing:border-box;
+  background:linear-gradient(#20232b,#13151b);
+  border-right:1px solid #0008;
+}
+.vs-channel-strip:last-child{border-right:0}
+.vs-channel-strip.is-click{background:linear-gradient(#263039,#15191d)}
+.vs-channel-strip.is-guide{background:linear-gradient(#182d38,#111a20)}
+.vs-bus-strip{background:linear-gradient(#302744,#171521)}
+.vs-vs-bus{background:linear-gradient(#4a3473,#21182f)}
+.vs-channel-top{
+  width:100%;
+  min-height:24px;
+  display:flex;
+  justify-content:flex-end;
+  align-items:flex-start;
+}
+.vs-channel-menu{position:relative;z-index:8}
+.vs-channel-menu summary{
+  width:25px;
+  height:23px;
+  display:grid;
+  place-items:center;
+  list-style:none;
+  border:1px solid #ffffff1c;
+  border-radius:6px;
+  background:#ffffff08;
+  color:#cfc9d9;
+  cursor:pointer;
+  font-weight:900;
+}
+.vs-channel-menu summary::-webkit-details-marker{display:none}
+.vs-channel-menu-pop{
+  position:absolute;
+  right:0;
+  top:27px;
+  z-index:60;
+  width:190px;
+  padding:9px;
+  display:grid;
+  gap:7px;
+  border:1px solid #655b78;
+  border-radius:9px;
+  background:#15121d;
+  box-shadow:0 14px 36px #000b;
+}
+.vs-channel-menu-pop label{
+  display:grid;
+  gap:4px;
+  color:#aaa4b7;
+  font-size:.7rem;
+}
+.vs-channel-menu-pop select,
+.vs-channel-menu-pop button{
+  width:100%;
+  border:1px solid #514967;
+  border-radius:7px;
+  background:#211d2b;
+  color:#eee8f8;
+  padding:7px;
+  font-size:.72rem;
+}
+.vs-channel-menu-pop button{cursor:pointer;text-align:left}
+.vs-channel-menu-pop button.danger{color:#ff929d;border-color:#7b3640}
+.vs-channel-pan{
+  width:100%;
+  display:grid;
+  grid-template-columns:1fr;
+  place-items:center;
+  gap:2px;
+  color:#9993a5;
+  font-size:.6rem;
+}
+.vs-channel-pan input{width:72px;accent-color:#38bdf8}
+.vs-channel-pan b{font-size:.62rem;color:#ddd7e7}
+.vs-channel-fader-wrap{
+  width:100%;
+  height:148px;
+  display:grid;
+  place-items:center;
+}
+.vs-channel-fader{
+  width:24px!important;
+  height:140px;
+  writing-mode:vertical-lr;
+  direction:rtl;
+  accent-color:#a57cf2;
+  cursor:pointer;
+}
+.vs-channel-value{
+  font-size:.66rem;
+  color:#aaa4b7;
+  font-variant-numeric:tabular-nums;
+}
+.vs-channel-ms{
+  width:100%;
+  display:flex;
+  justify-content:center;
+  gap:5px;
+}
+.vs-channel-ms .vs-toggle{
+  width:31px;
+  height:29px;
+  padding:0;
+  border-radius:6px;
+}
+.vs-channel-name{
+  width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  text-align:center;
+  font-size:.68rem;
+  font-weight:800;
+  color:#f3eefc;
+}
+.vs-channel-group{
+  width:calc(100% + 12px);
+  align-self:end;
+  padding:5px 2px;
+  box-sizing:border-box;
+  text-align:center;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  background:#ffffff14;
+  color:#bcb6c8;
+  font-size:.58rem;
+  font-weight:800;
+}
+.vs-bus-delete{
+  width:24px;
+  height:23px;
+  border:1px solid #7b3640;
+  border-radius:6px;
+  background:#391a20;
+  color:#ff9aa3;
+  cursor:pointer;
+  font-weight:900;
+}
+.vs-add-channel{
+  width:92px;
+  min-width:92px;
+  min-height:338px;
+  border:1px dashed #765aa8;
+  border-radius:10px;
+  background:#8a57ee0b;
+  color:#bda9e7;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  cursor:pointer;
+}
+.vs-add-channel strong{font-size:1.8rem;font-weight:500}
+.vs-add-channel span{font-size:.72rem;font-weight:800}
+.vs-add-channel:hover{background:#8a57ee1c;color:#e4d8ff}
+@media(max-width:650px){
+  .vs-channel-strip{width:84px;min-width:84px}
+  .vs-add-channel{width:84px;min-width:84px}
+  .vs-mixer-actions{width:100%;justify-content:flex-start}
+}
+
+/* ZLPlay standalone 1.5.1 */
+html,body{margin:0;min-height:100%;background:#07090d}
+#zosma-vs-study{display:block!important;min-height:100vh}
+.vs-study{min-height:100vh}
+.vs-mixer-body{display:flex;align-items:stretch;gap:10px;min-width:0}
+.vs-mixer-body>.vs-tracks{flex:1;min-width:0}
+.vs-master-strip{
+  width:92px;min-width:92px;box-sizing:border-box;
+  border:1px solid #5d4a82;border-radius:10px;
+  background:#181420;padding:10px 8px;
+  display:flex;flex-direction:column;align-items:center;gap:9px;
+}
+.vs-master-strip strong{font-size:.72rem}
+.vs-master-strip small{font-size:.58rem;color:#bcb6c8;font-weight:800}
+.vs-master-fader-wrap{height:190px;display:grid;place-items:center}
+.vs-master-strip .vs-channel-fader{height:180px}
+.vs-bus-rename{
+  width:24px;height:23px;border:1px solid #5f5475;border-radius:6px;
+  background:#24202d;color:#ddd5ea;cursor:pointer;font-weight:900;margin-right:4px
+}
+.vs-mixer-console>.vs-mixer-bank:first-child .vs-channel-menu-pop{left:0;right:auto}
+@media(max-width:650px){
+  .vs-master-strip{width:84px;min-width:84px}
+}
+
+/* ZLPlay 1.5.3 requested layout */
+.vs-timeline{margin:12px 20px 16px!important;width:auto!important;border:1px solid #2e2740;border-radius:12px;overflow:hidden;background:#0d1017}
+.vs-transport{position:relative}
+.vs-transport-region-status{margin-left:auto;max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.72rem;color:#c8c0d8}
+#zosma-vs-study:fullscreen .vs-status{display:none!important}
+[data-play].is-playing{box-shadow:0 0 0 2px rgba(255,255,255,.18),0 0 18px rgba(132,75,230,.7);transform:translateY(-1px)}
+[data-play].is-playing:before{content:"▶ ";font-size:.8em}
+.vs-click-source{display:flex;align-items:center;gap:6px}
+.vs-click-source select{background:#151120;color:#eee;border:1px solid #55476d;border-radius:8px;padding:7px}
+
+/* ZLPlay 1.5.4 corrections */
+.vs-timeline-scroll{
+  width:auto!important;
+  margin:12px 20px 16px!important;
+  border:1px solid #2e2740!important;
+  border-radius:12px!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  background:#0d1017!important;
+}
+.vs-timeline-content{border-radius:12px;overflow:hidden}
+.vs-timeline-scroll .vs-regions{border-bottom:1px solid #ffffff18!important}
+.vs-timeline-scroll .vs-timeline{
+  margin:0!important;width:100%!important;border:0!important;border-radius:0!important;
+}
+.vs-transport-region-status{display:none!important}
+.vs-transport-status{font-size:.72rem;color:#c8c0d8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#zosma-vs-study:fullscreen .vs-status{display:none!important}
+.vs-click-source-control{display:flex;align-items:center;gap:7px;font-weight:800}
+.vs-click-source-control select{background:#151120;color:#eee;border:1px solid #55476d;border-radius:8px;padding:7px 9px}
+.vs-mix-scope{display:flex;flex-direction:column;border:3px solid #77d300;border-radius:10px;padding:22px 5px 5px;position:relative;align-self:stretch}
+.vs-scope-title{position:absolute;top:4px;left:8px;font-size:.58rem;font-weight:900;color:#a9e65d}
+.vs-scope-content{display:flex;align-items:stretch}
+.vs-subgroup-bank{border:1px solid #5a4b75!important;border-radius:8px!important;margin:0 3px!important}
+
+/* ZLPlay 1.5.5 — transport/timeline */
+.vs-transport{
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  align-items:center!important;
+  gap:8px!important;
+}
+.vs-transport [data-loop]{order:60}
+.vs-transport [data-snap-toggle], .vs-transport .vs-snap-toggle{order:61}
+.vs-transport-status{order:62;flex:0 1 auto;min-width:120px;max-width:360px}
+.vs-transport .vs-progress, .vs-transport [data-progress-wrap]{order:63;flex:1 1 260px;min-width:120px}
+.vs-transport .vs-zoom, .vs-transport [data-zoom-controls]{order:64;margin-left:auto}
+.vs-transport-region-status{display:none!important}
+
+/* Timeline: padding real nos quatro lados do card, regiões e waveform no mesmo limite */
+.vs-timeline-scroll{
+  box-sizing:border-box!important;
+  margin:12px 20px 16px!important;
+  padding:12px 12px 14px!important;
+  width:calc(100% - 40px)!important;
+  border:1px solid #2e2740!important;
+  border-radius:12px!important;
+  background:#0d1017!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+}
+.vs-timeline-content{
+  min-width:100%!important;
+  border-radius:8px!important;
+  overflow:visible!important;
+}
+.vs-timeline-scroll .vs-regions{
+  margin:0 0 8px!important;
+  padding:0!important;
+}
+.vs-timeline-scroll .vs-timeline{
+  margin:0!important;
+  border:0!important;
+  width:100%!important;
+}
+
+/* O card superior do Click não possui PAN visível; PAN é do fader Click. */
+.vs-metronome [data-metro-pan],
+.vs-metronome [data-metro-pan-label]{display:none!important}
+
+.vs-metronome .vs-pan,
+.vs-metronome [data-metro-pan],
+.vs-metronome [data-metro-pan-label]{display:none!important}
+
+.vs-transport .vs-progress,
+.vs-transport [data-progress-wrap],
+.vs-transport progress,
+.vs-transport [data-progress],
+.vs-transport [data-time],
+.vs-transport .vs-time{display:none!important}
+
+.vs-transport{
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  align-items:center!important;
+  gap:8px!important;
+}
+.vs-transport [data-play]{order:10}
+.vs-transport [data-pause]{order:20}
+.vs-transport [data-home], .vs-transport [data-rewind], .vs-transport [data-start]{order:30}
+.vs-transport [data-stop]{order:40}
+.vs-transport [data-solo-click]{order:50}
+.vs-transport [data-loop]{order:60}
+.vs-transport [data-snap-toggle], .vs-transport .vs-snap-toggle{order:70}
+.vs-transport-status{order:80;flex:1 1 auto;max-width:none!important}
+.vs-transport .vs-zoom, .vs-transport [data-zoom-controls]{order:90;margin-left:auto!important}
+
+/* ZLPlay 1.5.7 — ajuste exato do Transport conforme referência */
+.vs-metronome .vs-pan,
+.vs-metronome [data-metro-pan],
+.vs-metronome [data-metro-pan-label]{
+  display:none!important;
+}
+
+/*
+Transport:
+Play | Pause | Stop | Solo Click | Loop | Início | Ferradura | Status | ... | - 100% +
+*/
+.vs-transport{
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  align-items:center!important;
+  gap:8px!important;
+}
+.vs-transport [data-play]{order:10!important}
+.vs-transport [data-pause]{order:20!important}
+.vs-transport [data-stop]{order:30!important}
+.vs-transport [data-solo-click]{order:40!important}
+.vs-transport [data-loop]{order:50!important}
+
+/* botão de voltar ao início */
+.vs-transport [data-home],
+.vs-transport [data-rewind],
+.vs-transport [data-start],
+.vs-transport [data-back-start]{
+  order:60!important;
+}
+
+/* ferradura / snap */
+.vs-transport [data-snap-toggle],
+.vs-transport .vs-snap-toggle{
+  order:70!important;
+}
+
+/* status logo depois da ferradura e ocupando o espaço central */
+.vs-transport-status{
+  order:80!important;
+  flex:1 1 auto!important;
+  max-width:none!important;
+  min-width:0!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+
+/* zoom sempre no extremo direito */
+.vs-transport .vs-zoom,
+.vs-transport [data-zoom-controls]{
+  order:90!important;
+  margin-left:auto!important;
+  flex:0 0 auto!important;
+}
+
+/* barra/tempo de reprodução continuam fora do Transport */
+.vs-transport .vs-progress,
+.vs-transport [data-progress-wrap],
+.vs-transport progress,
+.vs-transport [data-progress],
+.vs-transport [data-time],
+.vs-transport .vs-time{
+  display:none!important;
+}
+
+/* ZLPlay 1.5.8 — DOM order is now authoritative */
+.vs-transport{
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  align-items:center!important;
+  gap:8px!important;
+}
+.vs-transport>[data-play],
+.vs-transport>[data-pause],
+.vs-transport>[data-stop],
+.vs-transport>[data-solo-click],
+.vs-transport>[data-loop-current],
+.vs-transport>[data-go-start],
+.vs-transport>[data-snap-toggle],
+.vs-transport>.vs-transport-status,
+.vs-transport>.vs-zoom-controls{
+  order:initial!important;
+}
+.vs-transport-status{
+  flex:1 1 auto!important;
+  min-width:0!important;
+  max-width:none!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.vs-zoom-controls{margin-left:auto!important;flex:0 0 auto!important}
+.vs-metronome .vs-metro-pan,
+.vs-metronome .vs-pan-control{display:none!important}
+
+/* ZLPlay 1.6.1 — progresso integrado à timeline, sem cobrir playhead/waveform */
+.vs-timeline-scroll .vs-timeline{
+  --played-pct:0%;
+  background-image:
+    linear-gradient(90deg,rgba(132,75,230,.24) 0,rgba(132,75,230,.24) var(--played-pct),transparent var(--played-pct),transparent 100%),
+    repeating-linear-gradient(90deg,transparent 0,transparent calc(var(--beat-width,4%) - 1px),#ffffff12 calc(var(--beat-width,4%) - 1px),#ffffff12 var(--beat-width,4%))!important;
+}
+.vs-timeline-playhead{position:absolute!important;display:block!important;opacity:1!important;z-index:8!important;pointer-events:none!important}
+.vs-timeline-waveform{z-index:2!important}
+.vs-timeline-ruler{z-index:3!important}
+
+/* ZLPlay 1.6.2 — seleção manual de tracks que acompanham o tom */
+.vs-pitch-option{display:flex!important;align-items:center;gap:8px;padding:7px 8px;border-bottom:1px solid #ffffff12;font-weight:800}
+.vs-pitch-option input{accent-color:#8b5cf6}
+
+/* ZLPlay 1.7.0 — Biblioteca */
+.zl-library-modal{position:fixed;inset:0;z-index:99999;background:#000a;display:grid;place-items:center;padding:20px}
+.zl-library-box{width:min(620px,96vw);max-height:82vh;overflow:auto;background:#11141d;border:1px solid #332b47;border-radius:14px;padding:16px;box-shadow:0 20px 70px #0008}
+.zl-library-head{display:flex;align-items:center;justify-content:space-between;font-size:18px}
+.zl-library-head button{font-size:22px;background:transparent;border:0}
+.zl-library-list{display:grid;gap:7px;margin:14px 0}
+.zl-library-row{display:grid;grid-template-columns:28px 30px 1fr auto;gap:7px;align-items:center;padding:10px;border:1px solid #ffffff14;border-radius:9px;background:#ffffff08;cursor:grab}
+.zl-library-row:active{cursor:grabbing}
+.zl-library-row small{opacity:.6}
+.zl-grip{opacity:.65}
+.zl-library-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+
+/* ZLPlay 1.7.2 — Biblioteca mais legível */
+.zl-library-box{width:min(760px,96vw)!important}
+.zl-library-row{
+  grid-template-columns:28px 34px minmax(0,1fr) auto!important;
+  min-height:48px;
+  padding:11px 12px!important;
+}
+.zl-library-row .zl-song-name{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:15px;
+  font-weight:700;
+}
+.zl-library-row.selected{
+  outline:2px solid #8b5cf6;
+  background:#8b5cf61f!important;
+}
+.vs-transport [data-library-order],
+.vs-transport [data-library-prev],
+.vs-transport [data-library-next]{
+  flex:0 0 auto;
+}
+.vs-transport [data-library-prev],
+.vs-transport [data-library-next]{
+  min-width:38px;
+  font-size:20px;
+  line-height:1;
+}
+
+/* ZLPlay 1.7.5 — escolha explícita: projeto ou repertório */
+.zl-openmode-modal{
+  position:fixed;inset:0;z-index:100000;background:#000a;
+  display:grid;place-items:center;padding:20px
+}
+.zl-openmode-box{
+  width:min(560px,95vw);background:#11141d;border:1px solid #3b3150;
+  border-radius:14px;padding:18px;box-shadow:0 22px 70px #0009
+}
+.zl-openmode-box>strong{display:block;font-size:18px;margin-bottom:8px}
+.zl-openmode-box>p{margin:0 0 16px;opacity:.78;line-height:1.45}
+.zl-openmode-actions{display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+.zl-openmode-actions button{
+  appearance:none;border:1px solid #665080;border-radius:9px;
+  background:#171322;color:#f7f2ff;padding:9px 14px;font:inherit;
+  font-weight:800;cursor:pointer
+}
+.zl-openmode-actions [data-individual],
+.zl-openmode-actions [data-library]{background:#6f38ca;border-color:#8f5de2}
+.zl-openmode-actions button:hover{filter:brightness(1.12)}
+
+/* ============================================================
+   ZLPlay 1.7.7 — Modais independentes do tema do navegador/OS
+   ============================================================ */
+.zl-library-modal,
+.zl-openmode-modal{
+  color-scheme:dark !important;
+  color:#f7f2ff !important;
+}
+
+.zl-library-box,
+.zl-openmode-box{
+  background:#11141d !important;
+  color:#f7f2ff !important;
+  border:1px solid #4b3b64 !important;
+}
+
+/* Todo texto comum dos modais recebe cor explícita. */
+.zl-library-box h1,
+.zl-library-box h2,
+.zl-library-box h3,
+.zl-library-box strong,
+.zl-library-box b,
+.zl-library-box span,
+.zl-library-box div,
+.zl-openmode-box h1,
+.zl-openmode-box h2,
+.zl-openmode-box h3,
+.zl-openmode-box strong,
+.zl-openmode-box b,
+.zl-openmode-box span,
+.zl-openmode-box div{
+  color:#f7f2ff;
+}
+
+.zl-library-box p,
+.zl-library-box small,
+.zl-openmode-box p,
+.zl-openmode-box small{
+  color:#bdb4cf !important;
+}
+
+.zl-library-row{
+  color:#f7f2ff !important;
+  background:#171b24 !important;
+  border-color:#303542 !important;
+}
+
+.zl-library-row:hover{
+  background:#1e2230 !important;
+  border-color:#57466e !important;
+}
+
+.zl-library-row.selected{
+  background:#241b3a !important;
+  border-color:#8b5cf6 !important;
+  outline:1px solid #8b5cf6 !important;
+}
+
+.zl-library-row .zl-grip,
+.zl-library-row b,
+.zl-library-row .zl-song-name{
+  color:#f7f2ff !important;
+}
+
+.zl-library-row small{
+  color:#9e94b3 !important;
+}
+
+/* Botões: mesma linguagem visual do seletor Projeto/Repertório. */
+.zl-library-box button,
+.zl-openmode-box button{
+  appearance:none !important;
+  -webkit-appearance:none !important;
+  border:1px solid #665080 !important;
+  border-radius:9px !important;
+  background:#171322 !important;
+  color:#f7f2ff !important;
+  min-height:38px;
+  padding:8px 15px !important;
+  font:inherit !important;
+  font-weight:800 !important;
+  line-height:1.15 !important;
+  cursor:pointer !important;
+  box-shadow:none !important;
+  text-shadow:none !important;
+  transition:background .12s ease,border-color .12s ease,transform .12s ease;
+}
+
+.zl-library-box button:hover,
+.zl-openmode-box button:hover{
+  background:#241a34 !important;
+  border-color:#8b5cf6 !important;
+}
+
+.zl-library-box button:active,
+.zl-openmode-box button:active{
+  transform:translateY(1px);
+}
+
+/* Ações principais dos dois modais. */
+.zl-library-box [data-open],
+.zl-openmode-box [data-individual],
+.zl-openmode-box [data-library]{
+  background:#7440d8 !important;
+  border-color:#9565e7 !important;
+  color:#fff !important;
+}
+
+.zl-library-box [data-open]:hover,
+.zl-openmode-box [data-individual]:hover,
+.zl-openmode-box [data-library]:hover{
+  background:#824be0 !important;
+}
+
+/* Área inferior da Biblioteca — evita os botões brancos nativos. */
+.zl-library-box > div:last-child{
+  color:#f7f2ff;
+}
+.zl-library-box > div:last-child button{
+  margin-left:6px;
+}
+
+/* Botão X/fechar também não herda preto do browser. */
+.zl-library-box [data-close],
+.zl-openmode-box [data-cancel]{
+  color:#f7f2ff !important;
+}
+
+/* ZLPlay 1.7.8.1 — ajustes pontuais */
+.vs-head-actions [data-mode]{display:none!important}
+
+/* Timeline alinhada ao mesmo limite lateral do card de Click/Metronomo. */
+.vs-timeline-scroll{
+  margin-left:0!important;
+  margin-right:0!important;
+  width:100%!important;
+}
+
+
+/* ZLPlay 1.7.8.5 — Pads nativos */
+.vs-pad-panel{
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-width:0;
+  padding-left:14px;
+}
+.vs-pad-panel>strong{
+  color:#d7c8f5;
+  font-size:.78rem;
+  white-space:nowrap;
+}
+.vs-pad-notes{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  min-width:0;
+}
+.vs-pad-note{
+  appearance:none;
+  border:1px solid #64517d;
+  border-radius:8px;
+  background:#15101f;
+  color:#ded5ed;
+  min-width:34px;
+  height:32px;
+  padding:0 7px;
+  font-size:.72rem;
+  font-weight:850;
+  cursor:pointer;
+  transition:.15s ease;
+}
+.vs-pad-note:hover{
+  border-color:#9a6ee6;
+  background:#20152f;
+}
+.vs-pad-note.selected{
+  background:#4f3479;
+  border-color:#9b74df;
+  color:#fff;
+  box-shadow:inset 0 0 0 1px #b397ee33;
+}
+.vs-pad-note.on{
+  background:#7542d8;
+  border-color:#b99bff;
+  color:#fff;
+  box-shadow:0 0 14px #7c3aed66,inset 0 0 0 1px #ffffff18;
+}
+.vs-pad-transport{
+  min-width:58px;
+  white-space:nowrap;
+}
+.vs-pad-transport.on{
+  background:#7542d8!important;
+  border-color:#a885ff!important;
+  color:#fff!important;
+  box-shadow:0 0 12px #7c3aed33;
+}
+
+/* Ordem exata solicitada:
+   Play | Pause | Stop | Solo Click | Loop | Início | Pad Play | Pad Stop | Ferradura */
+.vs-transport>[data-pad-play],
+.vs-transport>[data-pad-stop]{
+  order:initial!important;
+}
+
+@media(max-width:1050px){
+  .vs-metronome{
+    flex-wrap:wrap!important;
+    overflow:visible!important;
+  }
+  .vs-pad-panel{
+    width:100%;
+    margin-left:0;
+    padding-left:0;
+    padding-top:4px;
+    overflow-x:auto;
+  }
+  .vs-pad-notes{
+    flex-wrap:nowrap;
+  }
+}
+@media(max-width:760px){
+  .vs-pad-note{
+    min-width:36px;
+    flex:0 0 36px;
+  }
+  .vs-pad-transport{
+    min-width:52px;
+    padding-left:7px!important;
+    padding-right:7px!important;
+  }
+}
+
+.vs-channel-strip.is-pad{
+  background:linear-gradient(#2a2038,#17131e);
+}
+.vs-channel-strip.is-pad .vs-channel-group{
+  color:#b99bff;
+}
+
+/* ZLPlay 1.7.8.9 — Tap Tempo, Loop visual e refinamentos */
+.vs-tap-tempo{
+  appearance:none;
+  border:1px solid #5d5472;
+  border-radius:9px;
+  background:#181421;
+  color:#e8e2f2;
+  padding:7px 10px;
+  font-size:.75rem;
+  font-weight:850;
+  white-space:nowrap;
+  cursor:pointer;
+}
+.vs-tap-tempo:active{transform:translateY(1px);background:#2b2040}
+.vs-segment.looping{
+  outline:2px solid #4ade80!important;
+  outline-offset:-2px!important;
+  box-shadow:inset 0 -4px #22c55e,0 0 12px #22c55e2b!important;
+}
+.vs-segment.solo-click-region{
+  outline-color:#facc15!important;
+  box-shadow:inset 0 -4px #facc15,0 0 14px #facc1538!important;
+}
+
+
+/* ZLPlay 1.7.8.17 — contraste do play e pads maiores */
+.vs-transport [data-play]{
+  background:#211a2d;
+  border-color:#5f4f7d;
+  color:#efe9fb;
+  box-shadow:none;
+}
+.vs-transport [data-play]:hover{
+  background:#2b2239;
+  border-color:#7a64a0;
+}
+.vs-transport [data-play].is-playing{
+  background:#7545d6;
+  border-color:#a57cf2;
+  color:#fff;
+  box-shadow:0 0 0 2px rgba(255,255,255,.18),0 0 18px rgba(132,75,230,.7);
+}
+.vs-pad-panel{
+  gap:11px;
+}
+.vs-pad-panel>strong{
+  font-size:.82rem;
+}
+.vs-pad-notes{
+  gap:7px;
+}
+.vs-pad-note{
+  min-width:40px;
+  height:36px;
+  padding:0 9px;
+  font-size:.78rem;
+  border-radius:9px;
+}
+@media(max-width:760px){
+  .vs-pad-note{
+    min-width:42px;
+    flex:0 0 42px;
+    height:38px;
+    font-size:.8rem;
+  }
+}
+
+
+/* ZLPlay 1.7.8.18 — Transport responsivo no celular */
+@media(max-width:760px){
+  .vs-transport{
+    display:grid!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    flex-wrap:unset!important;
+    align-items:stretch!important;
+    gap:7px!important;
+    padding:9px!important;
+    overflow:hidden!important;
+  }
+  .vs-transport>*{
+    order:initial!important;
+    min-width:0!important;
+    margin-left:0!important;
+  }
+  .vs-transport>[data-play],
+  .vs-transport>[data-pause],
+  .vs-transport>[data-stop],
+  .vs-transport>[data-solo-click],
+  .vs-transport>[data-loop-current],
+  .vs-transport>[data-go-start],
+  .vs-transport>[data-pad-play],
+  .vs-transport>[data-pad-stop]{
+    width:100%!important;
+    min-width:0!important;
+    min-height:42px!important;
+    padding:8px 5px!important;
+    font-size:.76rem!important;
+    line-height:1.12!important;
+    white-space:normal!important;
+  }
+  .vs-transport>[data-snap-toggle]{
+    grid-column:1!important;
+    width:100%!important;
+    min-width:0!important;
+    height:42px!important;
+  }
+  .vs-transport>.vs-transport-status{
+    display:none!important;
+  }
+  .vs-transport>.vs-zoom-controls{
+    grid-column:2 / 5!important;
+    width:100%!important;
+    margin-left:0!important;
+    justify-content:center!important;
+    min-height:42px!important;
+  }
+  .vs-transport>.vs-zoom-controls .vs-btn{
+    min-width:42px!important;
+    min-height:42px!important;
+    padding:7px 9px!important;
+  }
+  .vs-transport>[data-library-prev]{
+    grid-column:1!important;
+  }
+  .vs-transport>[data-library-order]{
+    grid-column:2 / 4!important;
+  }
+  .vs-transport>[data-library-next]{
+    grid-column:4!important;
+  }
+  .vs-transport>[data-library-prev],
+  .vs-transport>[data-library-order],
+  .vs-transport>[data-library-next]{
+    width:100%!important;
+    min-width:0!important;
+    min-height:42px!important;
+    padding:8px 5px!important;
+    font-size:.76rem!important;
+  }
+}
+
+@media(max-width:420px){
+  .vs-transport{
+    gap:6px!important;
+    padding:8px!important;
+  }
+  .vs-transport>[data-play],
+  .vs-transport>[data-pause],
+  .vs-transport>[data-stop],
+  .vs-transport>[data-solo-click],
+  .vs-transport>[data-loop-current],
+  .vs-transport>[data-go-start],
+  .vs-transport>[data-pad-play],
+  .vs-transport>[data-pad-stop],
+  .vs-transport>[data-library-prev],
+  .vs-transport>[data-library-order],
+  .vs-transport>[data-library-next]{
+    font-size:.72rem!important;
+    padding-left:4px!important;
+    padding-right:4px!important;
+  }
+}
+
+
+/* ZLPlay 1.7.8.19 — Zoom movido para o card Click/Pad */
+.vs-pad-row{
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:12px;
+  min-width:0;
+  flex:0 0 auto;
+}
+.vs-pad-row .vs-pad-panel{
+  margin-left:0!important;
+  padding-left:0!important;
+  width:auto!important;
+}
+.vs-pad-row>.vs-zoom-controls{
+  margin-left:0!important;
+  flex:0 0 auto!important;
+  display:flex!important;
+  align-items:center;
+  gap:6px;
+}
+.vs-pad-row>.vs-zoom-controls .vs-btn{
+  min-width:38px;
+  min-height:36px;
+  padding:7px 9px;
+}
+.vs-pad-row>.vs-zoom-controls [data-zoom-label]{
+  min-width:46px;
+  text-align:center;
+}
+
+@media(max-width:1050px){
+  .vs-pad-row{
+    flex:1 0 100%;
+    width:100%;
+    margin-left:0;
+    justify-content:space-between;
+    gap:12px;
+    padding-top:4px;
+  }
+  .vs-pad-row .vs-pad-panel{
+    flex:1 1 auto;
+    min-width:0;
+    overflow-x:auto;
+    padding-top:0!important;
+  }
+  .vs-pad-row>.vs-zoom-controls{
+    flex:0 0 auto!important;
+    justify-content:flex-end!important;
+  }
+}
+
+@media(max-width:760px){
+  .vs-pad-row{
+    gap:8px;
+  }
+  .vs-pad-row>.vs-zoom-controls .vs-btn{
+    min-width:42px!important;
+    min-height:42px!important;
+    padding:7px 8px!important;
+  }
+  .vs-pad-row>.vs-zoom-controls [data-zoom-label]{
+    min-width:44px;
+    font-size:.74rem;
+  }
+}
+\n\n/* ZLPlay 1.7.8.20 — status movido para o cabeçalho das regiões */\n.vs-regions>.vs-transport-status{\n  display:block!important;\n  position:absolute!important;\n  left:88px!important;\n  right:12px!important;\n  top:2px!important;\n  width:auto!important;\n  max-width:none!important;\n  min-width:0!important;\n  height:18px;\n  margin:0!important;\n  padding:0!important;\n  color:#9ca5b6;\n  font-size:.62rem;\n  font-weight:600;\n  line-height:18px;\n  white-space:nowrap!important;\n  overflow:hidden!important;\n  text-overflow:ellipsis!important;\n  pointer-events:none;\n  z-index:6;\n}\n@media(max-width:760px){\n  .vs-regions>.vs-transport-status{\n    left:78px!important;\n    right:8px!important;\n    font-size:.58rem;\n  }\n}\n
+
+/* ZLPlay 1.7.8.21 — REGIÕES + status na mesma linha real */
+.vs-regions::before,
+.vs-timeline-scroll .vs-regions::before{
+  content:none!important;
+  display:none!important;
+}
+.vs-regions-head{
+  position:absolute;
+  left:10px;
+  right:10px;
+  top:2px;
+  height:18px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+  z-index:7;
+  pointer-events:none;
+}
+.vs-regions-label{
+  flex:0 0 auto;
+  color:#7f899b;
+  font-size:.58rem;
+  font-weight:800;
+  letter-spacing:.12em;
+  line-height:18px;
+  white-space:nowrap;
+}
+.vs-regions-head>.vs-transport-status{
+  position:static!important;
+  display:block!important;
+  flex:1 1 auto!important;
+  width:auto!important;
+  max-width:none!important;
+  min-width:0!important;
+  height:18px!important;
+  margin:0!important;
+  padding:0!important;
+  color:#9ca5b6;
+  font-size:.62rem;
+  font-weight:600;
+  line-height:18px!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  pointer-events:none;
+}
+@media(max-width:760px){
+  .vs-regions-head{
+    left:8px;
+    right:8px;
+    gap:8px;
+  }
+  .vs-regions-head>.vs-transport-status{
+    font-size:.58rem;
+  }
+}
+
+
+/* ZLPlay 1.7.8.22 — MIDI / teclado mapping */
+.vs-head-actions [data-control-map].on{
+  background:#5b36a6;
+  border-color:#b894ff;
+  color:#fff;
+  box-shadow:0 0 14px #7c3aed55;
+}
+.vs-control-mapping .vs-map-eligible{
+  outline:2px solid #f0a23b!important;
+  outline-offset:2px!important;
+  box-shadow:0 0 0 1px #f0a23b33,0 0 12px #f0a23b22!important;
+  cursor:crosshair!important;
+}
+.vs-control-mapping .vs-map-bound{
+  outline-color:#54d98c!important;
+  box-shadow:0 0 0 1px #54d98c44,0 0 13px #54d98c2b!important;
+}
+.vs-control-mapping .vs-map-awaiting{
+  outline-color:#b58cff!important;
+  box-shadow:0 0 0 2px #b58cff55,0 0 22px #8b5cf688!important;
+  animation:vs-map-pulse .85s ease-in-out infinite alternate;
+}
+.vs-control-mapping input[type="range"].vs-map-eligible{
+  border-radius:8px;
+}
+@keyframes vs-map-pulse{from{filter:brightness(1)}to{filter:brightness(1.4)}}
+@media(max-width:650px){
+  .vs-head-actions{flex-direction:row!important;flex-wrap:wrap;align-items:center!important;justify-content:flex-end;gap:6px!important}
+  .vs-head-actions .vs-mode{padding:6px 8px}
+}
+
+
+/* ZLPlay 1.7.8.24 — botão Apoiar */
+.vs-brand{
+  min-width:0;
+}
+.vs-brand-line{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+}
+.vs-brand-line h2{
+  margin:0!important;
+  flex:0 0 auto;
+}
+.vs-support-btn{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:32px;
+  padding:6px 14px;
+  border:1px solid rgba(190,151,255,.58);
+  border-radius:10px;
+  overflow:hidden;
+  background:linear-gradient(135deg,#6f3fd4 0%,#8b5cf6 52%,#7444d8 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.16),
+    0 6px 18px rgba(90,53,170,.22);
+  color:#fff;
+  font-size:.76rem;
+  font-weight:850;
+  line-height:1;
+  letter-spacing:.01em;
+  text-decoration:none;
+  white-space:nowrap;
+  cursor:pointer;
+  transition:
+    transform .16s ease,
+    filter .16s ease,
+    border-color .16s ease,
+    box-shadow .16s ease;
+}
+.vs-support-btn::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(110deg,transparent 20%,rgba(255,255,255,.13) 48%,transparent 72%);
+  transform:translateX(-120%);
+  transition:transform .42s ease;
+  pointer-events:none;
+}
+.vs-support-btn:hover{
+  transform:translateY(-1px);
+  filter:brightness(1.08);
+  border-color:rgba(213,188,255,.85);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.2),
+    0 8px 22px rgba(111,63,212,.30);
+}
+.vs-support-btn:hover::after{
+  transform:translateX(120%);
+}
+.vs-support-btn:active{
+  transform:translateY(0);
+  filter:brightness(.98);
+}
+.vs-support-btn:focus-visible{
+  outline:2px solid #c4a7ff;
+  outline-offset:3px;
+}
+
+@media(max-width:650px){
+  .vs-brand-line{
+    gap:9px;
+  }
+  .vs-support-btn{
+    min-height:30px;
+    padding:6px 11px;
+    border-radius:9px;
+    font-size:.70rem;
+  }
+}
+@media(max-width:420px){
+  .vs-head{
+    gap:10px;
+  }
+  .vs-brand-line{
+    gap:7px;
+  }
+  .vs-brand-line h2{
+    font-size:1.25rem!important;
+  }
+  .vs-support-btn{
+    min-height:28px;
+    padding:5px 9px;
+    font-size:.66rem;
+  }
+}
+
+
+/* ZLPlay 1.7.8.26 — Apoiar alinhado ao título */
+.vs-brand-line{
+  align-items:center;
+}
+.vs-brand-line h2{
+  line-height:34px!important;
+}
+.vs-support-btn{
+  height:34px;
+  min-height:34px;
+  box-sizing:border-box;
+  padding:0 14px;
+  gap:6px;
+}
+
+@media(max-width:650px){
+  .vs-brand-line h2{
+    line-height:30px!important;
+  }
+  .vs-support-btn{
+    height:30px;
+    min-height:30px;
+    padding:0 11px;
+  }
+}
+
+@media(max-width:420px){
+  .vs-brand-line h2{
+    line-height:28px!important;
+  }
+  .vs-support-btn{
+    height:28px;
+    min-height:28px;
+    padding:0 9px;
+  }
+}
+
+
+/* ZLPlay 1.7.8.28 — backup dos mapeamentos */
+.vs-map-actions{
+  display:none;
+  align-items:center;
+  gap:6px;
+  flex-wrap:wrap;
+}
+.vs-control-mapping .vs-map-actions{
+  display:inline-flex;
+}
+.vs-map-actions [data-map-import],
+.vs-map-actions [data-map-export]{
+  border-color:#6c86b7;
+  background:#172137;
+  color:#dce9ff;
+}
+.vs-map-actions [data-map-clear]{
+  border-color:#7e5d69;
+  background:#291b23;
+  color:#f2dce5;
+}
+@media(max-width:650px){
+  .vs-control-mapping .vs-map-actions{
+    width:100%;
+    justify-content:flex-end;
+  }
+  .vs-map-actions .vs-mode{
+    min-height:30px;
+  }
+}
+@media(max-width:420px){
+  .vs-map-actions{
+    gap:5px;
+  }
+  .vs-map-actions .vs-mode{
+    padding:5px 7px!important;
+    font-size:.68rem;
+  }
+}
+
+.zl-library-rpp{grid-column:3 / -1;display:grid;gap:5px;min-width:0;font-size:12px;color:#bcb5cd;cursor:default}
+.zl-library-rpp select{width:100%;min-width:0;max-width:100%;font-size:13px}
+
+/* Compact desktop layout: song, transport/pad, timeline, click/mixer. */
+.vs-compact-layout .vs-project{margin-top:12px}
+.vs-compact-layout .vs-title-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 8px;padding:8px 10px;border:1px solid #ffffff18;border-radius:12px;background:#10101d}
+.vs-compact-layout .vs-title-row>div:first-child{flex:1 1 320px;min-width:0}
+.vs-compact-layout .vs-title{font-size:1rem}
+.vs-compact-layout .vs-meta .vs-pill{font-size:.67rem;padding:3px 6px}
+.vs-compact-layout .vs-library-navigation{display:flex;gap:6px;align-items:center}
+.vs-compact-layout .vs-library-navigation button{padding:8px 11px;white-space:nowrap}
+.vs-compact-layout .vs-key{padding:5px 7px;gap:7px;margin-left:auto;flex-wrap:nowrap}
+.vs-compact-layout .vs-key label{white-space:nowrap}
+.vs-compact-layout .vs-project-actions{margin-left:auto;align-items:center}
+.vs-compact-layout .vs-performance-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 10px;border:1px solid #ffffff18;border-radius:12px;background:#0d0e16;margin:0 0 8px}
+.vs-compact-layout .vs-performance-bar .vs-transport{position:static;flex:0 1 auto;flex-wrap:wrap!important;margin:0;padding:0;border:0;background:none;box-shadow:none;backdrop-filter:none;gap:6px!important;max-width:100%;width:auto}
+.vs-compact-layout .vs-transport .vs-btn{padding:8px 10px;font-size:.76rem;min-height:34px}
+.vs-compact-layout .vs-transport-status{display:none!important}
+.vs-compact-layout .vs-pad-row{display:flex;flex:0 1 auto;align-items:center;justify-content:flex-end;gap:8px;margin-left:auto;max-width:100%;flex-wrap:wrap}
+.vs-compact-layout .vs-pad-panel{gap:6px}
+.vs-compact-layout .vs-pad-notes{gap:4px;flex-wrap:wrap}
+.vs-compact-layout .vs-pad-note{min-width:30px;padding:7px 8px;font-size:.72rem}
+.vs-compact-layout .vs-zoom-controls{gap:5px}
+.vs-compact-layout .vs-zoom-controls button{padding:7px 9px;min-height:32px}
+.vs-compact-layout .vs-mixer-tools{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:8px 0}
+.vs-compact-layout .vs-mixer-tools>.vs-metronome{display:flex;flex:0 1 auto;flex-wrap:wrap;gap:7px;align-items:center;width:auto;max-width:100%;margin:0;padding:6px 8px;border:1px solid #383049;border-radius:10px;background:#111321}
+.vs-compact-layout .vs-mixer-actions{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.vs-compact-layout .vs-metronome select{padding:6px;font-size:.73rem}
+.vs-compact-layout .vs-metronome label{font-size:.74rem}
+.vs-compact-layout .vs-bpm-edit input{width:58px}
+.vs-compact-layout .vs-bpm-edit{padding:4px 6px}
+.vs-compact-layout .vs-accent-group{gap:6px}
+#zosma-vs-study.vs-compact-layout:fullscreen .vs-project-actions{display:none!important}
+#zosma-vs-study.vs-compact-layout:fullscreen .vs-project{margin-top:0}
+@media(max-width:1100px){.vs-compact-layout .vs-key{margin-left:0}.vs-compact-layout .vs-pad-row{justify-content:flex-start}.vs-compact-layout .vs-title-row>div:first-child{flex-basis:100%}}
+.vs-compact-layout .vs-head{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px}
+.vs-compact-layout .vs-head h2{font-size:1.35rem;margin:0}
+.vs-compact-layout .vs-head-main{align-items:center;flex:0 0 auto}
+.vs-compact-layout .vs-head-main p{display:none}
+.vs-compact-layout .vs-head .vs-actions{display:flex;flex:1 1 500px;width:auto;gap:6px;margin:0}
+.vs-compact-layout .vs-head .vs-actions>.vs-btn{padding:8px 10px;font-size:.75rem}
+.vs-compact-layout .vs-head .vs-head-actions{flex-wrap:wrap;gap:6px}
+.vs-compact-layout .vs-status{margin-top:6px;padding:6px 10px;font-size:.75rem}
+@media(max-width:1100px){.vs-compact-layout .vs-head .vs-actions{order:2;flex-basis:100%}.vs-compact-layout .vs-head-actions{margin-left:auto}}
+
+/* Notebook height: remove unused outer bands and keep useful fader travel. */
+#zosma-vs-study.vs-compact-layout{padding-top:0;padding-bottom:0;box-sizing:border-box}
+.vs-compact-layout{--vs-fader-height:clamp(80px,calc(24vh - 90px),120px)}
+.vs-compact-layout .vs-card{padding-bottom:8px}
+.vs-compact-layout .vs-channel-strip{min-height:0;grid-template-rows:26px 48px minmax(0,1fr) 20px 34px 32px 23px}
+.vs-compact-layout .vs-channel-fader-wrap{height:calc(var(--vs-fader-height) + 8px)}
+.vs-compact-layout .vs-channel-fader{height:var(--vs-fader-height)}
+.vs-compact-layout .vs-master-fader-wrap{height:calc(var(--vs-fader-height) + 38px)}
+.vs-compact-layout .vs-master-strip .vs-channel-fader{height:calc(var(--vs-fader-height) + 30px)}
+.vs-compact-layout .vs-warning:empty{display:none}
+#zosma-vs-study.vs-compact-layout:fullscreen .vs-card{padding-top:6px}
+@media(max-height:800px){
+  .vs-compact-layout .vs-timeline-scroll{padding-top:8px!important;padding-bottom:8px!important;margin-top:8px!important;margin-bottom:8px!important}
+  .vs-compact-layout .vs-timeline-scroll .vs-timeline{min-height:94px}
+  .vs-compact-layout .vs-timeline-waveform{height:58px}
+}
+.vs-compact-layout .vs-study{padding-top:0;padding-bottom:0}
+@media(max-height:800px){
+  .vs-compact-layout .vs-channel-strip{grid-template-rows:24px 44px minmax(0,1fr) 18px 32px 28px 20px;padding-top:4px}
+  .vs-compact-layout .vs-mixer-tools{margin:6px 0}
+  .vs-compact-layout .vs-master-strip{gap:7px}
+}
+.vs-compact-layout .vs-add-channel{min-height:0}
+@media(max-height:800px){
+  .vs-compact-layout .vs-timeline-scroll .vs-regions{min-height:72px}
+  .vs-compact-layout .vs-timeline-scroll .vs-regions .vs-segment{top:24px;height:40px}
+  .vs-compact-layout .vs-timeline-scroll .vs-timeline{min-height:74px}
+  .vs-compact-layout .vs-timeline-waveform{height:42px}
+}
+.zl-audio-modal{position:fixed;inset:0;z-index:20000;background:#000a;display:grid;place-items:center;padding:14px;color:#f5f0ff;font-family:Inter,system-ui,sans-serif}
+.zl-audio-box{width:min(760px,96vw);max-height:90vh;overflow:auto;box-sizing:border-box;background:#11131d;border:1px solid #665081;border-radius:16px;padding:18px;box-shadow:0 20px 80px #0009}
+.zl-audio-box header{display:flex;align-items:center;justify-content:space-between;font-size:1.1rem}
+.zl-audio-box p{font-size:.8rem;color:#b7afc7;line-height:1.5}
+.zl-audio-box label{display:grid;gap:5px;font-size:.76rem;color:#bcb3ce;margin:10px 0}
+.zl-audio-box select,.zl-audio-box button{border:1px solid #594768;border-radius:8px;background:#1c172b;color:#f5f0ff;padding:8px;min-width:0}
+.zl-audio-box button{cursor:pointer;font-weight:700}.zl-audio-box button:disabled{opacity:.4;cursor:default}
+.zl-audio-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}.zl-audio-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.zl-audio-route{display:grid;grid-template-columns:minmax(100px,1fr) minmax(140px,2fr);gap:12px;align-items:center;border-top:1px solid #ffffff10;font-size:.8rem}
+.zl-audio-route label{min-width:0}.vs-channel-top{gap:4px}.vs-audio-fullscreen{display:none}
+#zosma-vs-study:fullscreen .vs-audio-fullscreen{display:block}
+/* ZLPlay 2: compact project toolbar, setup and ordered mixer. */
+.zl-toolbar-open{display:inline-flex;align-items:center;gap:8px;background:#131422!important;border:1px solid #39314e!important;border-radius:10px!important;white-space:nowrap}
+.zl-toolbar-open svg{height:19px;width:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.vs-compact-layout .vs-head h2{font-family:Inter,system-ui,sans-serif;font-weight:850;letter-spacing:-.04em}
+.vs-compact-layout .vs-mix-scope{border-color:#6d429d!important}
+.vs-compact-layout .vs-scope-title{color:#bca3e5!important}
+.vs-compact-layout .vs-mixer-bank{border-color:#383049}
+.vs-compact-layout .vs-channel-fader{accent-color:#a47af3}
+.vs-arrangement-fullscreen{display:none}
+#zosma-vs-study:fullscreen .vs-arrangement-fullscreen{display:block}
+.zl-audio-modal:not(.zl-arrangement-modal) .zl-audio-box{width:min(1220px,97vw);max-height:96vh}
+.zl-settings-tabs{display:flex;gap:8px;margin-top:14px;padding-bottom:8px;border-bottom:1px solid #ffffff16}
+.zl-settings-tabs button:focus,.zl-settings-tabs button:hover{background:#56309b}
+.zl-settings-grid{display:grid;grid-template-columns:minmax(240px,.8fr) minmax(350px,1.6fr);gap:14px;align-items:start}
+.zl-settings-device,.zl-audio-routing{padding:12px;border:1px solid #3b2f52;border-radius:10px;background:#0e101a;min-width:0}
+.zl-settings-grid h3{margin:0 0 12px;font-size:1rem}
+.zl-audio-routing>p{margin:4px 0 8px}
+.zl-audio-route{grid-template-columns:minmax(100px,1fr) minmax(180px,1.6fr);gap:8px}
+.zl-audio-route label{font-size:0;margin:5px 0}
+.zl-audio-route select{font-size:.75rem;width:100%;padding:7px}
+.zl-route-group{border:1px solid #3c3151;border-radius:8px;margin:8px 0;padding:6px}
+.zl-route-group summary{cursor:pointer;font-weight:750;font-size:.85rem}
+.zl-route-group summary .zl-audio-route{border:0}
+.zl-route-group>.zl-audio-route{margin-left:18px}
+.zl-control-row{display:grid;grid-template-columns:1fr 1fr auto auto;align-items:center;gap:12px;border-bottom:1px solid #ffffff15;padding:10px 0;font-size:.8rem}
+.zl-audio-box [hidden]{display:none!important}
+.zl-arrangement-options{display:flex;align-items:center;gap:20px}
+.zl-arrangement-options label{display:flex;align-items:center;gap:8px}
+.zl-arrangement-list{padding-left:25px;font-size:.85rem}
+.zl-arrangement-list li{padding:8px 0;border-bottom:1px solid #ffffff17}
+.zl-arrangement-list li button{float:right;padding:4px 8px;font-size:.7rem}
+.zl-arrangement-list li::after{content:'';display:block;clear:both}
+.zl-auto-next{color:#c6a5ff;font-weight:800}
+@media(max-width:850px){.zl-settings-grid{grid-template-columns:1fr}.zl-control-row{grid-template-columns:1fr auto}.zl-audio-route{grid-template-columns:minmax(80px,1fr) minmax(140px,1.6fr)}}
+.vs-compact-layout,.vs-compact-layout button,.vs-compact-layout select,.vs-compact-layout input,.vs-compact-layout label{font-family:Inter,system-ui,-apple-system,'Segoe UI',sans-serif!important}
+.zl-audio-modal,.zl-audio-modal *{font-family:Inter,system-ui,-apple-system,'Segoe UI',sans-serif!important}
+.zl-audio-routing{max-height:calc(96vh - 176px);overflow-y:auto;box-sizing:border-box}
+.zl-audio-route select{padding:5px 7px}
+.zl-audio-route label{margin:3px 0}
+.zl-route-group summary .zl-audio-route{display:inline-grid;width:calc(100% - 18px);vertical-align:middle}
+.zl-route-heading{margin:14px 0 6px;font-size:.67rem;text-transform:uppercase;letter-spacing:.09em;color:#c6b8de}
+.zl-route-group{margin:5px 0;padding:3px 6px}
+@media(max-width:850px){.zl-audio-routing{max-height:none;overflow:visible}}
+.zl-playback-clock{font-variant-numeric:tabular-nums;color:#c6dcf5!important;background:#1b304344!important;white-space:nowrap}
+.zl-arrangement-indicator{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c5a3ff;font-size:.66rem;font-weight:700;line-height:18px}
+.zl-arrangement-indicator[data-state=armed]{color:#73ddff}
+.zl-arrangement-indicator[data-state=invalid]{color:#ffc079}
+.zl-arrangement-indicator[data-state=disabled],.zl-arrangement-indicator[data-state=done]{color:#a5a0b4}
+.zl-arrangement-indicator[hidden]{display:none}
+.vs-regions-head:has(.zl-arrangement-indicator:not([hidden]))>.vs-transport-status{display:none!important}
+.vs-compact-layout .zl-support-project{background:transparent!important;color:#c7b7df!important;border:1px solid #4a3b60!important;padding:7px 9px!important;font-size:.72rem!important;white-space:nowrap;box-shadow:none!important}
+#zosma-vs-study:fullscreen .zl-support-project{display:none!important}
+
+.zl-pad-folder{border-top:1px solid #44345e;margin-top:16px;padding:12px 0}.zl-pad-folder p{overflow-wrap:anywhere}.zl-pad-folder [data-pad-help]{border-radius:50%;min-width:28px;margin-left:8px}.zl-pad-folder [data-pad-instructions]{background:#191525;padding:12px;border-radius:8px}
+
+/* Fullscreen uses the complete viewport and reserves the mixer scrollbar. */
+#zosma-vs-study.vs-compact-layout:fullscreen{height:100dvh!important;min-height:0!important;overflow:hidden!important;padding:0!important}
+#zosma-vs-study:fullscreen>.vs-study{height:100%;min-height:0!important;padding:0!important;box-sizing:border-box}
+#zosma-vs-study:fullscreen .vs-card{height:100%;min-height:0;display:flex;flex-direction:column;box-sizing:border-box;padding-bottom:6px!important}
+#zosma-vs-study:fullscreen .vs-project.active{display:flex!important;flex-direction:column;flex:1;min-height:0;margin-top:0}
+#zosma-vs-study:fullscreen .vs-project.active> *{flex-shrink:0}
+#zosma-vs-study:fullscreen .vs-mixer-tools{margin-top:auto!important;padding-top:8px}
+#zosma-vs-study:fullscreen .vs-mixer-body{min-height:0}
+#zosma-vs-study:fullscreen .vs-mixer-scroll{box-sizing:border-box;padding-bottom:2px;overflow-y:hidden}
+#zosma-vs-study:fullscreen .vs-warning{margin-top:4px;font-size:.7rem}
+#zosma-vs-study:fullscreen .vs-timeline-scroll{flex-shrink:0}
+#zosma-vs-study:fullscreen{--vs-fader-height:var(--zl-fullscreen-fader,100px)}
+#zosma-vs-study:fullscreen .vs-timeline-scroll .vs-timeline{min-height:var(--zl-fullscreen-wave,74px)!important}
+
+/* Dark, draggable scrollbars for the player and setup dialogs. */
+html{scrollbar-color:#655279 #14121e;scrollbar-width:thin}
+#zosma-vs-study *, .zl-audio-modal *{scrollbar-color:#655279 #14121e;scrollbar-width:thin}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:#14121e;border-radius:8px}
+::-webkit-scrollbar-thumb{background:#655279;border:2px solid #14121e;border-radius:8px;min-width:36px;min-height:36px}
+::-webkit-scrollbar-thumb:hover{background:#a47af3}
+::-webkit-scrollbar-thumb:active{background:#bc9bff}
+::-webkit-scrollbar-corner{background:#14121e}
+
+#zosma-vs-study:fullscreen .vs-timeline-waveform{height:clamp(26px,calc(var(--zl-fullscreen-wave,104px) - 32px),72px)}
+@media(max-height:760px){
+#zosma-vs-study:fullscreen .vs-timeline-scroll{padding-top:6px!important;padding-bottom:6px!important;margin-top:6px!important;margin-bottom:6px!important}
+#zosma-vs-study:fullscreen .vs-timeline-scroll .vs-regions{min-height:62px}
+#zosma-vs-study:fullscreen .vs-timeline-scroll .vs-regions .vs-segment{top:20px;height:36px}
+}
+@supports selector(::-webkit-scrollbar){html,#zosma-vs-study *,.zl-audio-modal *{scrollbar-color:auto;scrollbar-width:auto}}
+
+/* 2.1: one mixer card, flexible waveform and visible real stereo meters. */
+.zl-mixer-card{border:1px solid #393147;background:#0b0d15;border-radius:14px;padding:10px 12px;box-sizing:border-box;min-width:0;overflow:hidden;margin-top:12px}
+.zl-mixer-card .vs-mixer-tools{margin:0 0 8px!important;padding:0!important}
+.zl-mixer-card .vs-mixer-scroll{padding:0 0 4px;min-width:0;box-sizing:border-box}
+.zl-mixer-card .vs-mixer-body{min-width:0}
+.zl-execution-tempo{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:6px}
+.zl-execution-tempo .vs-bpm{display:flex;align-items:center;gap:4px}.zl-execution-tempo .vs-switch{font-size:.67rem}
+.vs-compact-layout .vs-performance-bar{flex-wrap:wrap}.vs-compact-layout .vs-transport{flex-wrap:wrap;display:flex!important}
+.zl-click-settings{border:1px solid #3b2f52;border-radius:10px;padding:12px;margin-top:12px}.zl-click-settings .vs-metronome{display:flex;flex-wrap:wrap;gap:10px}
+.vs-channel-fader-wrap,.vs-master-fader-wrap{position:relative}
+.zl-meter{position:absolute;right:8px;top:4px;bottom:4px;width:10px;display:flex;align-items:flex-end;gap:2px;background:#10151c;pointer-events:none;border-radius:2px;overflow:hidden}
+.zl-meter i{display:block;width:4px;height:0;max-height:100%;background:linear-gradient(to top,#35be8d 0%,#42d99b 65%,#e6c55a 86%,#ef6776 100%);transition:height .08s linear}.zl-meter i.clipping{background:#ff455d}
+.zl-fx-button{padding:3px 6px!important;font-size:.65rem!important;min-height:0!important}.vs-master-strip>.zl-fx-button{align-self:center}
+.zl-fx-bands{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.zl-fx-bands fieldset{border:1px solid #493b62;border-radius:8px;min-width:0}.zl-fx-modal svg{width:100%;height:120px;background:#0b0d18;border-radius:8px}.zl-inline{display:flex!important;align-items:center;gap:8px}.zl-fx-modal input{max-width:100%;box-sizing:border-box}.zl-fx-modal input[type=number]{background:#161321;border:1px solid #5b486e;color:#eee;padding:5px;width:100%}
+.zl-pending-wave{position:absolute;top:0;bottom:0;box-sizing:border-box;border:2px solid #73ddff;background:#73ddff16;box-shadow:inset 0 0 18px #73ddff38;pointer-events:none;z-index:4;animation:zl-wave-pulse 1s ease-in-out infinite alternate}.zl-pending-wave[hidden]{display:none}
+@keyframes zl-wave-pulse{to{background:#73ddff35;box-shadow:inset 0 0 24px #73ddff60}}@media(prefers-reduced-motion:reduce){.zl-pending-wave{animation:none}}
+#zosma-vs-study:fullscreen .zl-mixer-card{flex:0 0 auto;margin-top:10px}
+#zosma-vs-study:fullscreen .vs-timeline-scroll{flex:1 1 auto!important;min-height:135px;height:auto!important;display:flex;flex-direction:column;box-sizing:border-box}
+#zosma-vs-study:fullscreen .vs-timeline-content{height:100%;min-height:0;display:flex;flex-direction:column;flex:1 0 auto}
+#zosma-vs-study:fullscreen .vs-timeline-scroll .vs-regions{flex:0 0 auto}
+#zosma-vs-study:fullscreen .vs-timeline-scroll .vs-timeline{flex:1;min-height:50px!important;margin-top:5px!important;margin-bottom:0!important}
+#zosma-vs-study:fullscreen .vs-timeline-waveform{height:calc(100% - 26px)!important;bottom:2px!important}
+#zosma-vs-study:fullscreen .vs-mixer-tools{margin-top:0!important}
+@media(max-height:800px){#zosma-vs-study:fullscreen .zl-mixer-card{padding:6px 8px;margin-top:6px}#zosma-vs-study:fullscreen .vs-title-row{margin-bottom:6px}#zosma-vs-study:fullscreen .vs-performance-bar{padding-top:5px;padding-bottom:5px}.zl-execution-tempo .vs-switch{font-size:.6rem}}
+@media(max-width:850px){.zl-fx-bands{grid-template-columns:repeat(2,1fr)}}
+
+.vs-master-fader-wrap{width:100%;min-width:50px}.vs-master-fader-wrap>.vs-channel-fader{min-height:100%;grid-area:1/1;flex-shrink:0}.zl-fx-button{background:#211a31;color:#e7dcff;border:1px solid #6d5a91;border-radius:6px;cursor:pointer}
+
+@media(max-height:760px){
+#zosma-vs-study:fullscreen .vs-timeline-scroll{min-height:100px}
+#zosma-vs-study:fullscreen .vs-timeline-scroll .vs-regions{min-height:52px}
+#zosma-vs-study:fullscreen .vs-timeline-scroll .vs-regions .vs-segment{top:20px;height:30px}
+#zosma-vs-study:fullscreen .vs-timeline-scroll .vs-timeline{min-height:40px!important}
+}
+
+.vs-compact-layout .vs-head{flex-wrap:wrap;gap:8px}.vs-compact-layout .vs-head>.vs-actions{flex:1 1 auto;flex-wrap:wrap;min-width:0}.vs-compact-layout .vs-head-actions{flex-wrap:wrap;margin-left:auto}
+
+/* 2.1.1: approved usability fixes, preserving the existing layout. */
+.zl-settings-left{display:flex;flex-direction:column;gap:12px;min-width:0}
+.zl-open-split{display:inline-flex;align-items:stretch;gap:0}.zl-open-split>button:first-child{border-top-right-radius:0!important;border-bottom-right-radius:0!important}.zl-open-split>.zl-open-more{border-top-left-radius:0!important;border-bottom-left-radius:0!important;padding-left:7px!important;padding-right:7px!important;border-left:0!important}
+.zl-settings-left .zl-click-settings{margin:0;background:#0e101a}
+.zl-click-settings .vs-metronome{margin:0!important;padding:0!important;border:0!important;background:transparent!important;align-items:center}
+.zl-click-settings .vs-click-source-control{flex:1 1 100%}
+.zl-click-settings .vs-accent-group{display:flex;flex-wrap:wrap;gap:8px}
+.zl-wave-zoom{margin-left:auto;flex:0 0 auto;color:#d8caff;font-size:.7rem;font-weight:700;padding:0 5px}
+.vs-regions-head>.vs-transport-status,.vs-regions-head>.zl-arrangement-indicator{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.zl-small-dialog{max-width:440px!important;display:flex;flex-direction:column;gap:14px}
+.zl-small-dialog input{box-sizing:border-box;width:100%;background:#171321;color:#eee;border:1px solid #655279;border-radius:6px;padding:10px;margin-top:8px}
+.zl-small-dialog footer{display:flex;justify-content:flex-end;gap:8px}.zl-small-dialog [data-error]{color:#f6a3ad;margin:0}
+.zl-order-handle{cursor:grab;touch-action:pan-y}.zl-order-handle:active{cursor:grabbing}.zl-order-handle:focus-visible{outline:2px solid #b38aff;outline-offset:-2px}
+.zl-drop-before{box-shadow:inset 3px 0 #9fdbff!important}.zl-drop-after{box-shadow:inset -3px 0 #9fdbff!important}
+.zl-fx-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:12px 0}.zl-fx-modal output{display:block;color:#cbb4f6;font-variant-numeric:tabular-nums;font-size:.8rem;min-height:1.3em}
+.zl-fx-modal input[type=range]{width:100%;accent-color:#a67bef}.zl-fx-modal svg{height:150px}
+@media(max-width:650px){.zl-fx-filters{grid-template-columns:1fr}}
+.vs-compact-layout .vs-master-strip{align-self:flex-start;margin-top:0!important;margin-bottom:0!important;border-top:3px solid #a77bf3;box-sizing:border-box;overflow:hidden}
