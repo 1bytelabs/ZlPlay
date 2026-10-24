@@ -62,7 +62,7 @@ public:
     double jumpBoundary=0,jumpTarget=0;std::string jumpId;
     double sampleRate=44100,duration=0,inputPosition=0,audiblePosition=0;
     double loopStart=0,loopEnd=0;
-    std::atomic<bool> loopEnabled{false}; bool configured=false,deviceOpen=false;
+    std::atomic<bool> loopEnabled{false}; bool configured=false,deviceOpen=false,offlineRendering=false;
     bool click=false,accent=false; int meter=4,accentPosition=0;
     float clickGain=.5f,clickPan=0;
     int clickLeft=maxOutputs,clickRight=maxOutputs+1;
@@ -190,7 +190,8 @@ public:
         std::lock_guard<std::mutex> lock(renderMutex);
         configured=false; tracks.clear();groups.clear();jumpEnabled=false;jumpId.clear();playedJumpSerial=0;renderedJumpSerial=0;
         double preferred=num(request,"sampleRate",44100);
-        if(bool(request["offline"])) sampleRate=preferred; else ensureDevice(preferred);
+        offlineRendering=bool(request["offline"]);
+        if(offlineRendering) sampleRate=preferred; else ensureDevice(preferred);
         duration=num(request,"duration");
         loadClickSample();
         auto* array=request["tracks"].getArray();
@@ -379,7 +380,10 @@ public:
         while(!quit){
             bool produced=false;
             try {std::lock_guard<std::mutex> l(renderMutex);
-                if(configured&&tail.load()-head.load()<queueSize-1){auto started=std::chrono::steady_clock::now();auto t=tail.load();render(queue[t%queueSize]);tail.store(t+1);produced=true;maxRenderMs=std::max(maxRenderMs,std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count());}
+                // Offline commands own the render clock. Producing ahead here
+                // would advance gain ramps between commands according to thread
+                // scheduling instead of the samples requested by the renderer.
+                if(configured&&!offlineRendering&&tail.load()-head.load()<queueSize-1){auto started=std::chrono::steady_clock::now();auto t=tail.load();render(queue[t%queueSize]);tail.store(t+1);produced=true;maxRenderMs=std::max(maxRenderMs,std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count());}
             }catch(const std::exception& e){playing=false;configured=false;send(object({{"event","error"},{"message",String(e.what())}}));}
             // Windows timer granularity can turn a 1 ms sleep into ~16 ms.
             // Fill the queue without sleeping; yield only once it is full.

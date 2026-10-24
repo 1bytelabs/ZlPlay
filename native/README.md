@@ -27,6 +27,12 @@ recuperação após um comando inválido e encerramento por EOF, sem abrir arqui
 ou dispositivos de áudio. No macOS, o processo de console cria primeiro a
 aplicação AppKit para que a fila de comandos do JUCE seja efetivamente atendida.
 
+Em uma carga `offline: true`, somente os comandos de renderização avançam o
+processamento; a thread de reprodução não completa essa fila em segundo plano.
+`tests/offline-render.test.cjs` intercala esperas e mudanças de ganho para verificar
+que a rampa depende da quantidade de samples renderizados, não do tempo entre
+comandos ou da velocidade da máquina.
+
 ## Limites desta versão de teste
 
 - A interface usa Electron. Tracks locais, Pad e Solo Click usam o mesmo motor/dispositivo nativo. Os WAVs curtos dos Pads são carregados sob demanda; músicas continuam por streaming.
