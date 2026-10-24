@@ -1,3 +1,4 @@
+const {showOpenDialog}=require('./native-dialogs.cjs');
 const {nativeExecutable}=require('./runtime-paths.cjs');
 const { spawn } = require('node:child_process');
 const { randomUUID } = require('node:crypto');
@@ -51,6 +52,7 @@ function setupNativeAudio({ app, ipcMain, window }) {
   function lookup(token) { const file = files.get(token); if (!file) throw new Error('Selecione o arquivo de áudio novamente.'); return file; }
   require('./speech.cjs').setupSpeech({app,ipcMain,authorize,lookup,NativeAudio,executable,window});
   require('./project-store.cjs').setupProjectStore({app,ipcMain,window,authorize,lookup,register:file=>{const token=randomUUID();files.set(token,file);return token;}});
+  require('./library-store.cjs').setupLibraryStore({app,ipcMain,window,authorize,lookup});
   let analyzer=null;
   ipcMain.handle('zlplay:cancel-analysis',event=>{authorize(event);analyzer?.close();analyzer=null;return true;});
   ipcMain.handle('zlplay:analyze',async(event,message)=>{
@@ -68,12 +70,13 @@ function setupNativeAudio({ app, ipcMain, window }) {
     if(target!==source){let index=1;const base=target;while(await fs.stat(target).catch(()=>null))target=base.replace(/\.zlplay$/i,'-'+index+++'.zlplay');}
     const backup=await fs.readFile(target,'utf8').catch(()=>null),temporary=target+'.'+randomUUID()+'.tmp';
     try{await fs.writeFile(temporary,text,{flag:'wx'});if(backup!==null)await fs.writeFile(target+'.bak',backup);await fs.rename(temporary,target);}finally{await fs.unlink(temporary).catch(()=>{});}
+    await require('./document-icon.cjs').applyDocumentIcon(app,target);
     const registered=randomUUID();files.set(registered,target);return {token:registered,name:path.basename(target)};
   });
   const padConfig = path.join(app.getPath('userData'), 'pad-folder.json');
   let padFolder;
   const sounds=require('./sound-bank.cjs').createSoundBank({root:app.getPath('userData'),probe:paths=>engine.request({op:'probe',files:paths.map((file,i)=>({token:String(i),path:file}))})});
-  ipcMain.handle('zlplay:sounds',async(event,message={})=>{authorize(event);const {dialog,shell}=require('electron');const action=message.action||'status';if(action==='open'){await fs.mkdir(sounds.folder,{recursive:true});await shell.openPath(sounds.folder);}else if(action==='reset'){await sounds.resetClick();await engine.request({op:'clickSounds',...(await sounds.get()),normal:(await sounds.get()).normal||'',accent:(await sounds.get()).accent||''});}else if(['pads','normal','accent'].includes(action)){const language=message.language||'en',title=language==='pt-BR'?'Importar sons':language==='es'?'Importar sonidos':'Import sounds';const selected=await dialog.showOpenDialog(window,{title,properties:action==='pads'?['openFile','multiSelections']:['openFile'],filters:[{name:'Audio',extensions:['wav','flac','mp3','ogg','aif','aiff']}]});if(!selected.canceled){await sounds.importFiles(action,selected.filePaths);const bank=await sounds.get();await engine.request({op:'clickSounds',normal:bank.normal||'',accent:bank.accent||''});}}else if(action==='preview'){const bank=await sounds.get();await engine.request({op:'clickSounds',normal:bank.normal||'',accent:bank.accent||''});await engine.request({op:'previewClick',accent:message.accent===true});}else if(action!=='status')throw Error('Ação inválida.');return sounds.status();});
+  ipcMain.handle('zlplay:sounds',async(event,message={})=>{authorize(event);const {dialog,shell}=require('electron');const action=message.action||'status';if(action==='open'){await fs.mkdir(sounds.folder,{recursive:true});await shell.openPath(sounds.folder);}else if(action==='reset'){await sounds.resetClick();await engine.request({op:'clickSounds',...(await sounds.get()),normal:(await sounds.get()).normal||'',accent:(await sounds.get()).accent||''});}else if(['pads','normal','accent'].includes(action)){const language=message.language||'en',title=language==='pt-BR'?'Importar sons':language==='es'?'Importar sonidos':'Import sounds';const selected=await showOpenDialog({app,dialog,window},{title,properties:action==='pads'?['openFile','multiSelections']:['openFile'],filters:[{name:'Audio',extensions:['wav','flac','mp3','ogg','aif','aiff']}]});if(!selected.canceled){await sounds.importFiles(action,selected.filePaths);const bank=await sounds.get();await engine.request({op:'clickSounds',normal:bank.normal||'',accent:bank.accent||''});}}else if(action==='preview'){const bank=await sounds.get();await engine.request({op:'clickSounds',normal:bank.normal||'',accent:bank.accent||''});await engine.request({op:'previewClick',accent:message.accent===true});}else if(action!=='status')throw Error('Ação inválida.');return sounds.status();});
   async function pads() {
     const bank=await sounds.get();if(bank.pads?.length===12){const available=[],missing=[];for(let i=0;i<12;i++)(await fs.stat(bank.pads[i]).catch(()=>null))?available.push(i):missing.push(i);return {folder:path.dirname(bank.pads[0]),paths:bank.pads,available,missing,warning:missing.length?'Pads importados ausentes. Importe os arquivos novamente.':''};}
     if (padFolder === undefined) { try { padFolder = JSON.parse(await fs.readFile(padConfig, 'utf8')).folder || ''; } catch { padFolder = ''; } }
@@ -83,7 +86,7 @@ function setupNativeAudio({ app, ipcMain, window }) {
     authorize(event);
     if (action === 'choose') {
       const { dialog } = require('electron');
-      const selection = await dialog.showOpenDialog(window, { title: 'Escolha sua pasta de pads', properties: ['openDirectory'] });
+      const selection = await showOpenDialog({app,dialog,window}, { title: 'Escolha sua pasta de pads', properties: ['openDirectory'] });
       if (!selection.canceled) { padFolder = selection.filePaths[0]; await fs.mkdir(path.dirname(padConfig), { recursive: true }); await fs.writeFile(padConfig, JSON.stringify({ folder: padFolder })); }
     } else if (action !== undefined && action !== 'status') throw new Error('Ação inválida.');
     const result = await pads();

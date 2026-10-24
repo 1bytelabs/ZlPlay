@@ -105,3 +105,8 @@ app/pads/
 app/LEIA-ME.txt
 **/profiles/
 **/*-profile/
+
+# macOS builds keep Intel and Apple Silicon resources separate.
+/native/bin-*/
+/native/speech-*/
+/native/build-*/

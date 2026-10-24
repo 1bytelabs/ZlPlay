@@ -482,6 +482,14 @@ function mount(){
     return {songs,rootProjects};
   }
   async function zlDownloadJson(data,name){
+    if(window.zlplayNative?.saveLibrary){
+      const entries=[...new Set((window.__ZL_LIBRARY_SCAN__?.songs||[]).flatMap(song=>song.files))].map(file=>({token:file._zlToken,relativePath:file.webkitRelativePath||file.relativePath}));
+      try{
+        const result=await window.zlplayNative.saveLibrary({data,entries,language:window.__ZL_I18N__?.language||'pt-BR'});
+        if(result)study.status?.(`Repertório salvo em ${result.name}.`);
+        return !!result;
+      }catch(error){study.status?.(error.message,true);return false;}
+    }
     const text=JSON.stringify(data,null,2);
     if("showSaveFilePicker" in window){
       try{

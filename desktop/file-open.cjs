@@ -3,13 +3,23 @@ const path=require('node:path');
 const {randomUUID}=require('node:crypto');
 const extensions=/\.(zlplay|zlset|zlplaylibrary|rpp|wav|mp3|flac|ogg|aiff?|opus|m4a|aac)$/i;
 async function collectSelection(selected,register){
-  const stat=await fs.stat(selected),directory=stat.isDirectory()?selected:path.dirname(selected),base=path.basename(directory),entries=[];
+  const stat=await fs.stat(selected),isLibrary=stat.isFile()&&/\.(zlset|zlplaylibrary)$/i.test(selected);
+  let directory=stat.isDirectory()?selected:path.dirname(selected),libraryText,libraryData;
+  if(isLibrary){
+    if(stat.size>16*1024*1024)throw Error('Arquivo de repertório grande demais.');
+    libraryText=await fs.readFile(selected,'utf8');
+    const data=JSON.parse(libraryText);
+    libraryData=data;
+    if(data.type!=='zlplay-library')throw Error('Repertório inválido.');
+
+  }
+  const base=path.basename(directory),entries=[],songFolders=new Set((libraryData?.songs||[]).map(song=>song.folder||song.name));
   async function walk(folder,depth){
     if(depth>5)return;
     for(const entry of await fs.readdir(folder,{withFileTypes:true})){
       if(entry.isSymbolicLink()||/^(\.git|node_modules|Peaks|Backups)$/i.test(entry.name))continue;
       const full=path.join(folder,entry.name);
-      if(entry.isDirectory()){await walk(full,depth+1);continue;}
+      if(entry.isDirectory()){if(isLibrary&&depth===0&&!songFolders.has(entry.name))continue;await walk(full,depth+1);continue;}
       if(!extensions.test(entry.name))continue;
       if(entries.length>=12000)throw Error('A pasta contém arquivos demais. Escolha uma pasta de músicas menor.');
       const token=register(full),relativePath=base+'/'+path.relative(directory,full).replace(/\\/g,'/');
@@ -22,6 +32,12 @@ async function collectSelection(selected,register){
     }
   }
   await walk(directory,0);
+  if(isLibrary){
+    const selectedPath=base+'/'+path.basename(selected);
+    // Keep only the selected setlist as the root manifest.
+    for(let i=entries.length-1;i>=0;i--)if(/\.(zlset|zlplaylibrary)$/i.test(entries[i].name)&&entries[i].relativePath.split('/').length===2)entries.splice(i,1);
+    entries.push({token:register(selected),name:path.basename(selected),relativePath:selectedPath,text:libraryText});
+  }
   // A selected project may deliberately reference audio outside its own folder.
   // Only audio references are followed; they are never executed as commands.
   for(const project of [...entries].filter(e=>/\.zlplay$/i.test(e.name))){
@@ -37,6 +53,9 @@ async function collectSelection(selected,register){
       entries.push({token:register(full),name:path.basename(full),relativePath});
     }
   }
-  return {id:randomUUID(),selected:stat.isFile()?base+'/'+path.basename(selected):null,library:/\.(zlset|zlplaylibrary)$/i.test(selected),entries};
+  const folders=(libraryData?.songs||[]).map(song=>song.folder||song.name);
+  const available=new Set(entries.map(entry=>entry.relativePath.split('/')[1]));
+  const needsLibraryRoot=isLibrary&&folders.length>0&&!folders.some(folder=>available.has(folder));
+  return {id:randomUUID(),selected:stat.isFile()?base+'/'+path.basename(selected):null,library:isLibrary,needsLibraryRoot,entries};
 }
 module.exports={collectSelection};

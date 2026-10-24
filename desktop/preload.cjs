@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('zlplayNative', {
   },
   command: message => ipcRenderer.invoke('zlplay:audio', message),
   bindProject: token => ipcRenderer.invoke('zlplay:bind-project',token),
+  saveLibrary: process.platform==='darwin'?message => ipcRenderer.invoke('zlplay:save-library',message):undefined,
   saveProject: message => ipcRenderer.invoke('zlplay:save-project',message),
   onGuideProgress: callback => {const listener=(_e,progress)=>callback(progress);ipcRenderer.on('zlplay:guide-progress',listener);return ()=>ipcRenderer.removeListener('zlplay:guide-progress',listener);},
   recognizeGuide: message => ipcRenderer.invoke('zlplay:recognize-guide',message),

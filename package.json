@@ -15,7 +15,9 @@
     "setup:speech": "node scripts/build-speech.mjs && node scripts/download-model.mjs",
     "audit:publication": "node scripts/audit-publication.cjs",
     "dist:win": "electron-builder --win nsis portable --x64",
-    "dist:mac": "electron-builder --mac dmg zip"
+    "dist:mac": "electron-builder --mac dmg zip",
+    "dist:mac:arm64": "node scripts/build-macos.mjs --arch arm64",
+    "dist:mac:x64": "node scripts/build-macos.mjs --arch x64"
   },
   "devDependencies": {
     "electron": "44.9.2",
@@ -100,7 +102,65 @@
         "zip"
       ],
       "category": "public.app-category.music",
-      "icon": "desktop/icon.png"
+      "icon": "desktop/icon.png",
+      "extendInfo": {
+        "UTExportedTypeDeclarations": [
+          {
+            "UTTypeIdentifier": "com.1bytelabs.zlplay.project",
+            "UTTypeDescription": "Projeto ZLPlay",
+            "UTTypeConformsTo": [
+              "public.json"
+            ],
+            "UTTypeIconFile": "zlplay-document.icns",
+            "UTTypeTagSpecification": {
+              "public.filename-extension": [
+                "zlplay"
+              ]
+            }
+          },
+          {
+            "UTTypeIdentifier": "com.1bytelabs.zlplay.setlist",
+            "UTTypeDescription": "Repertório ZLPlay",
+            "UTTypeConformsTo": [
+              "public.json"
+            ],
+            "UTTypeIconFile": "zlplay-document.icns",
+            "UTTypeTagSpecification": {
+              "public.filename-extension": [
+                "zlset"
+              ]
+            }
+          }
+        ],
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeName": "Projeto ZLPlay",
+            "CFBundleTypeRole": "Editor",
+            "LSHandlerRank": "Owner",
+            "LSItemContentTypes": [
+              "com.1bytelabs.zlplay.project"
+            ],
+            "CFBundleTypeIconFile": "zlplay-document.icns"
+          },
+          {
+            "CFBundleTypeName": "Repertório ZLPlay",
+            "CFBundleTypeRole": "Editor",
+            "LSHandlerRank": "Owner",
+            "LSItemContentTypes": [
+              "com.1bytelabs.zlplay.setlist"
+            ],
+            "CFBundleTypeIconFile": "zlplay-document.icns"
+          }
+        ]
+      },
+      "bundleVersion": "2.8.0.1",
+      "extraResources": [
+        {
+          "from": "desktop/zlplay-document.icns",
+          "to": "zlplay-document.icns"
+        }
+      ],
+      "minimumSystemVersion": "15.0"
     }
   },
   "license": "AGPL-3.0-only",

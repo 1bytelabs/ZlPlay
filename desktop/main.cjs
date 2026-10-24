@@ -1,3 +1,4 @@
+const {showOpenDialog}=require('./native-dialogs.cjs');
 const { showAbout } = require('./about.cjs');
 const { app, BrowserWindow, Menu, protocol, net, dialog, ipcMain, shell } = require('electron');
 const { setupNativeAudio } = require('./native-audio.cjs');
@@ -19,6 +20,13 @@ if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', (_event,argv) => { const file=argv.find(a=>/\.(zlplay|zlset|zlplaylibrary)$/i.test(a)&&path.isAbsolute(a));if(file){pendingOpen=file;window?.webContents.send('zlplay:open-request');} if (window) { if (window.isMinimized()) window.restore(); window.focus(); } });
   app.whenReady().then(async () => {
+    if(process.platform==='darwin'&&app.isPackaged){
+      const helper=path.join(process.resourcesPath,'native','zlplay-file-types');
+      const bundle=path.resolve(process.resourcesPath,'../..');
+      require('node:child_process').execFile(helper,[bundle],{timeout:15000},error=>{
+        if(error)console.warn('ZLPlay: não foi possível atualizar as associações de arquivos.');
+      });
+    }
     const root = path.join(app.getAppPath(), 'app');
     protocol.handle('zlplay', request => {
       const file = assetPath(root, request.url);
@@ -36,9 +44,13 @@ else {
     Menu.setApplicationMenu(null);window.setMenuBarVisibility(false);
     const {collectSelection}=require('./file-open.cjs');
     ipcMain.handle('zlplay:about',event=>{nativeAudio.authorize(event);showAbout(window,app.getVersion(),openProjectLink,locale.language);});
-    const selection=async file=>collectSelection(file,nativeAudio.register);
+    const selection=async file=>{
+      let result=await collectSelection(file,nativeAudio.register);
+      if(process.platform==='darwin'&&result.needsLibraryRoot)throw Error(tr('Salve o repertório na pasta principal das músicas.','Save the setlist in the main music folder.','Guarda el repertorio en la carpeta principal de canciones.'));
+      return result;
+    };
     ipcMain.handle('zlplay:pending-open',async event=>{nativeAudio.authorize(event);if(!pendingOpen)return null;const file=pendingOpen;pendingOpen=null;return selection(file);});
-    ipcMain.handle('zlplay:open-selection',async(event,mode)=>{nativeAudio.authorize(event);if(!['project','library','folder','library-folder'].includes(mode))throw Error('Seleção inválida.');const folder=mode.includes('folder');const result=await dialog.showOpenDialog(window,{title:folder?tr('Importar pasta','Import folder','Importar carpeta'):mode==='library'?tr('Abrir repertório','Open setlist','Abrir repertorio'):tr('Abrir projeto','Open project','Abrir proyecto'),properties:[folder?'openDirectory':'openFile'],filters:folder?undefined:[{name:mode==='library'?'Repertório ZLPlay':'Projeto ZLPlay / REAPER',extensions:mode==='library'?['zlset','zlplaylibrary']:['zlplay','rpp']}]});return result.canceled?null:selection(result.filePaths[0]);});
+    ipcMain.handle('zlplay:open-selection',async(event,mode)=>{nativeAudio.authorize(event);if(!['project','library','folder','library-folder'].includes(mode))throw Error('Seleção inválida.');const folder=mode.includes('folder');const result=await showOpenDialog({app,dialog,window},{title:folder?tr('Importar pasta','Import folder','Importar carpeta'):mode==='library'?tr('Abrir repertório','Open setlist','Abrir repertorio'):tr('Abrir projeto','Open project','Abrir proyecto'),properties:[folder?'openDirectory':'openFile'],filters:folder?undefined:[{name:mode==='library'?'Repertório ZLPlay':'Projeto ZLPlay / REAPER',extensions:mode==='library'?['zlset','zlplaylibrary']:['zlplay','rpp']}]});return result.canceled?null:selection(result.filePaths[0]);});
     window.webContents.on('before-input-event',(event,input)=>{if(input.type==='keyDown'&&input.key==='F11'){event.preventDefault();if(!input.isAutoRepeat)window.webContents.executeJavaScript("document.fullscreenElement?document.exitFullscreen():document.querySelector('#zosma-vs-study').requestFullscreen()",true).catch(()=>{});}});
     window.webContents.setWindowOpenHandler(({url}) => {openProjectLink(url);return { action: 'deny' };});
     window.webContents.on('will-navigate', (event, url) => {
