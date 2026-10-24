@@ -13,6 +13,12 @@ FetchContent_Declare(JUCE
 FetchContent_MakeAvailable(JUCE)
 juce_add_console_app(zlplay-audio PRODUCT_NAME "zlplay-audio" COMPANY_NAME "1Byte Labs" BUNDLE_ID "com.1bytelabs.zlplay.audio")
 target_sources(zlplay-audio PRIVATE engine.cpp vendor/libebur128/ebur128.c)
+if(APPLE)
+  enable_language(OBJCXX)
+  target_sources(zlplay-audio PRIVATE platform-macos.mm)
+  find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
+  target_link_libraries(zlplay-audio PRIVATE ${APPKIT_FRAMEWORK})
+endif()
 target_include_directories(zlplay-audio PRIVATE vendor/libebur128 vendor/signalsmith-stretch-main vendor/linear-main/include)
 target_compile_definitions(zlplay-audio PRIVATE
   JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 JUCE_STANDALONE_APPLICATION=1

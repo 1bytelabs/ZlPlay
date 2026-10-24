@@ -22,6 +22,11 @@ As prévias de formas de onda são calculadas por outro processo nativo, depois 
 
 Os testes públicos usam fixtures sintéticas. Testes e resultados locais com músicas reais não são publicados.
 
+`tests/native-protocol.test.cjs` verifica a inicialização, respostas sucessivas,
+recuperação após um comando inválido e encerramento por EOF, sem abrir arquivos
+ou dispositivos de áudio. No macOS, o processo de console cria primeiro a
+aplicação AppKit para que a fila de comandos do JUCE seja efetivamente atendida.
+
 ## Limites desta versão de teste
 
 - A interface usa Electron. Tracks locais, Pad e Solo Click usam o mesmo motor/dispositivo nativo. Os WAVs curtos dos Pads são carregados sob demanda; músicas continuam por streaming.
