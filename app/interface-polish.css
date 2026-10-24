@@ -94,3 +94,7 @@ html,body{font-family:'Segoe UI',Inter,system-ui,sans-serif;background:#090d15;c
  .vs-compact-layout .vs-vs-bus{margin-top:22px}
 }
 @media(max-height:640px){#zosma-vs-study.vs-compact-layout:not(:fullscreen){height:auto;min-height:100dvh}.vs-compact-layout .vs-study,.vs-compact-layout .vs-card{height:auto;min-height:100dvh}.vs-compact-layout .vs-timeline-scroll{flex-basis:170px!important}#zosma-vs-study:fullscreen .vs-card{height:100%;min-height:0}}
+
+/* Product identity; publisher branding is displayed in About. */
+.vs-head-main h2{display:flex;align-items:center;gap:9px}
+.vs-head-main h2::before{content:"";display:block;flex:0 0 32px;width:32px;height:32px;background:url("./brand/zlplay-mark.svg") center/contain no-repeat}
