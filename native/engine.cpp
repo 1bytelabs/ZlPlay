@@ -564,6 +564,7 @@ public:
     }
 };
 int main(){
+    initialisePlatformApplication();
     ScopedJuceInitialiser_GUI initialise;
     auto ownedEngine=std::make_unique<Engine>();auto& engine=*ownedEngine;
     std::thread input([&]{std::string line;while(std::getline(std::cin,line)){

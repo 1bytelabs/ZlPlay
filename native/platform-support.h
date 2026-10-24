@@ -17,6 +17,15 @@
  #endif
 #endif
 
+// A console main bypasses JUCEApplicationBase::main, which normally creates
+// NSApplication on macOS. The AppKit application must exist before JUCE installs
+// its delegate/message queue or runDispatchLoop() sends run to a nil NSApp.
+#if defined(__APPLE__)
+void initialisePlatformApplication();
+#else
+inline void initialisePlatformApplication() {}
+#endif
+
 inline bool beginPlatformTimer() {
  #if defined(_WIN32)
   return timeBeginPeriod(1) == TIMERR_NOERROR;
