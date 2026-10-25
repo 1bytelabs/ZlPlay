@@ -141,7 +141,7 @@ this.bindPadNoteButtons();
 this.installControlMappingHandlers()}
   render(){this.host.innerHTML=`<section class="vs-study"><div class="vs-card"><div class="vs-head"><div class="vs-head-main"><button class="vs-back" data-back>← Voltar</button><div class="vs-brand">
   <div class="vs-brand-line">
-    <h2>ZLPlay</h2>
+    <h2><span class="zl-brand-wordmark">ZL<span>Play</span></span></h2>
     <a class="vs-support-btn"
        href="https://1bytelabs.com.br"
        target="_blank"
