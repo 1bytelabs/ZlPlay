@@ -28,7 +28,7 @@ O usuário autorizou publicar primeiro o macOS e acrescentar o Windows depois, n
 4. Se um asset Windows de mesmo nome já existir, compare o hash: reutilize se for idêntico. Não sobrescreva uma versão diferente silenciosamente.
 5. Atualize a descrição acrescentando uma seção Windows com os downloads, a validação e o commit do build. Preserve a seção macOS.
 6. Não mova a tag `v2.8.0` nem troque seu commit para simplesmente anexar os arquivos Windows.
-7. Mantenha a classificação de pré-release e os avisos do Mac enquanto as pendências persistirem. Não apresente os pacotes como assinados por Developer ID/notarizados: os builds Mac têm assinatura ad-hoc e ainda precisam de validação em hardware Apple Silicon.
+7. Por solicitação do usuário, a v2.8.0 agora está marcada como Latest para aparecer na página inicial do repositório. Preserve essa configuração e os avisos técnicos nas notas; não restaure a marcação de pré-release automaticamente. Apple Silicon ainda aguarda teste em hardware, e os pacotes Mac não têm Developer ID/notarização.
 8. Confira no GitHub os arquivos anexados e informe ao usuário o link da mesma release.
 
 ## Código macOS
