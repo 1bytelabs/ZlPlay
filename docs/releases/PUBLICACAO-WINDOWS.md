@@ -24,7 +24,7 @@ O usuário autorizou publicar primeiro o macOS e acrescentar o Windows depois, n
 
 1. Leia a release existente e seus assets antes de alterar.
 2. Acrescente somente os dois executáveis Windows e `SHA256SUMS-Windows.txt`.
-3. Preserve os ZIPs do Mac, `SHA256SUMS-macOS.txt`, o bundle de fontes Mac e as notas existentes.
+3. Preserve os ZIPs do Mac, `SHA256SUMS-macOS.txt` e as notas existentes. O usuário decidiu manter o bundle dos fontes somente como backup local; não o recoloque nos anexos da release.
 4. Se um asset Windows de mesmo nome já existir, compare o hash: reutilize se for idêntico. Não sobrescreva uma versão diferente silenciosamente.
 5. Atualize a descrição acrescentando uma seção Windows com os downloads, a validação e o commit do build. Preserve a seção macOS.
 6. Não mova a tag `v2.8.0` nem troque seu commit para simplesmente anexar os arquivos Windows.
