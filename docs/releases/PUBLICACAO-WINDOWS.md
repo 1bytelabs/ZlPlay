@@ -1,6 +1,6 @@
 # Publicar Windows na release existente do ZLPlay 2.8.0
 
-O usuário autorizou publicar primeiro o macOS e acrescentar o Windows depois, na mesma release.
+Em 25/10/2026, o usuário escolheu atualizar a release v2.8.0 existente com a nova logo de ondas verticais. O Mac está sendo atualizado primeiro; o chat Windows deve atualizar somente os três assets Windows quando o usuário solicitar. Não criar release v2.8.1 ou duplicar a v2.8.0.
 
 ## Destino
 
@@ -23,7 +23,7 @@ O usuário autorizou publicar primeiro o macOS e acrescentar o Windows depois, n
 ## Publicar quando o usuário pedir
 
 1. Leia a release existente e seus assets antes de alterar.
-2. Acrescente somente os dois executáveis Windows e `SHA256SUMS-Windows.txt`.
+2. Atualize somente os dois executáveis Windows e `SHA256SUMS-Windows.txt` na release v2.8.0 existente. A solicitação do usuário para publicar o Windows autoriza a atualização; respeite eventuais confirmações obrigatórias da ferramenta.
 3. Preserve os ZIPs do Mac, `SHA256SUMS-macOS.txt` e as notas existentes. O usuário decidiu manter o bundle dos fontes somente como backup local; não o recoloque nos anexos da release.
 4. Se um asset Windows de mesmo nome já existir, compare o hash: reutilize se for idêntico. Não sobrescreva uma versão diferente silenciosamente.
 5. Atualize a descrição acrescentando uma seção Windows com os downloads, a validação e o commit do build. Preserve a seção macOS.
@@ -33,6 +33,12 @@ O usuário autorizou publicar primeiro o macOS e acrescentar o Windows depois, n
 
 ## Código macOS
 
-A branch `codex/macos-setup` contém o snapshot Mac publicado. Seu conteúdo corresponde ao Git tree `907c4e934c570e518c51c155f0509f3900b5048c`, o mesmo do build local `6c0682ee52c0172e49ab0532f6e2f6c118156486`. O snapshot remoto tem commit próprio porque foi enviado pelo conector; os arquivos são idênticos.
+A nova marca está no commit `a2aefa71f63da0dcc3db97cd5678e801982a8e8b` de `codex/macos-setup`. O build local foi gerado do commit `6c022b181f94cc661e4dd13e6678a019be3676ee`; ambos têm o Git tree `a6cd234675b8d433aa408fd21e18b432d670d9d1`. A tag v2.8.0 continua no snapshot original e não deve ser movida.
+
+Pacotes Mac com ondas verticais (confira estes hashes antes de concluir a atualização Windows):
+- `ZLPlay-2.8.0-macOS-Intel.zip`: `41e4fab9bde7cb46635e98c1279544362a2a98a58471c3c7fb98969aab730eb8`.
+- `ZLPlay-2.8.0-macOS-Apple-Silicon.zip`: `d89e26a25891bdac133721f8cf8a4f20edb81b2eec66e53e6f1c143988b26b37`.
+
+49 testes passaram e a auditoria não teve achados. Os dois apps passaram na verificação de arquitetura, 77 arquivos, modelo offline e assinatura ad-hoc. Finder/Sobre, documentos e duplo clique foram conferidos em Intel. Apple Silicon ainda não executado em hardware M; Dock sem confirmação visual; DMGs falharam no hdiutil, portanto apenas ZIPs. Preserve estes limites nas notas.
 
 Não é necessário substituir o trabalho Windows pelo Mac para anexar assets. Se integrar mudanças compartilhadas, revise o diff e rode novamente os testes Windows. Preserve as correções específicas de cada plataforma.
