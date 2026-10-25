@@ -1,6 +1,6 @@
 # Publicar Windows na release existente do ZLPlay 2.8.0
 
-Em 25/10/2026, o usuário escolheu atualizar a release v2.8.0 existente com a nova logo de ondas verticais. O Mac está sendo atualizado primeiro; o chat Windows deve atualizar somente os três assets Windows quando o usuário solicitar. Não criar release v2.8.1 ou duplicar a v2.8.0.
+Em 25/10/2026, o usuário escolheu atualizar a release v2.8.0 existente com a nova logo de ondas verticais. O Mac está sendo atualizado primeiro; o chat Windows deve atualizar somente o instalador Windows e seu checksum quando o usuário solicitar. Não criar release v2.8.1 ou duplicar a v2.8.0.
 
 ## Destino
 
@@ -13,17 +13,16 @@ Em 25/10/2026, o usuário escolheu atualizar a release v2.8.0 existente com a no
 
 1. Preserve o trabalho local e use a versão Windows final aprovada pelo usuário. Confira a versão em `package.json`; não renomeie um executável de outra versão para parecer 2.8.0.
 2. Compile o motor e prepare o reconhecimento offline com os scripts do projeto. Confirme que os runtimes e o modelo estão nos recursos do aplicativo.
-3. Rode `npm test` e `npm run audit:publication`. Gere os pacotes com `npm run dist:win` e valide a instalação e a versão portátil no Windows.
+3. Rode `npm test` e `npm run audit:publication`. Gere os pacotes com `npm run dist:win` e valide a instalação no Windows.
 4. Separe estes arquivos, com a versão consistente:
    - `ZLPlay-2.8.0-instalador.exe`
-   - `ZLPlay-2.8.0-portatil.exe`
-   - `SHA256SUMS-Windows.txt`, com SHA-256 dos dois executáveis.
+   - `SHA256SUMS-Windows.txt`, com SHA-256 do instalador.
 5. Registre o commit real do código Windows usado no build. A release reúne plataformas; não diga que um executável foi gerado de um commit diferente daquele efetivamente utilizado.
 
 ## Publicar quando o usuário pedir
 
 1. Leia a release existente e seus assets antes de alterar.
-2. Atualize somente os dois executáveis Windows e `SHA256SUMS-Windows.txt` na release v2.8.0 existente. A solicitação do usuário para publicar o Windows autoriza a atualização; respeite eventuais confirmações obrigatórias da ferramenta.
+2. Atualize somente o instalador Windows e `SHA256SUMS-Windows.txt` na release v2.8.0 existente. A solicitação do usuário para publicar o Windows autoriza a atualização; respeite eventuais confirmações obrigatórias da ferramenta.
 3. Preserve os ZIPs do Mac, `SHA256SUMS-macOS.txt` e as notas existentes. O usuário decidiu manter o bundle dos fontes somente como backup local; não o recoloque nos anexos da release.
 4. Se um asset Windows de mesmo nome já existir, compare o hash: reutilize se for idêntico. Não sobrescreva uma versão diferente silenciosamente.
 5. Atualize a descrição acrescentando uma seção Windows com os downloads, a validação e o commit do build. Preserve a seção macOS.
@@ -42,3 +41,7 @@ Pacotes Mac com ondas verticais (confira estes hashes antes de concluir a atuali
 49 testes passaram e a auditoria não teve achados. Os dois apps passaram na verificação de arquitetura, 77 arquivos, modelo offline e assinatura ad-hoc. Finder/Sobre, documentos e duplo clique foram conferidos em Intel. Apple Silicon ainda não executado em hardware M; Dock sem confirmação visual; DMGs falharam no hdiutil, portanto apenas ZIPs. Preserve estes limites nas notas.
 
 Não é necessário substituir o trabalho Windows pelo Mac para anexar assets. Se integrar mudanças compartilhadas, revise o diff e rode novamente os testes Windows. Preserve as correções específicas de cada plataforma.
+
+## Distribuição Windows somente instalável
+
+Em 25/10/2026, o usuário pediu corrigir o dropdown do tom original no Windows, substituir o instalador da v2.8.0 e retirar a versão portátil da release. Não gerar nem publicar portátil. O arquivo SHA256SUMS-Windows.txt deve listar somente o instalador. Preservar os assets/notas do Mac, Latest e a tag.

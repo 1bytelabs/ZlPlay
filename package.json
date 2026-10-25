@@ -14,7 +14,7 @@
     "build:native:legacy": "powershell -ExecutionPolicy Bypass -File native/build.ps1",
     "setup:speech": "node scripts/build-speech.mjs && node scripts/download-model.mjs",
     "audit:publication": "node scripts/audit-publication.cjs",
-    "dist:win": "electron-builder --win nsis portable --x64",
+    "dist:win": "electron-builder --win nsis --x64",
     "dist:mac": "electron-builder --mac dmg zip"
   },
   "devDependencies": {
@@ -53,14 +53,10 @@
     ],
     "win": {
       "target": [
-        "nsis",
-        "portable"
+        "nsis"
       ],
       "icon": "desktop/icon.ico",
       "signExecutable": false
-    },
-    "portable": {
-      "artifactName": "ZLPlay-${version}-portatil.${ext}"
     },
     "nsis": {
       "artifactName": "ZLPlay-${version}-instalador.${ext}",
