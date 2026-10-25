@@ -81,17 +81,20 @@
       {
         "ext": "zlplay",
         "name": "Projeto ZLPlay",
-        "role": "Editor"
+        "role": "Editor",
+        "icon": "desktop/zlplay-document"
       },
       {
         "ext": "zlplaylibrary",
         "name": "Repertório ZLPlay (legado)",
-        "role": "Editor"
+        "role": "Editor",
+        "icon": "desktop/zlplay-document"
       },
       {
         "ext": "zlset",
         "name": "Repertório ZLPlay",
-        "role": "Editor"
+        "role": "Editor",
+        "icon": "desktop/zlplay-document"
       }
     ],
     "mac": {
@@ -100,7 +103,7 @@
         "zip"
       ],
       "category": "public.app-category.music",
-      "icon": "desktop/icon.png"
+      "icon": "desktop/icon.icns"
     }
   },
   "license": "AGPL-3.0-only",

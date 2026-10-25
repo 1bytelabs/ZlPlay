@@ -98,3 +98,5 @@ html,body{font-family:'Segoe UI',Inter,system-ui,sans-serif;background:#090d15;c
 /* Product identity; publisher branding is displayed in About. */
 .vs-head-main h2{display:flex;align-items:center;gap:9px}
 .vs-head-main h2::before{content:"";display:block;flex:0 0 32px;width:32px;height:32px;background:url("./brand/zlplay-mark.svg") center/contain no-repeat}
+
+.zl-brand-wordmark{color:#f4efff;white-space:nowrap}.zl-brand-wordmark>span{color:#8b5cf6}
