@@ -56,7 +56,16 @@
         "nsis"
       ],
       "icon": "desktop/icon.ico",
-      "signExecutable": false
+      "signExecutable": false,
+      "extraResources": [
+        {
+          "to": "licenses",
+          "filter": [
+            "**/*"
+          ],
+          "from": ".cache/windows-licenses"
+        }
+      ]
     },
     "nsis": {
       "artifactName": "ZLPlay-${version}-instalador.${ext}",
@@ -100,7 +109,8 @@
       ],
       "category": "public.app-category.music",
       "icon": "desktop/icon.icns"
-    }
+    },
+    "beforePack": "scripts/prepare-windows-licenses.cjs"
   },
   "license": "AGPL-3.0-only",
   "repository": {

@@ -64,7 +64,7 @@ O auditor é uma proteção adicional, não uma garantia de ausência de segredo
 Na máquina de destino, após compilar o motor e preparar o reconhecimento opcional:
 
 ```sh
-# Windows x64: instalador e portátil
+# Windows x64: somente instalador
 npm run dist:win
 
 # macOS: DMG e ZIP para a arquitetura da máquina
@@ -92,3 +92,5 @@ O `.gitignore` usa uma lista explícita de pastas de código na raiz. Novas past
 Código próprio sob **GNU AGPL v3.0**, conforme [LICENSE](LICENSE). Dependências mantêm suas próprias licenças e avisos; veja [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). A licença de software não concede direitos de marca sobre o nome ou logotipo ZLPlay / 1Byte Labs.
 
 Leia [CONTRIBUTING.md](CONTRIBUTING.md) e [SECURITY.md](SECURITY.md) antes de enviar contribuições ou relatar problemas sensíveis.
+
+Detalhes da escolha GPLv3 para o ASIO no Windows e acesso aos fontes correspondentes: [docs/LICENSING.md](docs/LICENSING.md). O instalador inclui os avisos em resources/licenses/.

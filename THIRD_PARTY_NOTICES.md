@@ -5,6 +5,7 @@ A AGPLv3 escolhida para o código próprio não substitui as licenças das depen
 | Componente | Uso | Licença / fonte |
 | --- | --- | --- |
 | JUCE 9.0.4 | Dispositivos, leitura e infraestrutura de áudio | AGPLv3 ou licença comercial. Este projeto adota o caminho AGPLv3. [Fonte e licença](https://github.com/juce-framework/JUCE/tree/9.0.4). Obtido pelo CMake, não incluído no Git. |
+| Steinberg ASIO SDK (Windows) | Comunicação com drivers ASIO através do JUCE | Este projeto escolhe a alternativa GPLv3. Aviso original em `docs/licenses/ASIO-LICENSE.txt`; GPLv3 em `docs/licenses/GPL-3.0.txt`. Headers na revisão fixa do JUCE indicada em `native/CMakeLists.txt`. ASIO is a registered trademark of Steinberg Media Technologies GmbH. |
 | Signalsmith Stretch | Transposição e compensação de duração | MIT; `native/vendor/signalsmith-stretch-main/LICENSE.txt`. |
 | Signalsmith Linear | Rotinas usadas pelo Stretch | MIT; `native/vendor/linear-main/LICENSE.txt`. |
 | libebur128 | Loudness e true peak | MIT; `native/vendor/libebur128/COPYING`. A implementação BSD de `sys/queue.h` contém seu aviso no próprio arquivo. |
@@ -16,3 +17,5 @@ A AGPLv3 escolhida para o código próprio não substitui as licenças das depen
 Os avisos LLVM, MinGW e winpthreads mantidos em `native/speech/` correspondem aos binários Windows usados no ambiente de desenvolvimento anterior. Compilar o reconhecimento em outra plataforma pode envolver um runtime diferente, cujo aviso também deve acompanhar a distribuição quando exigido.
 
 Os arquivos de áudio dos usuários e os Pads não estão incluídos nem licenciados por este repositório. Nome e logotipo do projeto identificam a 1Byte Labs; a licença do código não concede autorização de uso das marcas.
+
+Modelo de licença, fontes e escopo por plataforma: [docs/LICENSING.md](docs/LICENSING.md).

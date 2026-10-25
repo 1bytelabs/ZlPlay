@@ -54,3 +54,9 @@ O usuário autorizou substituir os ZIPs Mac e o checksum na mesma v2.8.0. Snapsh
 - Apple Silicon: SHA-256 `87eac4856378dbe1e5d373fd4b3b0721cb545e43567c5d8f192c1bc24e63f57c`.
 
 Estes hashes substituem a referência dos pacotes de branding acima. 52 testes aprovados e auditoria sem achados; teste adicional do fluxo Bb/C e preservação de destino explícito aprovado. Tap reinicia feedback visual sem alterar BPM; um RPP usa o tom do nome, vários apresentam alternativas para Original; não há prioridade pelo texto Original. Preservadas escolhas salvas, valores internos e exibição em bemóis. Textos traduzidos pt-BR/en/es. Não foi integrada a correção de sobreposição do dropdown Windows. Pacotes estruturais/assinaturas verificados; teste físico Apple Silicon pendente. Teste visual pelo navegador não carregou a pasta sintética e não conta como validação visual. Tag e assets Windows preservados.
+
+## Licenças e fontes do instalador Windows
+
+Antes de publicar, confira `resources/licenses/` no pacote instalado: `ZLPlay-AGPL-3.0.txt`, `GPL-3.0.txt`, `ASIO-LICENSE.txt`, `THIRD_PARTY_NOTICES.md`, `LICENSING.md` e `SOURCE_CODE.txt`. O hook `scripts/prepare-windows-licenses.cjs` gera esses recursos somente no Windows. O ASIO usa a alternativa GPLv3; não afirmar contrato proprietário ou certificação Steinberg.
+
+O commit completo em `SOURCE_CODE.txt` deve ser o do build, publicado e acessível. Aponte nas notas Windows para o arquivo de fontes desse commit e para `docs/LICENSING.md` na mesma revisão, com fontes das dependências e instruções. Não apresentar os arquivos automáticos da tag antiga como fontes de um instalador atualizado. Confira os links antes da publicação e mantenha o acesso aos fontes correspondentes durante a distribuição. A documentação não substitui uma revisão jurídica.
