@@ -41,4 +41,5 @@
     <string name="not_seekable">This file location does not support block reading. Place the WAV in local phone storage and select it again.</string>
     <string name="buffering">Preparing playback position…</string>
     <string name="source_unavailable">Audio file became unavailable. Select the files again.</string>
+    <string name="back">Back</string>
 </resources>

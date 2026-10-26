@@ -30,11 +30,12 @@ public final class MainActivity extends Activity {
     private float[] sourcePeaks;
     private Button play,loop,click,pad;
     private LinearLayout mixerPanel;
+    private android.app.Dialog mixerDialog;
     private Waveform waveform;
     private final int purple=Color.rgb(151,105,239),panel=Color.rgb(23,31,47),text=Color.rgb(230,235,248);
     private final Runnable refresh=new Runnable(){public void run(){
         if(clock==null)return;
-        getWindow().getDecorView().setKeepScreenOn(mixer.isPlaying()||mixer.isClick()||mixer.isPad());
+        boolean activeAudio=mixer.isPlaying()||mixer.isClick()||mixer.isPad();getWindow().getDecorView().setKeepScreenOn(activeAudio);if(mixerDialog!=null&&mixerDialog.getWindow()!=null)mixerDialog.getWindow().getDecorView().setKeepScreenOn(activeAudio);
         clock.setText(getString(R.string.duration_format,time(mixer.position()),time(mixer.duration())));
         state(play,mixer.isPlaying());state(loop,mixer.isLoop());state(click,mixer.isClick());state(pad,mixer.isPad());
         if(mixer.sourceFailed())status.setText(R.string.source_unavailable);else if(audio!=null&&audio.error()!=null)status.setText(R.string.audio_error);else if(!loading&&lastImportError==0&&mixer.hasImported()&&mixer.isPlaying())status.setText(mixer.isBuffering()?R.string.buffering:R.string.import_done);
@@ -61,7 +62,7 @@ public final class MainActivity extends Activity {
         loop=button(R.string.loop,()->mixer.setLoop(!mixer.isLoop()));addButton(transport,loop);
         click=button(R.string.solo_click,()->{if(mixer.isClick())mixer.setClick(false);else if(ready())mixer.setClick(true);});addButton(transport,click);
         pad=button(R.string.pad,()->{if(mixer.isPad())mixer.setPad(false);else if(ready())mixer.setPad(true);});addButton(transport,pad);
-        addButton(transport,button(R.string.mixer,()->mixerPanel.setVisibility(mixerPanel.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE)));root.addView(transport);
+        addButton(transport,button(R.string.mixer,this::showMixer));root.addView(transport);
         LinearLayout tempo=row();tempo.addView(label(getString(R.string.bpm),12));Button minus=button(R.string.decrease,()->setBpm(mixer.getBpm()-1));Button plus=button(R.string.increase,()->setBpm(mixer.getBpm()+1));
         EditText bpm=new EditText(this);bpm.setId(View.generateViewId());bpm.setSingleLine();bpm.setTextColor(text);bpm.setTextSize(14);bpm.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);bpm.setText(String.valueOf(mixer.getBpm()));bpm.setContentDescription(getString(R.string.bpm));bpm.setSelectAllOnFocus(true);bpm.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_DONE);
         bpm.setOnEditorActionListener((v,action,event)->{try{setBpm(Integer.parseInt(bpm.getText().toString()));}catch(NumberFormatException ignored){}bpm.setText(String.valueOf(mixer.getBpm()));bpm.clearFocus();((android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(bpm.getWindowToken(),0);return true;});
@@ -75,7 +76,9 @@ public final class MainActivity extends Activity {
     private String time(double seconds){return String.format(Locale.getDefault(),"%d:%02d",(int)seconds/60,(int)seconds%60);}
     private String gainKey(int track){return mixer.hasImported()?"wavGain:"+currentUris.get(track):"gain"+track;}
     private void renderMixer(){
-        mixerPanel.removeAllViews();mixerPanel.addView(label(getString(R.string.mixer),14));
+        mixerPanel.removeAllViews();if(getResources().getConfiguration().smallestScreenWidthDp>=600)mixerPanel.addView(label(getString(R.string.mixer),14));
+        int stripHeight=mixerDialog==null?160:Math.max(140,Math.min(300,Math.round(getResources().getDisplayMetrics().heightPixels/getResources().getDisplayMetrics().density)-112));
+        int faderHeight=stripHeight-48;
         HorizontalScrollView scroll=new HorizontalScrollView(this);LinearLayout channels=row();scroll.addView(channels);mixerPanel.addView(scroll);
         final int count=mixer.trackCount();int[] demoNames={R.string.bass,R.string.keys,R.string.drums};
         for(int i=0;i<=count;i++){
@@ -83,15 +86,27 @@ public final class MainActivity extends Activity {
             String name=isPad?getString(R.string.pad):mixer.hasImported()?mixer.trackName(i):getString(demoNames[i]);
             LinearLayout strip=new LinearLayout(this);strip.setOrientation(LinearLayout.VERTICAL);strip.setGravity(Gravity.CENTER);strip.setBackground(background(panel));
             TextView title=label(name,11);title.setSingleLine();title.setEllipsize(android.text.TextUtils.TruncateAt.END);title.setContentDescription(name);strip.addView(title,new LinearLayout.LayoutParams(dp(62),dp(24)));
-            FrameLayout container=new FrameLayout(this);SeekBar gain=new SeekBar(this);gain.setMax(100);gain.setProgress(Math.round((isPad?mixer.getPadLevel():mixer.getGain(i))*100));gain.setRotation(-90);gain.setContentDescription(getString(R.string.volume,name));
-            container.addView(gain,new FrameLayout.LayoutParams(dp(110),dp(36),Gravity.CENTER));strip.addView(container,new LinearLayout.LayoutParams(dp(40),dp(112)));
+            FrameLayout container=new FrameLayout(this);SeekBar gain=new FaderSeekBar(this);gain.setMax(100);gain.setProgress(Math.round((isPad?mixer.getPadLevel():mixer.getGain(i))*100));gain.setRotation(-90);gain.setContentDescription(getString(R.string.volume,name));
+            container.addView(gain,new FrameLayout.LayoutParams(dp(faderHeight-8),dp(36),Gravity.CENTER));strip.addView(container,new LinearLayout.LayoutParams(dp(48),dp(faderHeight)));
             TextView value=label(getString(R.string.percent,gain.getProgress()),10);strip.addView(value);
             gain.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
                 public void onProgressChanged(SeekBar bar,int p,boolean user){if(isPad)mixer.setPadLevel(p/100f);else mixer.setGain(track,p/100f);value.setText(getString(R.string.percent,p));getSharedPreferences("mix",MODE_PRIVATE).edit().putFloat(isPad?"padLevel":gainKey(track),p/100f).apply();}
                 public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}
             });
-            LinearLayout.LayoutParams size=new LinearLayout.LayoutParams(dp(68),dp(160));size.setMargins(0,0,dp(6),0);channels.addView(strip,size);
+            LinearLayout.LayoutParams size=new LinearLayout.LayoutParams(dp(68),dp(stripHeight));size.setMargins(0,0,dp(6),0);channels.addView(strip,size);
         }
+    }
+    private void showMixer(){
+        if(getResources().getConfiguration().smallestScreenWidthDp>=600){mixerPanel.setVisibility(mixerPanel.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE);return;}
+        if(mixerDialog!=null)return;
+        final ViewGroup parent=(ViewGroup)mixerPanel.getParent();final int index=parent.indexOfChild(mixerPanel);final ViewGroup.LayoutParams previous=mixerPanel.getLayoutParams();parent.removeView(mixerPanel);
+        android.app.Dialog dialog=new android.app.Dialog(this,android.R.style.Theme_Material_NoActionBar);mixerDialog=dialog;
+        LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setBackgroundColor(Color.rgb(10,15,25));content.setPadding(dp(12),dp(8),dp(12),dp(8));
+        LinearLayout header=row();TextView title=label(getString(R.string.mixer),22);title.setTypeface(null,Typeface.BOLD);header.addView(title,new LinearLayout.LayoutParams(0,dp(42),1));header.addView(button(R.string.back,dialog::dismiss),new LinearLayout.LayoutParams(dp(90),dp(40)));content.addView(header);
+        content.addView(mixerPanel,new LinearLayout.LayoutParams(-1,0,1));mixerPanel.setVisibility(View.VISIBLE);renderMixer();dialog.setContentView(content);
+        dialog.setOnDismissListener(ignored->{((ViewGroup)mixerPanel.getParent()).removeView(mixerPanel);mixerDialog=null;if(!destroyed){parent.addView(mixerPanel,index,previous);mixerPanel.setVisibility(View.GONE);renderMixer();}});
+        content.setOnApplyWindowInsetsListener((view,insets)->{if(Build.VERSION.SDK_INT>=30){android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars());view.setPadding(dp(12)+bars.left,dp(8)+bars.top,dp(12)+bars.right,dp(8)+bars.bottom);}else view.setPadding(dp(12)+insets.getSystemWindowInsetLeft(),dp(8)+insets.getSystemWindowInsetTop(),dp(12)+insets.getSystemWindowInsetRight(),dp(8)+insets.getSystemWindowInsetBottom());return insets;});
+        dialog.show();if(dialog.getWindow()!=null)dialog.getWindow().setLayout(-1,-1);
     }
     private void chooseWav(){
         Intent picker=new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("audio/*");
@@ -123,7 +138,7 @@ public final class MainActivity extends Activity {
     }
     private void importFailure(int text){runOnUiThread(()->{if(!destroyed){loading=false;lastImportError=text;importButton.setEnabled(true);status.setText(text);if(!isFinishing()){if(importErrorDialog!=null)importErrorDialog.dismiss();importErrorDialog=new android.app.AlertDialog.Builder(this).setTitle(R.string.import_error_title).setMessage(text).setPositiveButton(android.R.string.ok,null).show();}}});}
     private void restoreImport(){try{JSONArray saved=new JSONArray(getSharedPreferences("mix",MODE_PRIVATE).getString("wavSources","[]"));List<Uri> files=new ArrayList<>();for(int i=0;i<saved.length();i++)files.add(Uri.parse(saved.getString(i)));if(!files.isEmpty())importAudioUris(files);}catch(Exception ignored){status.setText(R.string.import_failed);}}
-    @Override protected void onDestroy(){destroyed=true;imports.shutdownNow();if(importErrorDialog!=null)importErrorDialog.dismiss();mixer.closeImported();super.onDestroy();}
+    @Override protected void onDestroy(){destroyed=true;imports.shutdownNow();if(importErrorDialog!=null)importErrorDialog.dismiss();if(mixerDialog!=null)mixerDialog.dismiss();mixer.closeImported();super.onDestroy();}
 
     private void setBpm(int value){mixer.setBpm(value);getSharedPreferences("mix",MODE_PRIVATE).edit().putInt("bpm",mixer.getBpm()).apply();}
     @Override protected void onResume(){super.onResume();handler.post(refresh);}

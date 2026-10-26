@@ -67,3 +67,13 @@ The renderer only reads published blocks. Missing blocks hold the song cursor un
 The document provider must support random access. Unsupported cloud/pipe providers get a message to select a local stored WAV; the app does not silently duplicate it. RIFF PCM/float mono/stereo remains the supported file family. Waveform preview is sampled for quick import and may miss short transients; it is not a full peak or loudness analysis.
 
 Import failures are shown in a dialog and retained in the status instead of being hidden by Play. Source selection and gains remain private app state. The JVM regression opens a 10-minute WAV under a 48 MiB heap and tests bounded cache, seek, pause, loop, EOF and source loss. Device instrumentation requires an unlocked, active screen; it checks playback portions and jumps of the long fixture, not a full 10-minute soak test.
+
+## Phone mixer and fader gestures (0.3.1-dev)
+
+On phones, Mixer opens in a dedicated full-window panel with taller faders and a Back button. The transport/waveform scroll view is not the parent of the open mixer. Returning does not restart or stop audio. Tablets retain the inline mixer below the timeline. FaderSeekBar reserves the gesture from ACTION_DOWN through UP/CANCEL so parent vertical/horizontal scroll views do not steal a volume drag; scrolling outside the fader remains available. Android accessibility behavior is inherited from SeekBar.
+
+Run the device UI regression on an unlocked phone:
+
+    adb shell am instrument -r -w -e mode mixer com.onebytelabs.zlplay.dev.test/com.onebytelabs.zlplay.PadSmokeTest
+
+It opens the actual mixer window, sends a touchscreen drag to a fader, verifies the gain and audio state, restores the original gain and returns to transport. Tablet layout has not been physically tested in this round.

@@ -41,4 +41,5 @@
     <string name="not_seekable">Este local não permite leitura por blocos. Coloque o WAV no armazenamento local do celular e selecione novamente.</string>
     <string name="buffering">Preparando a posição de reprodução…</string>
     <string name="source_unavailable">O arquivo de áudio ficou indisponível. Selecione os arquivos novamente.</string>
+    <string name="back">Voltar</string>
 </resources>
