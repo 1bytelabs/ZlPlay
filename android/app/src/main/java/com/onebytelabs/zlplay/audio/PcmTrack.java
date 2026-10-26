@@ -1,7 +1,7 @@
 package com.onebytelabs.zlplay.audio;
 
 /** Immutable decoded source. Created on the import worker, never on the audio thread. */
-public final class PcmTrack {
+public class PcmTrack implements AutoCloseable {
     public final String name;
     public final int sampleRate, channels;
     private final float[] samples;
@@ -9,6 +9,10 @@ public final class PcmTrack {
         if(sampleRate<8000||sampleRate>192000||channels<1||channels>2||samples.length==0||samples.length%channels!=0)throw new IllegalArgumentException("Invalid PCM source");
         this.name=name;this.sampleRate=sampleRate;this.channels=channels;this.samples=samples;
     }
+    protected PcmTrack(String name,int rate,int channels){this.name=name;this.sampleRate=rate;this.channels=channels;this.samples=null;}
+    public boolean prepare(long frame,int count){return true;}
+    public boolean failed(){return false;}
+    @Override public void close(){}
     public long decodedBytes(){return samples.length*4L;}
     public void addPeaks(float[] peaks,double duration){
         int last=-1;float high=0;for(int frame=0;frame<samples.length/channels;frame++){

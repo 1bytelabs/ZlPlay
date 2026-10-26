@@ -23,6 +23,8 @@ public final class MainActivity extends Activity {
     private final ExecutorService imports=Executors.newSingleThreadExecutor();
     private volatile boolean destroyed;
     private boolean loading;
+    private int lastImportError;
+    private android.app.AlertDialog importErrorDialog;
     private Button importButton;
     private List<Uri> currentUris=new ArrayList<>();
     private float[] sourcePeaks;
@@ -32,9 +34,10 @@ public final class MainActivity extends Activity {
     private final int purple=Color.rgb(151,105,239),panel=Color.rgb(23,31,47),text=Color.rgb(230,235,248);
     private final Runnable refresh=new Runnable(){public void run(){
         if(clock==null)return;
+        getWindow().getDecorView().setKeepScreenOn(mixer.isPlaying()||mixer.isClick()||mixer.isPad());
         clock.setText(getString(R.string.duration_format,time(mixer.position()),time(mixer.duration())));
         state(play,mixer.isPlaying());state(loop,mixer.isLoop());state(click,mixer.isClick());state(pad,mixer.isPad());
-        if(audio!=null&&audio.error()!=null)status.setText(R.string.audio_error);
+        if(mixer.sourceFailed())status.setText(R.string.source_unavailable);else if(audio!=null&&audio.error()!=null)status.setText(R.string.audio_error);else if(!loading&&lastImportError==0&&mixer.hasImported()&&mixer.isPlaying())status.setText(mixer.isBuffering()?R.string.buffering:R.string.import_done);
         waveform.invalidate();handler.postDelayed(this,50);
     }};
     private int dp(float x){return Math.round(x*getResources().getDisplayMetrics().density);}
@@ -44,7 +47,7 @@ public final class MainActivity extends Activity {
     private Button button(int title,Runnable action){Button b=new Button(this);b.setText(title);b.setTextColor(text);b.setTextSize(11);b.setAllCaps(false);b.setMinWidth(0);b.setMinimumWidth(0);b.setMinHeight(0);b.setMinimumHeight(0);b.setPadding(dp(9),0,dp(9),0);b.setBackground(background(panel));b.setOnClickListener(v->action.run());return b;}
     private void addButton(LinearLayout r,Button b){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(40),1);lp.setMargins(dp(2),dp(3),dp(2),dp(3));r.addView(b,lp);}
     private void state(Button b,boolean active){b.setBackground(background(active?purple:panel));b.setSelected(active);}
-    private boolean ready(){if(loading)return false;if(audio==null)audio=new AudioSession(this,mixer);boolean ok=audio.start();if(!ok)status.setText(R.string.focus_denied);else status.setText(mixer.hasImported()?R.string.import_done:R.string.synthetic_notice);return ok;}
+    private boolean ready(){if(loading)return false;if(audio==null)audio=new AudioSession(this,mixer);boolean ok=audio.start();if(!ok)status.setText(R.string.focus_denied);else if(lastImportError==0)status.setText(mixer.hasImported()?R.string.import_done:R.string.synthetic_notice);return ok;}
     @Override public void onCreate(Bundle saved){super.onCreate(saved);
         var prefs=getSharedPreferences("mix",MODE_PRIVATE);mixer.setPadLevel(prefs.getFloat("padLevel",.7f));mixer.setBpm(prefs.getInt("bpm",120));for(int i=0;i<3;i++)mixer.setGain(i,prefs.getFloat("gain"+i,i==2?.4f:.55f));
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(Color.rgb(10,15,25));
@@ -65,7 +68,7 @@ public final class MainActivity extends Activity {
         minus.setOnClickListener(v->{setBpm(mixer.getBpm()-1);bpm.setText(String.valueOf(mixer.getBpm()));});plus.setOnClickListener(v->{setBpm(mixer.getBpm()+1);bpm.setText(String.valueOf(mixer.getBpm()));});
         tempo.addView(minus,new LinearLayout.LayoutParams(dp(40),dp(34)));tempo.addView(bpm,new LinearLayout.LayoutParams(dp(65),dp(38)));tempo.addView(plus,new LinearLayout.LayoutParams(dp(40),dp(34)));clock=label("0:00 / 1:30",12);clock.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);tempo.addView(clock,new LinearLayout.LayoutParams(0,dp(34),1));root.addView(tempo);
         waveform=new Waveform();root.addView(waveform,new LinearLayout.LayoutParams(-1,dp(104)));waveform.setContentDescription(getString(R.string.timeline));
-        status=label(getString(R.string.synthetic_notice),11);root.addView(status,new LinearLayout.LayoutParams(-1,dp(26)));
+        status=label(getString(R.string.synthetic_notice),11);status.setMinHeight(dp(26));root.addView(status,new LinearLayout.LayoutParams(-1,-2));
         mixerPanel=new LinearLayout(this);mixerPanel.setOrientation(LinearLayout.VERTICAL);root.addView(mixerPanel);renderMixer();mixerPanel.setVisibility(getResources().getConfiguration().smallestScreenWidthDp>=600?View.VISIBLE:View.GONE);restoreImport();
     }
 
@@ -103,24 +106,24 @@ public final class MainActivity extends Activity {
     }
     void importAudioUris(List<Uri> selected){
         if(loading||selected.isEmpty())return;if(selected.size()>32){status.setText(R.string.too_many_files);return;}
-        loading=true;importButton.setEnabled(false);mixer.silence();if(audio!=null){audio.close();audio=null;}status.setText(R.string.loading_audio);
+        lastImportError=0;loading=true;importButton.setEnabled(false);mixer.silence();if(audio!=null){audio.close();audio=null;}status.setText(R.string.loading_audio);
         final List<Uri> files=new ArrayList<>(selected);
         imports.execute(()->{
             try{
                 boolean durable=true;for(Uri uri:files)try{if(!"content".equals(uri.getScheme())){durable=false;continue;}getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(SecurityException unavailable){durable=false;}
                 final boolean persistent=durable;
                 WavImport.Result decoded=WavImport.read(getApplicationContext(),files,(done,total)->runOnUiThread(()->{if(!destroyed)status.setText(getString(R.string.loading_count,done,total));}));
-                runOnUiThread(()->{if(destroyed)return;currentUris=files;sourcePeaks=decoded.peaks;mixer.load(decoded.tracks);
+                runOnUiThread(()->{if(destroyed){decoded.close();return;}currentUris=files;sourcePeaks=decoded.peaks;mixer.load(decoded.tracks);
                     var prefs=getSharedPreferences("mix",MODE_PRIVATE);for(int i=0;i<mixer.trackCount();i++)mixer.setGain(i,prefs.getFloat(gainKey(i),.7f));
                     if(persistent){JSONArray list=new JSONArray();for(Uri uri:files)list.put(uri.toString());prefs.edit().putString("wavSources",list.toString()).apply();}
                     songTitle.setText(getString(R.string.imported_project,mixer.trackCount()));renderMixer();loading=false;importButton.setEnabled(true);status.setText(persistent?R.string.import_done:R.string.import_session_only);waveform.invalidate();
                 });
-            }catch(OutOfMemoryError memory){importFailure(R.string.import_memory);}catch(WavReader.TooLarge large){importFailure(R.string.import_memory);}catch(WavReader.Unsupported unsupported){importFailure(R.string.unsupported_wav);}catch(Exception failure){importFailure(R.string.import_failed);}
+            }catch(OutOfMemoryError memory){importFailure(R.string.import_memory);}catch(WavImport.NotSeekable unavailable){importFailure(R.string.not_seekable);}catch(WavReader.TooLarge large){importFailure(R.string.import_memory);}catch(WavReader.Unsupported unsupported){importFailure(R.string.unsupported_wav);}catch(Exception failure){importFailure(R.string.import_failed);}
         });
     }
-    private void importFailure(int text){runOnUiThread(()->{if(!destroyed){loading=false;importButton.setEnabled(true);status.setText(text);}});}
+    private void importFailure(int text){runOnUiThread(()->{if(!destroyed){loading=false;lastImportError=text;importButton.setEnabled(true);status.setText(text);if(!isFinishing()){if(importErrorDialog!=null)importErrorDialog.dismiss();importErrorDialog=new android.app.AlertDialog.Builder(this).setTitle(R.string.import_error_title).setMessage(text).setPositiveButton(android.R.string.ok,null).show();}}});}
     private void restoreImport(){try{JSONArray saved=new JSONArray(getSharedPreferences("mix",MODE_PRIVATE).getString("wavSources","[]"));List<Uri> files=new ArrayList<>();for(int i=0;i<saved.length();i++)files.add(Uri.parse(saved.getString(i)));if(!files.isEmpty())importAudioUris(files);}catch(Exception ignored){status.setText(R.string.import_failed);}}
-    @Override protected void onDestroy(){destroyed=true;imports.shutdownNow();super.onDestroy();}
+    @Override protected void onDestroy(){destroyed=true;imports.shutdownNow();if(importErrorDialog!=null)importErrorDialog.dismiss();mixer.closeImported();super.onDestroy();}
 
     private void setBpm(int value){mixer.setBpm(value);getSharedPreferences("mix",MODE_PRIVATE).edit().putInt("bpm",mixer.getBpm()).apply();}
     @Override protected void onResume(){super.onResume();handler.post(refresh);}

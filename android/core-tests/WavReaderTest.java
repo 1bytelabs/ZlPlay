@@ -15,10 +15,16 @@ public final class WavReaderTest {
   byte[] tail={0,0,16,0,(byte)128,0,0,(byte)170,0,56,(byte)155,113};System.arraycopy(tail,0,result,48,tail.length);return result;
  }
  static byte[] metadata(byte[] basic){byte[] result=new byte[basic.length+12];System.arraycopy(basic,0,result,0,12);System.arraycopy(basic,12,result,24,basic.length-12);ByteBuffer b=ByteBuffer.wrap(result).order(ByteOrder.LITTLE_ENDIAN);b.putInt(4,result.length-8);result[12]='J';result[13]='U';result[14]='N';result[15]='K';b.putInt(16,3);result[20]=1;result[21]=2;result[22]=3;return result;}
+ static float[] stream(byte[] bytes)throws Exception{
+  java.nio.file.Path path=java.nio.file.Files.createTempFile("zlplay-format-",".wav");
+  try{java.nio.file.Files.write(path,bytes);java.nio.channels.FileChannel channel=java.nio.channels.FileChannel.open(path,java.nio.file.StandardOpenOption.READ);
+   try(WavFile file=new WavFile("format",channel,channel,0,channel.size())){return file.readFrames(0,8,new byte[64]);}
+  }finally{java.nio.file.Files.deleteIfExists(path);}
+ }
  static void rejects(byte[] bytes,long budget,Class<? extends Exception> kind)throws Exception{try{WavReader.decode(new ByteArrayInputStream(bytes),"Test.wav",budget);throw new AssertionError("Expected rejection");}catch(Exception e){if(!kind.isInstance(e))throw e;}}
  public static void main(String[] args)throws Exception{
-  for(int bits:new int[]{8,16,24,32}){PcmTrack track=WavReader.decode(new ByteArrayInputStream(wav(48000,1,1,bits,new float[]{.5f,-.5f,0})),"tone.wav",1000);check(Math.abs(track.sample(0,0)-.5)<.01,"PCM "+bits);check(Math.abs(track.sample(1,1)+.5)<.01,"mono duplication "+bits);}
-  PcmTrack f=WavReader.decode(new ByteArrayInputStream(wav(48000,2,3,32,new float[]{.25f,-.5f,.5f,-.25f})),"stereo.wav",1000);check(f.sample(0,0)==.25f&&f.sample(0,1)==-.5f,"float stereo");
+  for(int bits:new int[]{8,16,24,32}){PcmTrack track=WavReader.decode(new ByteArrayInputStream(wav(48000,1,1,bits,new float[]{.5f,-.5f,0})),"tone.wav",1000);check(Math.abs(track.sample(0,0)-.5)<.01,"PCM "+bits);check(Math.abs(track.sample(1,1)+.5)<.01,"mono duplication "+bits);float[] streamed=stream(wav(48000,1,1,bits,new float[]{.5f,-.5f,0}));check(Math.abs(streamed[0]-.5)<.01&&Math.abs(streamed[1]+.5)<.01,"stream PCM "+bits);}
+  PcmTrack f=WavReader.decode(new ByteArrayInputStream(wav(48000,2,3,32,new float[]{.25f,-.5f,.5f,-.25f})),"stereo.wav",1000);check(f.sample(0,0)==.25f&&f.sample(0,1)==-.5f,"float stereo");float[] streamFloat=stream(wav(48000,2,3,32,new float[]{.25f,-.5f,.5f,-.25f}));check(streamFloat[0]==.25f&&streamFloat[1]==-.5f,"stream float");
   byte[] basic=wav(48000,1,1,24,new float[]{.25f,-.25f});
   check(Math.abs(WavReader.decode(new ByteArrayInputStream(extensible(basic)),"extended.wav",1000).sample(0,0)-.25)<.001,"extensible PCM");
   check(Math.abs(WavReader.decode(new ByteArrayInputStream(metadata(basic)),"metadata.wav",1000).sample(1,0)+.25)<.001,"unknown chunk and padding");

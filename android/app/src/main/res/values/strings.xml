@@ -34,7 +34,11 @@
     <string name="imported_project">Imported WAV · %1$d tracks</string>
     <string name="import_done">Audio opened without copying originals · ready to play</string>
     <string name="import_session_only">Audio opened for this session; select again after reopening</string>
-    <string name="import_memory">Prototype memory limit reached; select fewer or shorter files</string>
     <string name="unsupported_wav">Use PCM WAV (8/16/24/32-bit or float32), mono or stereo</string>
     <string name="import_failed">Unable to open audio; select the files again. Previous project preserved.</string>
+    <string name="import_memory">Unable to reserve audio buffers; try fewer tracks</string>
+    <string name="import_error_title">Unable to import audio</string>
+    <string name="not_seekable">This file location does not support block reading. Place the WAV in local phone storage and select it again.</string>
+    <string name="buffering">Preparing playback position…</string>
+    <string name="source_unavailable">Audio file became unavailable. Select the files again.</string>
 </resources>

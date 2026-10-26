@@ -34,7 +34,11 @@
     <string name="imported_project">WAV importado · %1$d pistas</string>
     <string name="import_done">Audio abierto sin copiar los originales · listo para reproducir</string>
     <string name="import_session_only">Audio abierto en esta sesión; vuelve a seleccionar al reabrir</string>
-    <string name="import_memory">Límite de memoria del prototipo alcanzado; selecciona menos archivos o más cortos</string>
     <string name="unsupported_wav">Usa WAV PCM (8/16/24/32 bits o float32), mono o estéreo</string>
     <string name="import_failed">No se pudo abrir el audio; vuelve a seleccionar los archivos. Proyecto anterior conservado.</string>
+    <string name="import_memory">No se pudieron reservar los buffers de audio; prueba con menos pistas</string>
+    <string name="import_error_title">No se pudo importar el audio</string>
+    <string name="not_seekable">Esta ubicación no permite lectura por bloques. Coloca el WAV en el almacenamiento local del teléfono y vuelve a seleccionarlo.</string>
+    <string name="buffering">Preparando la posición de reproducción…</string>
+    <string name="source_unavailable">El archivo de audio dejó de estar disponible. Vuelve a seleccionar los archivos.</string>
 </resources>

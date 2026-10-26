@@ -48,7 +48,7 @@ The runner clicks the real Pad button, verifies standalone PCM output and frame 
 
 Import WAV opens the system document picker with multiple selection. Supported: little-endian RIFF/WAVE PCM integer 8/16/24/32-bit and IEEE float32, mono/stereo, including supported WAVEFORMATEXTENSIBLE subtypes. Rate conversion currently uses linear interpolation to the 48 kHz prototype output; it is not a finalized high-quality resampler. MP3, FLAC, RF64 and desktop manifests are not supported yet.
 
-Decoding and source-peak analysis run on a worker thread before replacing the active session. The audio renderer reads immutable PCM arrays and performs no file I/O. Source files are not copied or modified. The prototype accepts up to 32 sources and limits decoded PCM to min(64 MiB, one fifth of the app heap) per load. A previous session and a new session can coexist during transactional preparation. Select short/few files for this stage; a streaming backend is required before practical long multitrack projects. Unsupported/truncated/oversized files leave the previous active session intact.
+Header validation, initial prefetch and a sampled source-peak preview run on a worker thread before replacing the active session. Subsequent decoding runs on a separate prefetch worker. The 0.2.0 implementation decoded whole sources and imposed a memory limit; it has been replaced by the 0.3.0 block-streaming implementation below. Source files are not copied or modified. Up to 32 sources can be selected. New and old sessions may coexist during transactional preparation. Unsupported/truncated/oversized files leave the previous active session intact.
 
 The app retains read-only document permissions and automatically saves selected URI references and gains when the provider supports it. Missing/revoked files are reported. No broad storage permission is requested, and original audio is never uploaded. Provider session-only access is identified in the UI.
 
@@ -56,4 +56,14 @@ Run the on-device WAV regression with the test APK installed:
 
     adb shell am instrument -r -w -e mode wav com.onebytelabs.zlplay.dev.test/com.onebytelabs.zlplay.PadSmokeTest
 
-The test creates and deletes its own temporary WAV fixtures in app cache, imports 48 kHz stereo and 44.1 kHz mono, checks AudioTrack output, pause/loop/stop, independent gains and rollback after invalid input. It does not validate a user's document provider, persistent grants after process death, acoustic quality or long sessions.
+The test creates and deletes its own temporary WAV fixtures in app cache, imports a 10-minute / 115 MB WAV at 48 kHz stereo and a short 44.1 kHz mono WAV, checks AudioTrack output, pause/loop/stop, independent gains and rollback after invalid input. It does not validate a user's document provider, persistent grants after process death, acoustic quality or long sessions.
+
+## Bounded streaming (0.3.0-dev)
+
+The former 64 MiB whole-file decoding limit is removed from the import path. Read-only seekable WAV documents are opened using file descriptors; one background worker per session decodes immutable 8192-frame blocks. Each source retains two intro blocks and up to six rotating cache blocks. At 32 stereo sources, nominal retained PCM cache storage is about 16 MiB, plus in-flight/referenced blocks, previews and Android overhead. GC and device/provider throughput still affect real performance; this is not an unlimited-track or latency guarantee.
+
+The renderer only reads published blocks. Missing blocks hold the song cursor until all needed sources are ready, preserving their shared clock; the UI reports buffering. Pad remains independent, and the song-linked click is muted during buffering. Seek and loop restart use prefetch/intro blocks. Provider read failure stops the song and is reported rather than substituting demo tracks. Foreground playback keeps the screen awake; manual locking/backgrounding still silences the prototype as before.
+
+The document provider must support random access. Unsupported cloud/pipe providers get a message to select a local stored WAV; the app does not silently duplicate it. RIFF PCM/float mono/stereo remains the supported file family. Waveform preview is sampled for quick import and may miss short transients; it is not a full peak or loudness analysis.
+
+Import failures are shown in a dialog and retained in the status instead of being hidden by Play. Source selection and gains remain private app state. The JVM regression opens a 10-minute WAV under a 48 MiB heap and tests bounded cache, seek, pause, loop, EOF and source loss. Device instrumentation requires an unlocked, active screen; it checks playback portions and jumps of the long fixture, not a full 10-minute soak test.
