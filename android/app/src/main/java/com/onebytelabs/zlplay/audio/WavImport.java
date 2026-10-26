@@ -15,8 +15,8 @@ public final class WavImport {
     public static final class NotSeekable extends IOException { public NotSeekable(){super("Document provider must support seeking");} }
     public static final class Result {
         public final PcmTrack[] tracks;
-        public final float[] peaks;
-        Result(PcmTrack[] tracks,float[] peaks){this.tracks=tracks;this.peaks=peaks;}
+        public final float[] peaks;public final boolean temporary;
+        Result(PcmTrack[] tracks,float[] peaks,boolean temporary){this.tracks=tracks;this.peaks=peaks;this.temporary=temporary;}
         public void close(){for(PcmTrack track:tracks)track.close();}
     }
     private static WavFile open(Context context,Uri uri,String name)throws IOException{
@@ -31,17 +31,20 @@ public final class WavImport {
         }
     }
     public static Result read(Context context,List<Uri> uris,Progress progress)throws IOException {
-        if(uris.isEmpty()||uris.size()>32)throw new WavReader.Unsupported();
-        List<WavFile> files=new ArrayList<>();List<float[]> previews=new ArrayList<>();StreamBank bank=null;
+        return readSources(context,uris,progress,32);
+    }
+    public static Result readSources(Context context,List<Uri> uris,Progress progress,int maximum)throws IOException {
+        if(uris.isEmpty()||uris.size()>maximum||maximum>64)throw new WavReader.Unsupported();
+        Map<Uri,File> mp3=new HashMap<>();List<WavFile> files=new ArrayList<>();List<float[]> previews=new ArrayList<>();StreamBank bank=null;
         try{
             for(Uri uri:uris){
-                String name="WAV "+(files.size()+1);
+                String name=uri.getLastPathSegment()==null?"Audio "+(files.size()+1):uri.getLastPathSegment();
                 try(Cursor cursor=context.getContentResolver().query(uri,new String[]{OpenableColumns.DISPLAY_NAME},null,null,null)){if(cursor!=null&&cursor.moveToFirst()&&!cursor.isNull(0))name=cursor.getString(0);}
-                WavFile file=open(context,uri,name);files.add(file);previews.add(file.preview());progress.update(files.size(),uris.size());
+                WavFile file;if(name.toLowerCase(Locale.ROOT).endsWith(".mp3")){File cached=mp3.get(uri);if(cached==null){cached=Mp3Decode.decode(context,uri);mp3.put(uri,cached);}file=Mp3Decode.open(cached,name);}else file=open(context,uri,name);files.add(file);previews.add(file.preview());progress.update(files.size(),uris.size());
             }
             bank=new StreamBank(files,previews);double duration=0;for(PcmTrack track:bank.tracks)duration=Math.max(duration,track.duration());
             float[] peaks=new float[1024];for(PcmTrack track:bank.tracks)track.addPeaks(peaks,duration);for(int i=0;i<peaks.length;i++)peaks[i]=Math.min(1,peaks[i]);
-            return new Result(bank.tracks,peaks);
-        }catch(IOException|RuntimeException|Error failure){if(bank!=null)bank.close();else for(WavFile file:files)file.close();throw failure;}
+            return new Result(bank.tracks,peaks,!mp3.isEmpty());
+        }catch(IOException|RuntimeException|Error failure){if(bank!=null)bank.close();else for(WavFile file:files)file.close();for(File cached:mp3.values())cached.delete();throw failure;}
     }
 }

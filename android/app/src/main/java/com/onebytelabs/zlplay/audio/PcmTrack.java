@@ -11,6 +11,8 @@ public class PcmTrack implements AutoCloseable {
     }
     protected PcmTrack(String name,int rate,int channels){this.name=name;this.sampleRate=rate;this.channels=channels;this.samples=null;}
     public boolean prepare(long frame,int count){return true;}
+    public void hint(long frame){}
+    public float previewPeak(double seconds){int frame=(int)(seconds*sampleRate);if(frame<0||frame>=samples.length/channels)return 0;float value=0;for(int f=frame;f<Math.min(frame+32,samples.length/channels);f++)for(int c=0;c<channels;c++)value=Math.max(value,Math.abs(samples[f*channels+c]));return value;}
     public boolean failed(){return false;}
     @Override public void close(){}
     public long decodedBytes(){return samples.length*4L;}
