@@ -28,7 +28,7 @@ public final class WavImportSmoke {
  public static Bundle run(Instrumentation test)throws Exception{
   android.app.KeyguardManager keyguard=(android.app.KeyguardManager)test.getTargetContext().getSystemService(android.content.Context.KEYGUARD_SERVICE);
   check(!keyguard.isDeviceLocked(),"Unlock the phone before foreground audio tests");
-  MainActivity screen=(MainActivity)test.startActivitySync(new Intent(test.getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+  MainActivity screen=(MainActivity)test.startActivitySync(new Intent(test.getTargetContext(),MainActivity.class).putExtra("com.onebytelabs.zlplay.SKIP_RESTORE_TEST",true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
   File dir=new File(test.getTargetContext().getCacheDir(),"wav-smoke-"+System.nanoTime());check(dir.mkdir(),"Fixture directory");File a=new File(dir,"Left.wav"),b=new File(dir,"Mono44100.wav"),bad=new File(dir,"Invalid.wav");
   try{
    fixture(a,48000,2,600);fixture(b,44100,1,5);try(FileOutputStream out=new FileOutputStream(bad)){out.write(new byte[12]);}

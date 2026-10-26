@@ -59,4 +59,16 @@
     <string name="rpp_native_click">El clic interno de REAPER no tiene archivo de audio. Esta pista usa el sonido de clic de la app al tempo del proyecto.</string>
     <string name="guide_track">Guía</string>
     <string name="click_track">Clic</string>
+    <string name="open_setlist">Repertorio</string>
+    <string name="setlist_folder_help">Elige la carpeta principal con el .zlset y todas las carpetas de canciones, con sus proyectos y audios. Tocar una tarjeta prepara la canción; usa Play para iniciar.</string>
+    <string name="no_setlist">No se encontró ningún .zlset o .zlplaylibrary en esta carpeta.</string>
+    <string name="choose_setlist">Elegir repertorio</string>
+    <string name="setlist_failed">No se pudo abrir el repertorio. Revisa formato, versión y estructura de carpetas. Se conservó la sesión de audio actual.</string>
+    <string name="setlist_song_missing">Falta el proyecto guardado para esta canción o su nombre es ambiguo. Conserva la carpeta de la canción y el nombre del proyecto elegido.</string>
+    <string name="setlist_pitch">Esta canción requiere otro tono. La transposición móvil aún no está implementada. Prepara en el ordenador un proyecto renderizado en ese tono.</string>
+    <string name="next_song">Siguiente: %1$s</string>
+    <string name="setlist_end">Fin del repertorio</string>
+    <string name="song_card">%1$d · %2$s</string>
+    <string name="current_song">Canción actual</string>
+    <string name="setlist_error_title">No se pudo abrir el repertorio</string>
 </resources>

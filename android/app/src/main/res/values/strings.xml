@@ -59,4 +59,16 @@
     <string name="rpp_native_click">The REAPER internal click has no audio file. This track uses the app click sound at the project tempo.</string>
     <string name="guide_track">Guide</string>
     <string name="click_track">Click</string>
+    <string name="open_setlist">Setlist</string>
+    <string name="setlist_folder_help">Choose the main folder containing the .zlset and all song folders with their projects and audio. Selecting a card prepares that song; press Play to start.</string>
+    <string name="no_setlist">No .zlset or .zlplaylibrary found in this folder.</string>
+    <string name="choose_setlist">Choose a setlist</string>
+    <string name="setlist_failed">Unable to open this setlist. Check its format, version and folder structure. The current audio session was preserved.</string>
+    <string name="setlist_song_missing">The saved project for this song is missing or ambiguous. Preserve its song folder and the selected project filename.</string>
+    <string name="setlist_pitch">This song requests a different key. Mobile pitch shifting is not implemented yet. Prepare a rendered project in that key on the computer.</string>
+    <string name="next_song">Next: %1$s</string>
+    <string name="setlist_end">End of setlist</string>
+    <string name="song_card">%1$d · %2$s</string>
+    <string name="current_song">Current song</string>
+    <string name="setlist_error_title">Unable to open setlist</string>
 </resources>

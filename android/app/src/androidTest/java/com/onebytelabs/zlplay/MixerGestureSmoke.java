@@ -16,7 +16,7 @@ public final class MixerGestureSmoke {
  private static void touch(Instrumentation test,long down,int action,float x,float y){MotionEvent event=MotionEvent.obtain(down,SystemClock.uptimeMillis(),action,x,y,0);event.setSource(InputDevice.SOURCE_TOUCHSCREEN);test.sendPointerSync(event);event.recycle();}
  public static Bundle run(Instrumentation test)throws Exception{
   KeyguardManager lock=(KeyguardManager)test.getTargetContext().getSystemService(Context.KEYGUARD_SERVICE);check(!lock.isDeviceLocked(),"Unlock the phone before mixer tests");
-  MainActivity screen=(MainActivity)test.startActivitySync(new Intent(test.getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));SeekBar[] slider={null};int[] original={-1};
+  MainActivity screen=(MainActivity)test.startActivitySync(new Intent(test.getTargetContext(),MainActivity.class).putExtra("com.onebytelabs.zlplay.SKIP_RESTORE_TEST",true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));SeekBar[] slider={null};int[] original={-1};
   try{
    for(int i=0;i<100;i++){boolean[] loading={true};test.runOnMainSync(()->{try{loading[0]=(Boolean)field(screen,"loading");}catch(Exception e){throw new RuntimeException(e);}});if(!loading[0])break;Thread.sleep(100);}
    DemoMixer mixer=(DemoMixer)field(screen,"mixer");test.runOnMainSync(()->button(screen.findViewById(android.R.id.content),screen.getString(R.string.pad)).performClick());
