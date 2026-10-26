@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ZLPlay Test</string>
+    <string name="prototype">AUDIO PROTOTYPE</string>
+    <string name="demo_project">Synthetic test project · 3 tracks</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="stop">Stop</string>
+    <string name="loop">Loop</string>
+    <string name="solo_click">Solo Click</string>
+    <string name="pad">Pad C</string>
+    <string name="mixer">Mixer</string>
+    <string name="bpm">BPM</string>
+    <string name="decrease">−</string>
+    <string name="increase">+</string>
+    <string name="synthetic_notice">Synthetic audio only · project import is not available yet</string>
+    <string name="focus_denied">Audio is in use by another application</string>
+    <string name="audio_error">Unable to start audio on this device</string>
+    <string name="timeline">Timeline: drag to change playback position</string>
+    <string name="bass">Bass</string>
+    <string name="keys">Keys</string>
+    <string name="drums">Drums</string>
+    <string name="volume">%1$s volume</string>
+    <string name="intro">Intro</string>
+    <string name="verse">Verse</string>
+    <string name="chorus">Chorus</string>
+    <string name="percent">%1$d%%</string>
+</resources>

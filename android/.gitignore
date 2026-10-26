@@ -1,0 +1,9 @@
+# Android development
+
+# Private device metadata, local SDK paths, debug signing keys and build outputs are not source files.
+.gradle/
+.idea/
+local.properties
+*.jks
+*.keystore
+captures/

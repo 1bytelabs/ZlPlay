@@ -1,0 +1,55 @@
+package com.onebytelabs.zlplay.audio;
+
+/** Synthetic multitrack fixture: no audio files, platform dependencies or disk I/O. */
+public final class DemoMixer {
+    public static final int RATE = 48000;
+    public static final int DURATION = RATE * 90;
+    private long cursor, auxiliary, clickFrame;
+    private boolean playing, loop, click, pad;
+    private int bpm = 120;
+    private final float[] target = { .55f, .55f, .4f }, gain = new float[3];
+    private float clickGain, padGain;
+    public synchronized void play() { if(cursor>=DURATION)cursor=0; playing=true; }
+    public synchronized void pause() { playing=false; }
+    public synchronized void stop() { playing=false; cursor=0; }
+    public synchronized void silence() { playing=false; click=false; pad=false; }
+    public synchronized void seek(double seconds) { cursor=Math.max(0,Math.min(DURATION,(long)(seconds*RATE))); }
+    public synchronized void setLoop(boolean value) { loop=value; }
+    public synchronized void setClick(boolean value) { if(value&&!click)clickFrame=0; click=value; }
+    public synchronized void setPad(boolean value) { pad=value; }
+    public synchronized void setBpm(int value) { bpm=Math.max(20,Math.min(400,value)); }
+    public synchronized void setGain(int index,float value) { if(index>=0&&index<3)target[index]=Math.max(0,Math.min(1,value)); }
+    public synchronized boolean isPlaying() { return playing; }
+    public synchronized boolean isLoop() { return loop; }
+    public synchronized boolean isClick() { return click; }
+    public synchronized boolean isPad() { return pad; }
+    public synchronized int getBpm() { return bpm; }
+    public synchronized double position() { return cursor/(double)RATE; }
+    public synchronized float getGain(int index) { return target[index]; }
+    private static double sine(double hz,long frame) { return Math.sin(2*Math.PI*hz*frame/RATE); }
+    public synchronized void render(float[] stereo,int frames) {
+        if(frames<0||stereo.length<frames*2)throw new IllegalArgumentException("Invalid frame count");
+        final double beat=RATE*60.0/bpm;
+        for(int i=0;i<frames;i++,auxiliary++,clickFrame++) {
+            if(cursor>=DURATION) { if(loop)cursor=0;else playing=false; }
+            for(int j=0;j<3;j++)gain[j]+=(target[j]-gain[j])*.002f;
+            clickGain+=((click?1:0)-clickGain)*.004f;
+            padGain+=((pad?1:0)-padGain)*.00005f;
+            double left=0,right=0;
+            if(playing) {
+                double phase=(cursor%24000)/24000.0;
+                double bass=.16*gain[0]*sine(110,cursor)*(.6+.4*Math.cos(2*Math.PI*phase));
+                double keys=.09*gain[1]*(sine(220,cursor)+sine(277.1826,cursor)+sine(329.6276,cursor));
+                double drums=.18*gain[2]*sine(65,cursor)*Math.exp(-phase*38);
+                left=bass+keys*.65+drums;right=bass+keys+drums;
+                cursor++;
+            }
+            long clock=playing?Math.max(0,cursor-1):clickFrame;
+            double inBeat=clock%beat;
+            double clickSample=clickGain*.13*sine(((long)(clock/beat)%4==0)?1800:1200,clock)*Math.exp(-inBeat/160.0);
+            double padSample=padGain*.045*(sine(130.8128,auxiliary)+sine(164.8138,auxiliary)+sine(195.9977,auxiliary));
+            stereo[i*2]=(float)Math.max(-.9,Math.min(.9,left+clickSample+padSample));
+            stereo[i*2+1]=(float)Math.max(-.9,Math.min(.9,right+clickSample+padSample));
+        }
+    }
+}
