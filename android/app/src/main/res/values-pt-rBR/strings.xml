@@ -25,4 +25,16 @@
     <string name="verse">Verso</string>
     <string name="chorus">Refrão</string>
     <string name="percent">%1$d%%</string>
+    <string name="duration_format">%1$s / %2$s</string>
+    <string name="import_wav">Importar WAV</string>
+    <string name="no_picker">Seletor de arquivos indisponível</string>
+    <string name="too_many_files">Selecione até 32 arquivos WAV</string>
+    <string name="loading_audio">Abrindo áudio…</string>
+    <string name="loading_count">Abrindo %1$d de %2$d…</string>
+    <string name="imported_project">WAV importado · %1$d pistas</string>
+    <string name="import_done">Áudio aberto sem copiar os originais · pronto para reproduzir</string>
+    <string name="import_session_only">Áudio aberto nesta sessão; selecione novamente ao reabrir</string>
+    <string name="import_memory">Limite de memória do protótipo atingido; selecione menos arquivos ou mais curtos</string>
+    <string name="unsupported_wav">Use WAV PCM (8/16/24/32 bits ou float32), mono ou estéreo</string>
+    <string name="import_failed">Não foi possível abrir o áudio; selecione os arquivos novamente. Projeto anterior preservado.</string>
 </resources>
