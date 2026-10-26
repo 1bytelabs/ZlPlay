@@ -9,8 +9,8 @@ Registro consolidado em **25/10/2026** (America/Sao_Paulo). Este documento prese
 - Versão publicada: **2.8.0**. Windows somente instalador; portátil retirada por decisão do usuário.
 - Release compartilhada: https://github.com/1bytelabs/ZlPlay/releases/tag/v2.8.0 . Preservar arquivos/notas de cada plataforma ao atualizar a outra.
 - Tag v2.8.0 permanece em `18fa25bf0dc8bd1a12281bfcedc3a9474ad9f222`. Não mover a tag para atualizar anexos. A release está marcada como Latest por decisão posterior do usuário, substituindo a preferência inicial por pré-release.
-- Último build Windows: commit `82142626480f5cf2eedc38163317c85be81c0c5b`. **56 testes aprovados**, auditoria de publicação sem achados; instalação isolada e testes do pacote concluídos.
-- Instalador Windows atual: `ZLPlay-2.8.0-instalador.exe`, SHA-256 `5f6dca8f0fff002d97024b94146c8d0d3c7c67b9628c73ada4fa9837e7b8e53d`. O checksum publicado lista somente esse instalador. Ambos foram baixados e comparados após publicação.
+- Último build Windows: commit `d18ff78419ae9c09f3c2cc5c77fc0f142ead33c6`. **60 testes aprovados**, auditoria de publicação sem achados; instalação isolada e testes do pacote concluídos.
+- Instalador Windows atual: `ZLPlay-2.8.0-instalador.exe`, SHA-256 `39b9578a4c5472e62c5141fe550f510cbe83e00ed43634ee0c84125990e5a969`. O checksum publicado lista somente esse instalador. Ambos foram baixados e comparados após publicação.
 - **Android ainda não tem implementação nesta conversa.** Android Studio instalado e depuração USB ativada no celular, conforme o usuário. A conexão ADB, SDK e toolchain ainda precisam ser confirmados.
 - Próxima etapa: inventariar o ambiente Android e validar uma reprodução multitrack mínima no celular real antes de construir a interface completa.
 
@@ -130,3 +130,5 @@ O pacote deve registrar formato/versão e incluir projetos, ordem do repertório
 Usuário solicitou e autorizou implementar: acompanhamento da reprodução na timeline principal com zoom; linhas finas nos limites das regiões, mais fortes na região atual; Shift + arraste de aresta independente sem mover vizinha, mantendo comportamento normal conectado; EQ/Gain e submenu com dimensões iguais (38 × 25 CSS px). Textos pt-BR/en/es. Validação local: 60 testes aprovados e auditoria sem achados; teste Electron sintético confirmou avanço/retorno da rolagem, ausência de rolagem parado, linhas [0,10,30], dimensões iguais e limites normais [0,8]/[8,30] versus Shift [0,6]/[8,30].
 
 Publicação Windows solicitada na mesma v2.8.0, somente instalador/checksum; validar pacote e downloads antes de declarar concluída. Handoff Mac em `docs/releases/HANDOFF-MAC-TIMELINE.md`; o usuário também autorizou o outro chat a gerar e substituir somente os ZIPs/checksum Mac após portar e validar as quatro mudanças. Android continua como próxima fase, ainda sem implementação.
+
+Publicação desta rodada concluída: instalador Windows do commit d18ff78419ae9c09f3c2cc5c77fc0f142ead33c6 e checksum substituídos com confirmação do usuário; downloads comparados por SHA-256, Mac/notas Mac/tag/Latest preservados. Testes repetidos no pacote instalado confirmaram as quatro mudanças e os recursos anteriores. O prompt de continuidade Mac foi entregue no chat com autorização para substituir somente os pacotes Mac após validação.
