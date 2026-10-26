@@ -12,6 +12,8 @@ public final class AudioSession implements AutoCloseable {
     private volatile boolean running;
     private Thread worker;
     private volatile String error;
+    private volatile long writtenFrames;
+    private volatile double blockRms;
     public AudioSession(Context context,DemoMixer mixer) {
         this.mixer=mixer;
         manager=(AudioManager)context.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
@@ -29,6 +31,8 @@ public final class AudioSession implements AutoCloseable {
         worker=new Thread(this::stream,"ZLPlay-Audio");worker.start();return true;
     }
     public String error() { return error; }
+    public long writtenFrames() { return writtenFrames; }
+    public double blockRms() { return blockRms; }
     private void stream() {
         AudioTrack output=null;
         try {
@@ -42,11 +46,11 @@ public final class AudioSession implements AutoCloseable {
             if(output.getState()!=AudioTrack.STATE_INITIALIZED)throw new IllegalStateException("Audio initialization failed");
             float[] block=new float[1024];output.play();
             while(running) {
-                mixer.render(block,512);int offset=0;
+                mixer.render(block,512);double energy=0;for(float sample:block)energy+=(double)sample*sample;blockRms=Math.sqrt(energy/block.length);int offset=0;
                 while(running&&offset<block.length) {
                     int written=output.write(block,offset,block.length-offset,AudioTrack.WRITE_BLOCKING);
                     if(written<=0)throw new IllegalStateException("Audio write failed: "+written);
-                    offset+=written;
+                    offset+=written;writtenFrames+=written/2;
                 }
             }
         } catch(Exception failure) { error=failure.getClass().getSimpleName();mixer.silence(); }

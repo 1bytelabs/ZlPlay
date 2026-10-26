@@ -12,6 +12,12 @@ public final class MixerTest {
   mixer.stop();check(mixer.position()==0,"stop resets song cursor");mixer.setBpm(999);check(mixer.getBpm()==400,"BPM clamp");mixer.setGain(0,-1);check(mixer.getGain(0)==0,"gain clamp");
   for(float value:block)check(Float.isFinite(value)&&Math.abs(value)<=.9f,"bounded finite output");
   DemoMixer a=new DemoMixer(),b=new DemoMixer();a.play();b.play();float[] whole=new float[9600],part=new float[4800];a.render(whole,4800);b.render(part,2400);check(Arrays.equals(Arrays.copyOf(whole,4800),part),"block boundary invariant");b.render(part,2400);check(Arrays.equals(Arrays.copyOfRange(whole,4800,9600),part),"continuous clock across blocks");
+  DemoMixer padOnly=new DemoMixer();padOnly.setPad(true);for(int i=0;i<20;i++)padOnly.render(block,4800);
+  double padRms=Math.sqrt(energy(block)/block.length);check(padRms>.035&&padRms<.12,"pad alone has measurable signal");check(!padOnly.isPlaying()&&!padOnly.isClick(),"pad test is isolated");
+  padOnly.setPadLevel(0);for(int i=0;i<40;i++)padOnly.render(block,4800);check(Math.sqrt(energy(block)/block.length)<.001,"pad level fades to silence");
+  padOnly.setPadLevel(1);for(int i=0;i<20;i++)padOnly.render(block,4800);check(Math.sqrt(energy(block)/block.length)>padRms,"pad gain works");
+  padOnly.setPad(false);for(int i=0;i<40;i++)padOnly.render(block,4800);check(Math.sqrt(energy(block)/block.length)<.001,"pad off fades to silence");
+  System.out.println("Pad-only RMS: "+padRms);
   System.out.println("PASS: silence, multitrack clock, pause, independent click/pad, loop, end, bounds and block continuity");
  }
  private static double energy(float[] buffer){double sum=0;for(float sample:buffer)sum+=sample*sample;return sum;}

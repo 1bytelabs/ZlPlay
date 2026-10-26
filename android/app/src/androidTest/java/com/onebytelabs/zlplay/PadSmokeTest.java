@@ -1,0 +1,40 @@
+package com.onebytelabs.zlplay;
+import android.app.*;
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.*;
+import android.widget.*;
+import com.onebytelabs.zlplay.audio.*;
+import java.lang.reflect.Field;
+
+/** Device regression: a real Pad button click must send nonzero PCM to AudioTrack. */
+public final class PadSmokeTest extends Instrumentation {
+    @Override public void onCreate(Bundle args){super.onCreate(args);start();}
+    private static Object field(Object target,String name)throws Exception{Field f=target.getClass().getDeclaredField(name);f.setAccessible(true);return f.get(target);}
+    private Button find(View view,String label){if(view instanceof Button&&label.contentEquals(((Button)view).getText()))return (Button)view;if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++){Button b=find(group.getChildAt(i),label);if(b!=null)return b;}}return null;}
+    @Override public void onStart(){Bundle result=new Bundle();Activity activity=null;
+        try {
+            activity=startActivitySync(new Intent(getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            final Activity screen=activity;final DemoMixer mixer=(DemoMixer)field(screen,"mixer");
+            runOnMainSync(mixer::silence);
+            runOnMainSync(()->{Button button=find(screen.findViewById(android.R.id.content),screen.getString(R.string.pad));if(button==null)throw new AssertionError("Pad button missing");button.performClick();});
+            runOnMainSync(()->mixer.setPadLevel(.7f));
+            Thread.sleep(1800);
+            AudioSession audio=(AudioSession)field(screen,"audio");
+            if(!mixer.isPad()||mixer.isPlaying()||mixer.isClick())throw new AssertionError("Pad must run alone");
+            if(audio==null||audio.error()!=null||audio.writtenFrames()<48000||audio.blockRms()<.005)throw new AssertionError("No Pad PCM delivered to AudioTrack");
+            result.putString("stream","Pad-only RMS="+audio.blockRms()+", writtenFrames="+audio.writtenFrames());
+            runOnMainSync(()->mixer.setPadLevel(0));
+            Thread.sleep(3000);
+            if(audio.blockRms()>.001)throw new AssertionError("Pad volume zero did not silence output");
+            runOnMainSync(()->mixer.setPadLevel(.7f));
+            Thread.sleep(1800);
+            if(audio.blockRms()<.005)throw new AssertionError("Pad volume restore failed");
+            runOnMainSync(()->{Button button=find(screen.findViewById(android.R.id.content),screen.getString(R.string.pad));button.performClick();});
+            Thread.sleep(3000);
+            if(mixer.isPad()||audio.blockRms()>.001)throw new AssertionError("Pad stop did not fade to silence");
+            result.putString("status","PASS: pad-only AudioTrack, volume zero/restore and fade-out");
+            runOnMainSync(screen::finish);finish(Activity.RESULT_OK,result);
+        }catch(Throwable e){result.putString("error",e.toString());if(activity!=null){Activity failed=activity;runOnMainSync(failed::finish);}finish(Activity.RESULT_CANCELED,result);}
+    }
+}

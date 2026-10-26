@@ -8,7 +8,7 @@ public final class DemoMixer {
     private boolean playing, loop, click, pad;
     private int bpm = 120;
     private final float[] target = { .55f, .55f, .4f }, gain = new float[3];
-    private float clickGain, padGain;
+    private float clickGain, padGain, padLevel=.7f;
     public synchronized void play() { if(cursor>=DURATION)cursor=0; playing=true; }
     public synchronized void pause() { playing=false; }
     public synchronized void stop() { playing=false; cursor=0; }
@@ -17,6 +17,8 @@ public final class DemoMixer {
     public synchronized void setLoop(boolean value) { loop=value; }
     public synchronized void setClick(boolean value) { if(value&&!click)clickFrame=0; click=value; }
     public synchronized void setPad(boolean value) { pad=value; }
+    public synchronized void setPadLevel(float value) { padLevel=Math.max(0,Math.min(1,value)); }
+    public synchronized float getPadLevel() { return padLevel; }
     public synchronized void setBpm(int value) { bpm=Math.max(20,Math.min(400,value)); }
     public synchronized void setGain(int index,float value) { if(index>=0&&index<3)target[index]=Math.max(0,Math.min(1,value)); }
     public synchronized boolean isPlaying() { return playing; }
@@ -34,7 +36,7 @@ public final class DemoMixer {
             if(cursor>=DURATION) { if(loop)cursor=0;else playing=false; }
             for(int j=0;j<3;j++)gain[j]+=(target[j]-gain[j])*.002f;
             clickGain+=((click?1:0)-clickGain)*.004f;
-            padGain+=((pad?1:0)-padGain)*.00005f;
+            padGain+=((pad?padLevel:0)-padGain)*.00005f;
             double left=0,right=0;
             if(playing) {
                 double phase=(cursor%24000)/24000.0;
@@ -47,7 +49,7 @@ public final class DemoMixer {
             long clock=playing?Math.max(0,cursor-1):clickFrame;
             double inBeat=clock%beat;
             double clickSample=clickGain*.13*sine(((long)(clock/beat)%4==0)?1800:1200,clock)*Math.exp(-inBeat/160.0);
-            double padSample=padGain*.045*(sine(130.8128,auxiliary)+sine(164.8138,auxiliary)+sine(195.9977,auxiliary));
+            double padSample=padGain*.085*(sine(261.6256,auxiliary)+.8*sine(329.6276,auxiliary)+.7*sine(391.9954,auxiliary)+.15*sine(523.2511,auxiliary));
             stereo[i*2]=(float)Math.max(-.9,Math.min(.9,left+clickSample+padSample));
             stereo[i*2+1]=(float)Math.max(-.9,Math.min(.9,right+clickSample+padSample));
         }

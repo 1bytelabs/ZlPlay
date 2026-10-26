@@ -25,7 +25,7 @@ On Windows, if Java reports a Unix-domain socket/loopback error, configure `jdk.
 
 - Native Android views and a single AudioTrack PCM output; three synthetic stems share one sample clock.
 - Landscape transport, a representative synthetic waveform with three regions, seeking and looping; slim volume faders and automatically saved gain/BPM preferences.
-- Standalone click with adjustable BPM and a synthetic C pad. These are test signals, not the final sound library.
+- Standalone click with adjustable BPM and a synthetic C pad with its own persisted gain control. The test chord uses midrange harmonics to be easier to hear on small speakers. These are test signals, not the final sound library.
 - Pausing/stopping the song leaves independently enabled click/pad active; disable their buttons to silence them. Leaving the activity or losing audio focus silences all audio. Playback does not continue in the background in this prototype.
 - This is an audio experiment, not a completed Android port. There is no `.zlplay`/`.zlset` import, real multitrack decoding, pitch shifting, arrangement jump automation, custom pads/click import, external multichannel routing, project autosave or audio latency certification yet.
 - The Java mixer is isolated from Android for deterministic tests. Final backend reuse/native DSP decisions require actual device measurements. ASIO and Windows-specific packaging are not used.
@@ -35,3 +35,11 @@ On Windows, if Java reports a Unix-domain socket/loopback error, configure `jdk.
 ## License
 
 The project's own source remains AGPL-3.0-only; see `../LICENSE` and `../THIRD_PARTY_NOTICES.md`. The Gradle wrapper is from the official Gradle 9.1.0 distribution/source and carries its upstream notices. Android tooling is obtained separately under its own terms; SDK license acceptance must be completed by the developer. This prototype does not bundle the desktop JUCE/ASIO SDK or personal audio.
+
+## Device Pad regression
+
+Build assembleDebugAndroidTest, install both debug APKs and run:
+
+    adb shell am instrument -r -w com.onebytelabs.zlplay.dev.test/com.onebytelabs.zlplay.PadSmokeTest
+
+The runner clicks the real Pad button, verifies standalone PCM output and frame delivery to AudioTrack, tests zero/restored Pad level and fade-out, and closes its test activity. It does not record the microphone or certify physical audibility, latency or the external audio route. AudioSession exposes stream RMS and written-frame counters for this test; these are diagnostics, not mixer meters.
