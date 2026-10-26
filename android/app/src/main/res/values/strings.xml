@@ -56,4 +56,7 @@
     <string name="project_limits">This prototype reads WAV/MP3 clips, basic levels, regions and ZLPlay arrangement jumps. REAPER effects, fades, tempo maps, custom routing and project click/pad settings are not reproduced. Use rendered audio when those settings are needed.</string>
     <string name="audio_cache_full">Not enough temporary space for MP3. Free storage and try again.</string>
     <string name="mp3_cache_notice">MP3 sources are decoded to temporary audio in app storage before playback; originals remain unchanged. Temporary audio is removed when the project is closed.</string>
+    <string name="rpp_native_click">The REAPER internal click has no audio file. This track uses the app click sound at the project tempo.</string>
+    <string name="guide_track">Guide</string>
+    <string name="click_track">Click</string>
 </resources>

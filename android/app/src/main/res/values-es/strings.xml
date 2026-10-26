@@ -56,4 +56,7 @@
     <string name="project_limits">Este prototipo lee clips WAV/MP3, volúmenes básicos, regiones y saltos del arreglo ZLPlay. No reproduce efectos de REAPER, fades, mapas de tempo, rutas personalizadas ni ajustes de clic/pad del proyecto. Usa audios renderizados cuando necesites esos ajustes.</string>
     <string name="audio_cache_full">No hay espacio temporal para el MP3. Libera almacenamiento e inténtalo otra vez.</string>
     <string name="mp3_cache_notice">Los MP3 se decodifican en audio temporal dentro del almacenamiento de la app antes de reproducir; se conservan los originales. El audio temporal se elimina al cerrar el proyecto.</string>
+    <string name="rpp_native_click">El clic interno de REAPER no tiene archivo de audio. Esta pista usa el sonido de clic de la app al tempo del proyecto.</string>
+    <string name="guide_track">Guía</string>
+    <string name="click_track">Clic</string>
 </resources>

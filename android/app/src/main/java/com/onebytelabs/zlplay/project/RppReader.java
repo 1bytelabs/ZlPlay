@@ -16,7 +16,7 @@ public final class RppReader {
     if(type.equals("REAPER_PROJECT"))root=true;
     else if(type.equals("TRACK")){node=new Node();all.add(node);}
     else if(type.equals("ITEM")&&node!=null){item=new ProjectSpec.Clip();node.track.clips.add(item);}
-    else if(type.equals("SOURCE")&&item!=null){if(p.size()>1&&p.get(1).equals("CLICK"))item.file="@click:"+node.track.name;else if(p.size()<2||!p.get(1).equals("WAVE")&&!p.get(1).equals("MP3"))throw new ProjectSpec.Processing();}
+    else if(type.equals("SOURCE")&&item!=null){if(p.size()>1&&p.get(1).equals("CLICK")){node.track.role=2;item.file="@click:"+node.track.name;}else if(p.size()<2||!p.get(1).equals("WAVE")&&!p.get(1).equals("MP3"))throw new ProjectSpec.Processing();}
     else if(Arrays.asList("VST","JS","AU","CLAP","DX").contains(type))result.warnings.add("effects");
     continue;
    }

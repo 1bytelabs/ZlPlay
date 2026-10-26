@@ -11,7 +11,7 @@ import android.provider.DocumentsContract;
 /** Read-only inventory of the folder explicitly granted by the user. */
 public final class ProjectFolder {
  public final Uri tree;public final Map<String,Uri> files=new LinkedHashMap<>();
- public static final class Missing extends IOException {public Missing(){super("Missing or ambiguous project audio");}}
+ public static final class Missing extends IOException {public final boolean ambiguous;public Missing(){this(false);}public Missing(boolean ambiguous){super("Missing or ambiguous project audio");this.ambiguous=ambiguous;}}
  public ProjectFolder(Uri tree){this.tree=tree;}
  public static ProjectFolder scan(Context context,Uri tree)throws IOException{
   ProjectFolder result=new ProjectFolder(tree);Set<String> seen=new HashSet<>();int[] count={0};
@@ -30,9 +30,10 @@ public final class ProjectFolder {
  public List<String> projects(){List<String> list=new ArrayList<>();for(String file:files.keySet())if(file.toLowerCase(Locale.ROOT).endsWith(".zlplay")||file.toLowerCase(Locale.ROOT).endsWith(".rpp"))list.add(file);list.sort(String.CASE_INSENSITIVE_ORDER);return list;}
  private static String key(String path){return Normalizer.normalize(path,Normalizer.Form.NFC).toLowerCase(Locale.ROOT);}
  public Uri resolve(String project,String reference)throws IOException{
+  if(reference.startsWith("@click:")){String name=reference.substring(7);try{return resolve(project,name+".wav");}catch(Missing missing){if(missing.ambiguous)throw missing;}Uri click=null;for(var entry:files.entrySet()){String base=entry.getKey().substring(entry.getKey().lastIndexOf('/')+1).toLowerCase(Locale.ROOT);if(base.matches(".*(?:click|clique|claqueta|metronom).*\\.(?:wav|mp3)")){if(click!=null)throw new Missing(true);click=entry.getValue();}}if(click==null)throw new Missing();return click;}
   String ref=reference.replace('\\','/');if(ref.startsWith("@click:"))ref=ref.substring(7)+".wav";
   if(ref.contains("://"))throw new Missing();boolean absolute=ref.startsWith("/")||ref.matches("^[A-Za-z]:/.*");
-  if(!absolute){String parent=project.contains("/")?project.substring(0,project.lastIndexOf('/')+1):"";Deque<String> parts=new ArrayDeque<>();for(String part:(parent+ref).split("/")){if(part.isEmpty()||part.equals("."))continue;if(part.equals("..")){if(parts.isEmpty())throw new Missing();parts.removeLast();}else parts.add(part);}String wanted=key(String.join("/",parts));Uri found=null;for(var entry:files.entrySet())if(key(entry.getKey()).equals(wanted)){if(found!=null)throw new Missing();found=entry.getValue();}if(found!=null)return found;}
+  if(!absolute){String parent=project.contains("/")?project.substring(0,project.lastIndexOf('/')+1):"";Deque<String> parts=new ArrayDeque<>();for(String part:(parent+ref).split("/")){if(part.isEmpty()||part.equals("."))continue;if(part.equals("..")){if(parts.isEmpty())throw new Missing();parts.removeLast();}else parts.add(part);}String wanted=key(String.join("/",parts));Uri found=null;for(var entry:files.entrySet())if(key(entry.getKey()).equals(wanted)){if(found!=null)throw new Missing(true);found=entry.getValue();}if(found!=null)return found;}
   // Relocated desktop paths are accepted only for a unique basename inside this grant.
   String base=key(ref.substring(ref.lastIndexOf('/')+1));Uri found=null;for(var entry:files.entrySet())if(key(entry.getKey().substring(entry.getKey().lastIndexOf('/')+1)).equals(base)){if(found!=null)throw new Missing();found=entry.getValue();}if(found==null)throw new Missing();return found;
  }

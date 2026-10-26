@@ -34,7 +34,7 @@ public final class WavImport {
         return readSources(context,uris,progress,32);
     }
     public static Result readSources(Context context,List<Uri> uris,Progress progress,int maximum)throws IOException {
-        if(uris.isEmpty()||uris.size()>maximum||maximum>64)throw new WavReader.Unsupported();
+        if(uris.isEmpty()||uris.size()>maximum||maximum>128)throw new WavReader.Unsupported();
         Map<Uri,File> mp3=new HashMap<>();List<WavFile> files=new ArrayList<>();List<float[]> previews=new ArrayList<>();StreamBank bank=null;
         try{
             for(Uri uri:uris){

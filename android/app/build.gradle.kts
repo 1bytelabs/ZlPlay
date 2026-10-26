@@ -7,8 +7,8 @@ android {
         minSdk = 26
         targetSdk = 36
         testInstrumentationRunner = "com.onebytelabs.zlplay.PadSmokeTest"
-        versionCode = 6
-        versionName = "0.4.0-dev"
+        versionCode = 7
+        versionName = "0.4.1-dev"
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     buildTypes { release { isMinifyEnabled = false } }
@@ -20,3 +20,10 @@ val prepareLicenseAssets by tasks.registering(Copy::class) {
 }
 android.sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/licenseAssets").get().asFile)
 tasks.named("preBuild") { dependsOn(prepareLicenseAssets) }
+
+val prepareAudioAssets by tasks.registering(Copy::class) {
+    from(rootProject.file("../app/Meuclick.wav"))
+    into(layout.buildDirectory.dir("generated/audioAssets"))
+}
+android.sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/audioAssets").get().asFile)
+tasks.named("preBuild") { dependsOn(prepareAudioAssets) }

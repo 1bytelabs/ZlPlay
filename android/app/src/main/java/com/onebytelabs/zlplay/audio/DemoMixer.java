@@ -10,6 +10,7 @@ public final class DemoMixer {
     private int bpm = 120;
     private PcmTrack[] imported;
     private ProjectSpec project;private ProjectArrangement arrangement;private long manualBoundary=-1,manualTarget;private int pendingRegion=-1;
+    private PcmTrack guidePreview;private int guideIndex=-1;private long previewStart=-1,previewEnd,previewSource;private boolean previewReady;
     private float[] pan=new float[3];
     private long durationFrames=DURATION;
     private float[] target = { .55f, .55f, .4f }, gain = new float[3];
@@ -23,12 +24,14 @@ public final class DemoMixer {
         closeImported();project=null;arrangement=null;manualBoundary=-1;pendingRegion=-1;pan=new float[tracks.length];imported=sources;target=new float[tracks.length];java.util.Arrays.fill(target,.7f);gain=new float[tracks.length];durationFrames=(long)Math.ceil(duration*RATE);cursor=0;playing=false;
     }
     public synchronized void configureProject(ProjectSpec spec){project=spec;arrangement=new ProjectArrangement(spec);durationFrames=Math.max(durationFrames,Math.round(spec.duration*RATE));bpm=(int)Math.round(spec.bpm);}
+    public synchronized void configureGuidePreview(PcmTrack source,int index){guidePreview=source;guideIndex=index;}
+    private void updatePreview(){previewStart=-1;previewReady=false;if(guidePreview==null||guideIndex<0||loop||!playing||project==null)return;long boundary=manualBoundary>=0?manualBoundary:arrangement==null?-1:arrangement.previewBoundary(cursor),target=manualBoundary>=0?manualTarget:arrangement==null?-1:arrangement.hint();if(boundary<0||target<=0)return;long previous=0;for(int i=0;i<project.regions.size();i++){long start=Math.round(project.regions.get(i).start*RATE);if(start<target&&start>previous)previous=start;}long source=Math.max(Math.max(0,target-8L*RATE),previous),lead=target-source;if(lead<=RATE*.03)return;previewStart=boundary-lead;previewEnd=boundary;previewSource=source;guidePreview.hint(source);if(cursor<previewEnd&&cursor>=previewStart)previewReady=guidePreview.prepare(source+cursor-previewStart,512);}
     public synchronized void setPan(int track,float value){pan[track]=Math.max(-1,Math.min(1,value));}
     private ProjectSpec.Region regionAt(long frame){if(project!=null)for(int i=0;i<project.regions.size();i++){ProjectSpec.Region r=project.regions.get(i);if(frame>=Math.round(r.start*RATE)&&frame<Math.round(r.end*RATE))return r;}return null;}
     public synchronized int pendingRegion(){return pendingRegion;}
     public synchronized void selectRegion(int index){if(project==null||index<0||index>=project.regions.size())return;ProjectSpec.Region target=project.regions.get(index),from=regionAt(cursor);if(playing&&from!=null){if(pendingRegion==index){manualBoundary=-1;pendingRegion=-1;return;}manualBoundary=Math.round(from.end*RATE);manualTarget=Math.round(target.start*RATE);pendingRegion=index;hintSources(manualTarget);}else seek(target.start);}
     private void hintSources(long frame){if(imported!=null&&frame>=0)for(PcmTrack track:imported)track.hint(frame);}
-    public synchronized void closeImported(){if(imported!=null){for(PcmTrack track:imported)track.close();imported=null;}buffering=false;}
+    public synchronized void closeImported(){if(guidePreview!=null){guidePreview.close();guidePreview=null;}guideIndex=-1;previewStart=-1;if(imported!=null){for(PcmTrack track:imported)track.close();imported=null;}buffering=false;}
     public synchronized boolean isBuffering(){return buffering;}
     public synchronized boolean sourceFailed(){if(imported!=null)for(PcmTrack track:imported)if(track.failed())return true;return false;}
     private boolean prepareSources(int frames){boolean ready=true;if(imported!=null)for(PcmTrack track:imported)ready=track.prepare(cursor,frames)&&ready;return ready;}
@@ -58,18 +61,19 @@ public final class DemoMixer {
         final double beat=RATE*60.0/bpm;
         if(sourceFailed()){playing=false;buffering=false;}
         if(playing&&!loop)hintSources(manualBoundary>=0?manualTarget:arrangement==null?-1:arrangement.hint());
+        updatePreview();
         boolean ready=!playing||prepareSources((int)Math.min(Math.min(frames,512),Math.max(1,durationFrames-cursor)));
         buffering=playing&&!ready;
         for(int i=0;i<frames;i++,auxiliary++,clickFrame++) {
-            if(playing&&project!=null){long target=-1;if(manualBoundary>=0&&cursor>=manualBoundary){target=manualTarget;manualBoundary=-1;pendingRegion=-1;if(arrangement!=null)arrangement.manualSeek(regionAt(target));}else if(arrangement!=null)target=arrangement.target(cursor,loop||manualBoundary>=0);if(target>=0){cursor=target;ready=prepareSources((int)Math.min(Math.min(frames-i,512),Math.max(1,durationFrames-cursor)));buffering=!ready;if(!loop)hintSources(arrangement==null?-1:arrangement.hint());}}
-            if(i>0&&i%512==0&&playing){ready=prepareSources((int)Math.min(Math.min(frames-i,512),Math.max(1,durationFrames-cursor)));buffering=!ready;}
+            if(playing&&project!=null){long target=-1;if(manualBoundary>=0&&cursor>=manualBoundary){target=manualTarget;manualBoundary=-1;pendingRegion=-1;if(arrangement!=null)arrangement.manualSeek(regionAt(target));}else if(arrangement!=null)target=arrangement.target(cursor,loop||manualBoundary>=0);if(target>=0){cursor=target;updatePreview();ready=prepareSources((int)Math.min(Math.min(frames-i,512),Math.max(1,durationFrames-cursor)));buffering=!ready;if(!loop)hintSources(arrangement==null?-1:arrangement.hint());}}
+            if(i>0&&i%512==0&&playing){updatePreview();ready=prepareSources((int)Math.min(Math.min(frames-i,512),Math.max(1,durationFrames-cursor)));buffering=!ready;}
             if(cursor>=durationFrames) { if(loop){cursor=0;ready=prepareSources((int)Math.min(Math.min(frames-i,512),durationFrames));buffering=playing&&!ready;}else{playing=false;buffering=false;} }
             for(int j=0;j<target.length;j++)gain[j]+=(target[j]-gain[j])*.002f;
             clickGain+=((click?1:0)-clickGain)*.004f;
             padGain+=((pad?padLevel:0)-padGain)*.00005f;
             double left=0,right=0;
             if(playing&&ready) {
-              if(imported!=null){for(int track=0;track<imported.length;track++){left+=gain[track]*(pan[track]>0?1-pan[track]:1)*imported[track].sample(cursor,0);right+=gain[track]*(pan[track]<0?1+pan[track]:1)*imported[track].sample(cursor,1);}}else{
+              if(imported!=null){for(int track=0;track<imported.length;track++){boolean preview=track==guideIndex&&previewReady&&cursor>=previewStart&&cursor<previewEnd;PcmTrack source=preview?guidePreview:imported[track];long frame=preview?previewSource+cursor-previewStart:cursor;left+=gain[track]*(pan[track]>0?1-pan[track]:1)*source.sample(frame,0);right+=gain[track]*(pan[track]<0?1+pan[track]:1)*source.sample(frame,1);}}else{
                 double phase=(cursor%24000)/24000.0;
                 double bass=.16*gain[0]*sine(110,cursor)*(.6+.4*Math.cos(2*Math.PI*phase));
                 double keys=.09*gain[1]*(sine(220,cursor)+sine(277.1826,cursor)+sine(329.6276,cursor));
@@ -80,10 +84,10 @@ public final class DemoMixer {
             }
             long clock=playing?Math.max(0,cursor-1):clickFrame;
             double inBeat=clock%beat;
-            double clickSample=(playing&&buffering?0:1)*clickGain*.13*sine(((long)(clock/beat)%4==0)?1800:1200,clock)*Math.exp(-inBeat/160.0);
+            double clickLevel=(playing&&buffering?0:1)*clickGain;int meter=project==null?4:project.numerator;double clickLeft=clickLevel*NativeClickSound.sample(clock,beat,meter,0),clickRight=clickLevel*NativeClickSound.sample(clock,beat,meter,1);
             double padSample=padGain*.085*(sine(261.6256,auxiliary)+.8*sine(329.6276,auxiliary)+.7*sine(391.9954,auxiliary)+.15*sine(523.2511,auxiliary));
-            stereo[i*2]=(float)Math.max(-.9,Math.min(.9,left+clickSample+padSample));
-            stereo[i*2+1]=(float)Math.max(-.9,Math.min(.9,right+clickSample+padSample));
+            stereo[i*2]=(float)Math.max(-.9,Math.min(.9,left+clickLeft+padSample));
+            stereo[i*2+1]=(float)Math.max(-.9,Math.min(.9,right+clickRight+padSample));
         }
     }
 }

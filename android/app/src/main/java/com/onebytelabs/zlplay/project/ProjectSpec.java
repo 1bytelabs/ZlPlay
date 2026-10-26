@@ -1,12 +1,15 @@
 package com.onebytelabs.zlplay.project;
 import java.util.*;
+import java.text.Normalizer;
 
 /** Shared project model. Times are seconds at the project's original execution rate. */
 public final class ProjectSpec {
  public String title="Project";public double bpm=120,duration;public int numerator=4,denominator=4;public boolean automationEnabled=true;
  public final List<Track> tracks=new ArrayList<>();public final List<Region> regions=new ArrayList<>();public final List<Jump> jumps=new ArrayList<>();public final Set<String> warnings=new LinkedHashSet<>();
- public static final class Track {public String name="Track",group="VS";public double volume=1,pan;public boolean mute,solo;public final List<Clip> clips=new ArrayList<>();}
- public static final class Clip {public String file="";public double position,offset,length=-1,gain=1,pan;}
+ public static boolean isGuideName(String name){String n=Normalizer.normalize(name,Normalizer.Form.NFD).replaceAll("\\p{M}+","").toLowerCase(Locale.ROOT);return n.matches(".*(?:^|[^a-z])(?:guia|guide|cue|cues)(?:[^a-z]|$).*");}
+ public static boolean isClickName(String name){String n=Normalizer.normalize(name,Normalizer.Form.NFD).replaceAll("\\p{M}+","").toLowerCase(Locale.ROOT);return n.matches(".*(?:click|clique|claqueta|metronom).*");}
+ public static final class Track {public int role;public boolean isGuide(){return role==1||role==0&&isGuideName(name);}public boolean isClick(){return role==2||role==0&&isClickName(name);}public String name="Track",group="VS";public double volume=1,pan;public boolean mute,solo;public final List<Clip> clips=new ArrayList<>();}
+ public static final class Clip {public boolean nativeClick;public String file="";public double position,offset,length=-1,gain=1,pan;}
  public static final class Region {public final String name,color;public final double start,end;public Region(String n,double s,double e,String c){name=n;start=s;end=e;color=c==null?"":c;}}
  public static final class Jump {public final double fromStart,fromEnd,target;public Jump(double s,double e,double t){fromStart=s;fromEnd=e;target=t;}}
  public static final class Invalid extends Exception {public Invalid(){super("Invalid project");}}

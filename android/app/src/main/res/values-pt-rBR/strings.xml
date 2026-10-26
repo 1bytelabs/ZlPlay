@@ -56,4 +56,7 @@
     <string name="project_limits">Este protótipo lê trechos WAV/MP3, volumes básicos, regiões e saltos do arranjo ZLPlay. Efeitos do REAPER, fades, mapas de tempo, roteamento personalizado e ajustes de clique/pad do projeto não são reproduzidos. Use áudios renderizados quando precisar desses ajustes.</string>
     <string name="audio_cache_full">Sem espaço temporário para o MP3. Libere armazenamento e tente novamente.</string>
     <string name="mp3_cache_notice">As fontes MP3 são decodificadas em áudio temporário no armazenamento do app antes de reproduzir; os originais são preservados. O áudio temporário é removido ao fechar o projeto.</string>
+    <string name="rpp_native_click">O clique interno do REAPER não tem arquivo de áudio. Essa track usa o som de clique do app no andamento do projeto.</string>
+    <string name="guide_track">Guia</string>
+    <string name="click_track">Click</string>
 </resources>

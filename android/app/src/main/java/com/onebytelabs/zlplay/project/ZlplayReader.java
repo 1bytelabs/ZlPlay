@@ -7,8 +7,8 @@ import java.util.*;
 public final class ZlplayReader {
  private static double value(JSONObject o,String key,double fallback)throws ProjectSpec.Invalid{if(o==null||!o.has(key))return fallback;double n=o.optDouble(key,Double.NaN);if(!Double.isFinite(n))throw new ProjectSpec.Invalid();return n;}
  private static String normalized(String s){return Normalizer.normalize(s,Normalizer.Form.NFD).replaceAll("\\p{M}+","").toLowerCase(Locale.ROOT);}
- private static boolean guide(String name){return normalized(name).matches(".*(guia|guide).*" );}
- private static boolean special(String name){return guide(name)||normalized(name).matches(".*(click|clique|claqueta|metronom).*" );}
+ private static boolean guide(String name){return ProjectSpec.isGuideName(name);}
+ private static boolean special(String name){return guide(name)||ProjectSpec.isClickName(name);}
  public static ProjectSpec parse(String text)throws Exception{
   JSONObject root=new JSONObject(text);if(!root.optString("format").equals("tom-certo-project")||root.optInt("formatVersion",-1)!=1)throw new ProjectSpec.Invalid();
   ProjectSpec result=new ProjectSpec();JSONObject song=root.optJSONObject("song"),settings=root.optJSONObject("settings"),mix=root.optJSONObject("mixer");if(song==null)throw new ProjectSpec.Invalid();
