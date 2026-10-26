@@ -132,3 +132,22 @@ Usuário solicitou e autorizou implementar: acompanhamento da reprodução na ti
 Publicação Windows solicitada na mesma v2.8.0, somente instalador/checksum; validar pacote e downloads antes de declarar concluída. Handoff Mac em `docs/releases/HANDOFF-MAC-TIMELINE.md`; o usuário também autorizou o outro chat a gerar e substituir somente os ZIPs/checksum Mac após portar e validar as quatro mudanças. Android continua como próxima fase, ainda sem implementação.
 
 Publicação desta rodada concluída: instalador Windows do commit d18ff78419ae9c09f3c2cc5c77fc0f142ead33c6 e checksum substituídos com confirmação do usuário; downloads comparados por SHA-256, Mac/notas Mac/tag/Latest preservados. Testes repetidos no pacote instalado confirmaram as quatro mudanças e os recursos anteriores. O prompt de continuidade Mac foi entregue no chat com autorização para substituir somente os pacotes Mac após validação.
+
+## 25/10/2026 — porte macOS da timeline publicado na v2.8.0
+
+Decisão do usuário: portar somente as quatro correções do commit Windows `d18ff78419ae9c09f3c2cc5c77fc0f142ead33c6`, preservando trabalho Mac, Tap/RPP, branding, diálogos e configurações de plataforma. Referências remotas atualizadas sem reset; árvore local inicialmente limpa. Não foram importados dropdown Windows, NSIS, ASIO ou hook de licenças Windows.
+
+Código Mac: commit local de build `c6eef1d8025a8eba67358567f1f7faf41118f0ae`; snapshot remoto equivalente `edadd9c66e8f25e3d0515c762bd16a35e39e0e15` em `codex/macos-setup`, com Git tree idêntico `813a848449fde1fbf086e521e02ca31876fdc060`. Arquivos: timeline-model.mjs/timeline-navigation.js, queue-280.js, region-editor.js, repair.css, locales.mjs e teste de navegação. Porte seletivo por diff; traduções novas acrescentadas às traduções Mac existentes. Adicionada proteção contra sobreposição ao cruzar intervalos livres também no modo conectado.
+
+Validação: **58 testes aprovados**, auditoria sem achados. Modelos cobrem paginação para frente/trás, suspensão durante pausa/edição/arraste, limites com intervalos e mesma cor, planos ligados/independentes e rejeição de sobreposição. Teste suplementar executou o handler real de pointerdown com/sem Shift e confirmou captura do modificador no início e snap.
+
+Teste físico real executado somente no pacote Intel deste Mac, com fixture sintética de 90 s e três regiões: reprodução em 400% com avanço da página, retorno ao início/salto e loop de Verso 2, pausa sem autoacompanhamento; divisórias entre regiões de mesma cor; arraste conectado mudou limite 15 → 13 s em ambas as vizinhas; Desfazer restaurou 15 s e Refazer repetiu 13 s. Controles EQ/Gain/submenu uniformes em CSS 38 × 25 e visualmente; Master preservado. A fixture foi restaurada/descartada e nenhum projeto pessoal foi usado.
+
+**Limitações:** a ferramenta de UI rejeitou manter Shift isolado durante o arraste, portanto o gesto físico independente não foi concluído; sua lógica e o handler passaram em testes automatizados. Não houve medição DOM de dimensões no app nativo, apenas CSS e conferência visual. Apple Silicon foi compilado neste Intel e verificado estruturalmente, **não executado em hardware M**. Ambos os apps passaram scripts/verify-macos-package.mjs (79 arquivos, arquiteturas, mínimo macOS 15, modelo offline e assinatura ad-hoc) e os ZIPs passaram unzip -t. Sem Developer ID/notarização.
+
+Publicação concluída com confirmação específica do usuário: substituídos **somente** os dois ZIPs Mac e SHA256SUMS-macOS.txt da release existente v2.8.0. Downloads HTTP completos comparados com os arquivos locais:
+- Intel `ZLPlay-2.8.0-macOS-Intel.zip`: `23f3a61031cdd3068556b67c14be2ad59119853772510e7df65fa904b0c97516`.
+- Apple Silicon `ZLPlay-2.8.0-macOS-Apple-Silicon.zip`: `57c1b7c020f7e099c72dd20347ca45de7a063eebdc53e360a869e8a9e80d6590`.
+- SHA256SUMS-macOS.txt: `0e07040077346d67b0b7b03f6bafe49259fbcb6a5b325e0779a2ef8d90545cc8`.
+
+Instalador Windows (`39b9578a4c5472e62c5141fe550f510cbe83e00ed43634ee0c84125990e5a969`), checksum Windows (`12a847b3890e3b47935963f5bc7e831c0f9ac88476267fcbf9383f3336e648d9`) e toda a seção de notas Windows comparados e preservados integralmente. Tag v2.8.0 continua em `18fa25bf0dc8bd1a12281bfcedc3a9474ad9f222`; endpoint releases/latest confirmou a mesma release. Notas Mac atualizadas com fonte exata, validação e limitações. Nenhuma nova tag/release/repositório criada. Próxima validação manual: Shift+arraste físico no Mac e execução em hardware M; Android permanece adiado até nova solicitação.
