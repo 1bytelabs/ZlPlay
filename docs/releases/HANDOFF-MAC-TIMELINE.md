@@ -15,7 +15,7 @@ Aplicar somente as quatro mudanças de interface desta rodada, preservando o tra
 - `app/region-editor.js`: plano ligado/independente, Shift no pointerdown e instrução traduzida.
 - `app/repair.css`: divisórias e botões uniformes.
 - `app/locales.mjs`: textos novos em pt-BR/en/es.
-- `tests/timeline-navigation.test.cjs`: quatro testes adicionais. O diário reúne o histórico e plano Android, que continua adiado durante essas correções desktop.
+- `tests/timeline-navigation.test.cjs`: quatro testes adicionais.
 
 Não substituir arquivos inteiros cegamente: o Mac pode ter diferenças próprias. Não importar a correção do dropdown Windows nem configurações de NSIS/ASIO. O hook de licenças Windows não precisa ser portado para a compilação Mac.
 
