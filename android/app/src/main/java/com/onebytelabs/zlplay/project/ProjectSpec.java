@@ -19,8 +19,8 @@ public final class ProjectSpec {
   if(!Double.isFinite(duration)||duration<0||duration>86400||!Double.isFinite(bpm)||bpm<20||bpm>400||tracks.isEmpty()||tracks.size()>32)throw new Invalid();
   int clips=0;for(Track t:tracks){if(!Double.isFinite(t.volume)||t.volume<0||t.volume>8||!Double.isFinite(t.pan)||Math.abs(t.pan)>1)throw new Invalid();for(Clip c:t.clips){clips++;if(c.file.trim().isEmpty()||!Double.isFinite(c.position)||c.position<0||!Double.isFinite(c.offset)||c.offset<0||!Double.isFinite(c.length)||(c.length!=-1&&c.length<=0)||!Double.isFinite(c.gain)||c.gain<0||c.gain>8||!Double.isFinite(c.pan)||Math.abs(c.pan)>1)throw new Invalid();}}
   if(numerator<1||numerator>32||denominator<1||denominator>32)throw new Invalid();
-  if(clips==0||clips>64||regions.size()>512||jumps.size()>512)throw new Invalid();regions.sort(Comparator.comparingDouble(r->r.start));double last=-1;
-  for(Region r:regions){if(!Double.isFinite(r.start)||!Double.isFinite(r.end)||r.start<0||r.end<=r.start||r.start<last-.0001)throw new Invalid();last=r.end;duration=Math.max(duration,r.end);}
+  if(clips==0||clips>64||regions.size()>512||jumps.size()>512)throw new Invalid();regions.sort(Comparator.comparingDouble(r->r.start));
+  for(Region r:regions){if(!Double.isFinite(r.start)||!Double.isFinite(r.end)||r.start<0||r.end<=r.start)throw new Invalid();duration=Math.max(duration,r.end);}
   if(duration>86400)throw new Invalid();
   for(Jump j:jumps){boolean from=false,to=false;for(Region r:regions){from|=Math.abs(r.start-j.fromStart)<.01&&Math.abs(r.end-j.fromEnd)<.01;to|=Math.abs(r.start-j.target)<.01;}if(!from||!to)throw new Invalid();}
  }

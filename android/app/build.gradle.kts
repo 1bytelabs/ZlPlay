@@ -7,8 +7,8 @@ android {
         minSdk = 26
         targetSdk = 36
         testInstrumentationRunner = "com.onebytelabs.zlplay.PadSmokeTest"
-        versionCode = 10
-        versionName = "0.5.1-dev"
+        versionCode = 11
+        versionName = "0.5.2-dev"
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     buildTypes { release { isMinifyEnabled = false } }

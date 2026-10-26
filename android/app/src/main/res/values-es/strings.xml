@@ -78,4 +78,6 @@
         <item quantity="one">%1$d canción necesita un proyecto RPP o ZLPlay disponible. Se pueden usar las demás.</item>
         <item quantity="other">%1$d canciones necesitan proyectos RPP o ZLPlay disponibles. Se pueden usar las demás.</item>
     </plurals>
+    <string name="compatibility_details">Compatibilidad</string>
+    <string name="project_invalid_data">Se encontró el archivo del proyecto, pero sus datos no se pudieron leer como un proyecto compatible. Se conservó el proyecto anterior.</string>
 </resources>

@@ -26,7 +26,7 @@ public final class RppReader {
     if(key.equals("TEMPO")){result.bpm=n(p,1,120);result.numerator=(int)n(p,2,4);result.denominator=(int)n(p,3,4);}
     if(key.equals("MARKER")&&p.size()>=4){String id=p.get(1),name=p.get(3);double time=n(p,2,0);long nativeColor=(long)n(p,5,0);String color=(nativeColor&0x1000000)!=0?String.format(Locale.ROOT,"#%02x%02x%02x",nativeColor&255,(nativeColor>>8)&255,(nativeColor>>16)&255):"";
      if(p.contains("R")&&!name.isEmpty()){Mark old=open.put(id,new Mark(name,time,color));if(old!=null&&time>old.time)result.regions.add(new ProjectSpec.Region(old.name,old.time,time,old.color));}
-     else if(open.containsKey(id)&&name.isEmpty()){Mark old=open.remove(id);result.regions.add(new ProjectSpec.Region(old.name,old.time,time,old.color));}
+     else if(open.containsKey(id)&&name.isEmpty()){Mark old=open.remove(id);if(time>old.time)result.regions.add(new ProjectSpec.Region(old.name,old.time,time,old.color));}
      else if(!name.isEmpty())markers.add(new Mark(name,time,color));
     }
    }
