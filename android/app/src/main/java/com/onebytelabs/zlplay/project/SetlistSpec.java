@@ -15,6 +15,9 @@ public final class SetlistSpec {
   Set<String> included=new HashSet<>();JSONArray order=root.optJSONArray("order");if(order!=null){if(order.length()>256)throw new ProjectSpec.Invalid();for(int i=0;i<order.length();i++){String id=order.getString(i);Song song=ids.get(id);if(song==null)for(Song entry:ids.values())if(entry.name.equals(id)||entry.folder.equals(parent+id)){if(song!=null)throw new ProjectSpec.Invalid();song=entry;}if(song==null)throw new ProjectSpec.Invalid();result.songs.add(song);included.add(song.id);}}
   for(Song song:ids.values())if(!included.contains(song.id))result.songs.add(song);if(result.songs.size()>256)throw new ProjectSpec.Invalid();return result;
  }
+ public int unavailableCount(){int count=0;for(Song song:songs)if(song.project==null)count++;return count;}
+ public int nextAvailable(int after){for(int i=Math.max(0,after+1);i<songs.size();i++)if(songs.get(i).project!=null)return i;return -1;}
+ public int availableFrom(int index){int start=Math.max(0,Math.min(index,songs.size()-1)),found=nextAvailable(start-1);return found>=0?found:nextAvailable(-1);}
  private static int note(String key){String s=key.trim().replace("♭","b").replace("♯","#").toUpperCase(Locale.ROOT);if(!s.matches("[A-G](?:#|B)?(?:M|MIN|MAJ)?"))return -1;int n;switch(s.charAt(0)){case 'C':n=0;break;case 'D':n=2;break;case 'E':n=4;break;case 'F':n=5;break;case 'G':n=7;break;case 'A':n=9;break;case 'B':n=11;break;default:return -1;}if(s.length()>1){if(s.charAt(1)=='#')n++;else if(s.charAt(1)=='B')n--;}return(n+12)%12;}
  public static boolean needsTranspose(Song song){int original=note(song.originalKey),target=note(song.tonalKey);return original>=0&&target>=0&&original!=target;}
 }

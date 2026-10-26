@@ -71,4 +71,11 @@
     <string name="song_card">%1$d · %2$s</string>
     <string name="current_song">Canción actual</string>
     <string name="setlist_error_title">No se pudo abrir el repertorio</string>
+    <string name="setlist_project_required">Requiere RPP/.zlplay</string>
+    <string name="setlist_none_ready">Ninguna canción tiene un proyecto disponible. Prepara sus proyectos .rpp o .zlplay en el ordenador.</string>
+    <string name="setlist_song_unavailable">Canción no disponible</string>
+    <plurals name="setlist_missing_projects">
+        <item quantity="one">%1$d canción necesita un proyecto RPP o ZLPlay disponible. Se pueden usar las demás.</item>
+        <item quantity="other">%1$d canciones necesitan proyectos RPP o ZLPlay disponibles. Se pueden usar las demás.</item>
+    </plurals>
 </resources>
