@@ -19,3 +19,7 @@ Os avisos LLVM, MinGW e winpthreads mantidos em `native/speech/` correspondem ao
 Os arquivos de áudio dos usuários e os Pads não estão incluídos nem licenciados por este repositório. Nome e logotipo do projeto identificam a 1Byte Labs; a licença do código não concede autorização de uso das marcas.
 
 Modelo de licença, fontes e escopo por plataforma: [docs/LICENSING.md](docs/LICENSING.md).
+
+## QR code generation (Windows remote)
+node-qrcode 1.5.4, Copyright (c) 2012 Ryan Day, MIT. Full license in docs/licenses/QRCode-MIT.txt and packaged node_modules/qrcode/license. Sources: https://github.com/soldair/node-qrcode/tree/v1.5.4. Runtime dependencies retain their license files in the packaged node_modules tree.
+
