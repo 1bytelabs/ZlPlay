@@ -22,7 +22,23 @@ static var object(std::initializer_list<std::pair<const char*, var>> properties)
 static double num(const var& o,const char* k,double fallback=0) { return o.hasProperty(k)?double(o[k]):fallback; }
 static std::string str(const var& o,const char* k) { return o[k].toString().toStdString(); }
 static std::mutex outputMutex;
+#if defined(ZLPLAY_EMBEDDED_ENGINE)
+static Array<var> embeddedEvents;
+static void send(const var& value) {
+    std::lock_guard<std::mutex> lock(outputMutex);
+    if (embeddedEvents.size() == 32) embeddedEvents.remove(0);
+    embeddedEvents.add(value);
+}
+#else
 static void send(const var& value) { std::lock_guard<std::mutex> l(outputMutex); std::cout << JSON::toString(value,true).toStdString() << std::endl; }
+#endif
+static File defaultClickFile() {
+#if defined(ZLPLAY_EMBEDDED_ENGINE) && JUCE_MAC
+    auto resource = File::getSpecialLocation(File::currentApplicationFile).getChildFile("Contents/Resources/Meuclick.wav");
+    if (resource.existsAsFile()) return resource;
+#endif
+    return File::getSpecialLocation(File::currentExecutableFile).getSiblingFile("Meuclick.wav");
+}
 constexpr int blockSize=512, queueSize=32, maxOutputs=64, renderOutputs=maxOutputs+2;
 struct Clip {
     std::unique_ptr<AudioFormatReader> reader;
@@ -107,7 +123,7 @@ public:
         return result;
     }
     void readClick(const String& source,AudioBuffer<float>& wave,double& rate){auto reader=open(source);if(reader->lengthInSamples>reader->sampleRate*10||reader->lengthInSamples<1)throw std::runtime_error("Use sons de clique de até 10 segundos.");rate=reader->sampleRate;wave.setSize(2,int(reader->lengthInSamples)+1);wave.clear();if(!reader->read(&wave,0,int(reader->lengthInSamples),0,true,true))throw std::runtime_error("Não foi possível carregar o som do clique.");}
-    void loadClickSample(){if(clickSample.getNumSamples()>0)return;readClick(File::getSpecialLocation(File::currentExecutableFile).getSiblingFile("Meuclick.wav").getFullPathName(),clickSample,clickSampleRate);}
+    void loadClickSample(){if(clickSample.getNumSamples()>0)return;readClick(defaultClickFile().getFullPathName(),clickSample,clickSampleRate);}
     double clickLength(){return std::max((clickSample.getNumSamples()-1)/clickSampleRate,accentSample.getNumSamples()>0?(accentSample.getNumSamples()-1)/accentSampleRate:0.0);}
     float clickValue(double seconds,bool strong,int channel){const bool custom=strong&&accentSample.getNumSamples()>0;const auto& wave=custom?accentSample:clickSample;const double at=seconds*(custom?accentSampleRate:clickSampleRate)*(strong&&accentIsDefault?1.16:1.0);if(at<0||at>=wave.getNumSamples()-1)return 0;int j=int(at);float f=float(at-j);return (wave.getSample(channel,j)+(wave.getSample(channel,j+1)-wave.getSample(channel,j))*f)*(strong&&accentIsDefault?1.3f:1.0f);}
     void ensureDevice(double preferred) {
@@ -448,7 +464,7 @@ public:
     var status() {const auto memory=platformMemory();return object({{"soloEnabled",soloEnabled},{"launchWaitFrames",launchWaitFrames},{"jumpSerial",playedJumpSerial.load()},{"jumpId",String(jumpId)},{"position",playhead.load()},{"playing",playing.load()&&launchWaitFrames==0},{"sampleRate",sampleRate},{"tracks",int(tracks.size())},{"underruns",int64(underruns.load())},{"readBytes",int64(readBytes.load())},{"queuedFrames",int((tail.load()-head.load())*blockSize)},{"latencyFrames",latency},{"maxCallbackFrames",maxCallbackFrames.load()},{"maxRenderMs",maxRenderMs},{"workingSetBytes",int64(memory.first)},{"privateBytes",int64(memory.second)}});}
     var command(const var& request) {
         auto op=str(request,"op");
-        if(op=="clickSounds"){const String normal=request["normal"].toString(),accentPath=request["accent"].toString();if(normal==normalSource&&accentPath==accentSource&&clickSample.getNumSamples()>0)return true;AudioBuffer<float> normalWave,accentWave;double normalRate=44100,accentRate=44100;readClick(normal.isEmpty()?File::getSpecialLocation(File::currentExecutableFile).getSiblingFile("Meuclick.wav").getFullPathName():normal,normalWave,normalRate);if(accentPath.isNotEmpty())readClick(accentPath,accentWave,accentRate);else if(normal.isNotEmpty())readClick(File::getSpecialLocation(File::currentExecutableFile).getSiblingFile("Meuclick.wav").getFullPathName(),accentWave,accentRate);std::lock_guard<std::mutex> l(renderMutex);{std::lock_guard<std::mutex> c(callbackMutex);clickSample=std::move(normalWave);accentSample=std::move(accentWave);clickSampleRate=normalRate;accentSampleRate=accentRate;normalSource=normal;accentSource=accentPath;accentIsDefault=accentPath.isEmpty();}if(configured)reset(playhead.load());return true;}
+        if(op=="clickSounds"){const String normal=request["normal"].toString(),accentPath=request["accent"].toString();if(normal==normalSource&&accentPath==accentSource&&clickSample.getNumSamples()>0)return true;AudioBuffer<float> normalWave,accentWave;double normalRate=44100,accentRate=44100;readClick(normal.isEmpty()?defaultClickFile().getFullPathName():normal,normalWave,normalRate);if(accentPath.isNotEmpty())readClick(accentPath,accentWave,accentRate);else if(normal.isNotEmpty())readClick(defaultClickFile().getFullPathName(),accentWave,accentRate);std::lock_guard<std::mutex> l(renderMutex);{std::lock_guard<std::mutex> c(callbackMutex);clickSample=std::move(normalWave);accentSample=std::move(accentWave);clickSampleRate=normalRate;accentSampleRate=accentRate;normalSource=normal;accentSource=accentPath;accentIsDefault=accentPath.isEmpty();}if(configured)reset(playhead.load());return true;}
         if(op=="previewClick"){ensureDevice(44100);loadClickSample();std::lock_guard<std::mutex> c(callbackMutex);previewAccent=bool(request["accent"]);previewAt=0;return true;}
         if(op=="cpuFeatures"){return object({{"avx2",SystemStats::hasAVX2()&&SystemStats::hasFMA3()&&platformHasF16C()}});}
         if(op=="spectrum"){
@@ -567,6 +583,22 @@ public:
         throw std::runtime_error("Comando de áudio desconhecido.");
     }
 };
+#if defined(ZLPLAY_EMBEDDED_ENGINE)
+#include "embedded-engine.h"
+namespace zlplay {
+struct EmbeddedEngine { Engine engine; };
+EmbeddedEngine* createEngine() { return new EmbeddedEngine(); }
+void destroyEngine(EmbeddedEngine* engine) { delete engine; }
+juce::var engineCommand(EmbeddedEngine* engine, const juce::var& request) {
+    if (!engine || !request.isObject()) throw std::runtime_error("Invalid embedded request");
+    if (request["op"].toString() == "events") {
+        std::lock_guard<std::mutex> lock(outputMutex);
+        auto result = juce::var(embeddedEvents); embeddedEvents.clear(); return result;
+    }
+    return engine->engine.command(request);
+}
+}
+#else
 int main(){
     initialisePlatformApplication();
     ScopedJuceInitialiser_GUI initialise;
@@ -584,3 +616,5 @@ int main(){
 }
 
 
+
+#endif // ZLPLAY_EMBEDDED_ENGINE
