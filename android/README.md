@@ -1,6 +1,6 @@
-# ZLPlay Android — audio prototype
+# ZLPlay Mobile — Android
 
-This standalone Android project is an early, foreground-only playback prototype. It does not change the desktop application or its release packages.
+The signed distribution is ZLPlay Mobile 0.11.1 (versionCode 24), published as an APK alongside Windows 2.8.1 in release v2.8.1. It updates the previous Mobile installation using the same application ID and permanent signing certificate. Debug builds remain separate and must not be published. This is an early, foreground-only player and LAN remote controller; the historical development sections below document implementation milestones and limitations.
 
 ## Build
 
