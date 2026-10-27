@@ -1,5 +1,9 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 contextBridge.exposeInMainWorld('zlplayNative', {
+  remoteConfig: action => ipcRenderer.invoke('zlplay:remote-config',action),
+  remoteState: state => ipcRenderer.send('zlplay:remote-state',state),
+  remoteResult: result => ipcRenderer.send('zlplay:remote-result',result),
+  onRemoteCommand: callback => {const listener=(_event,data)=>callback(data);ipcRenderer.on('zlplay:remote-command',listener);return ()=>ipcRenderer.removeListener('zlplay:remote-command',listener);},
   describe: file => {
     if(file._zlToken)return ipcRenderer.invoke('zlplay:describe-token',file._zlToken);
     const filename = webUtils.getPathForFile(file);

@@ -1,0 +1,7 @@
+const crypto=require('node:crypto');
+const b=(hex)=>Buffer.from(hex,'hex');
+const der=(tag,...parts)=>{const value=Buffer.concat(parts),n=value.length,bytes=[];for(let x=n;x;x>>>=8)bytes.unshift(x&255);return Buffer.concat([Buffer.from([tag]),n<128?Buffer.from([n]):Buffer.from([128|bytes.length,...bytes]),value]);};
+const seq=(...p)=>der(0x30,...p),int=(v)=>{let bytes=Buffer.isBuffer(v)?v:b(v.toString(16).padStart(2,'0'));if(bytes[0]&128)bytes=Buffer.concat([b('00'),bytes]);return der(2,bytes);};
+const algorithm=seq(b('06092a864886f70d01010b'),b('0500'));
+function tlsIdentity(){const {privateKey,publicKey}=crypto.generateKeyPairSync('rsa',{modulusLength:2048});const name=seq(der(0x31,seq(b('0603550403'),der(12,Buffer.from('ZLPlay Remote')))));const date=ms=>der(23,Buffer.from(new Date(ms).toISOString().replace(/[-:T]/g,'').slice(2,14)+'Z'));const body=seq(der(0xa0,int(2)),int(crypto.randomBytes(16)),algorithm,name,seq(date(Date.now()-86400000),date(Date.now()+7*86400000)),name,publicKey.export({type:'spki',format:'der'}));const cert=seq(body,algorithm,der(3,b('00'),crypto.sign('RSA-SHA256',body,privateKey)));return {key:privateKey.export({type:'pkcs8',format:'pem'}),cert:'-----BEGIN CERTIFICATE-----\n'+cert.toString('base64').match(/.{1,64}/g).join('\n')+'\n-----END CERTIFICATE-----\n',fingerprint:crypto.createHash('sha256').update(cert).digest('hex')};}
+module.exports={tlsIdentity};
