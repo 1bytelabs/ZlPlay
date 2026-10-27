@@ -4,11 +4,12 @@ import java.text.Normalizer;
 
 /** Shared project model. Times are seconds at the project's original execution rate. */
 public final class ProjectSpec {
- public String title="Project";public double bpm=120,duration;public int numerator=4,denominator=4;public boolean automationEnabled=true;
+ public String originalKey="",targetKey="";public String title="Project";public double bpm=120,duration;public int numerator=4,denominator=4;public boolean automationEnabled=true;
  public final List<Track> tracks=new ArrayList<>();public final List<Region> regions=new ArrayList<>();public final List<Jump> jumps=new ArrayList<>();public final Set<String> warnings=new LinkedHashSet<>();
+ public static boolean defaultPitch(String name){if(isClickName(name)||isGuideName(name))return false;String n=Normalizer.normalize(name,Normalizer.Form.NFD).replaceAll("\\p{M}+","").toLowerCase(Locale.ROOT).trim();if(n.equals("loop"))return false;List<String> blocked=Arrays.asList("drum","drums","bateria","percussao","percussion","perc","shaker","tambourine","pandeiro","cajon","clap","snare","kick","hihat","cymbal","cymbals","prato","pratos","toms","tom");for(String word:n.split("[^a-z0-9]+"))if(blocked.contains(word))return false;return true;}
  public static boolean isGuideName(String name){String n=Normalizer.normalize(name,Normalizer.Form.NFD).replaceAll("\\p{M}+","").toLowerCase(Locale.ROOT);return n.matches(".*(?:^|[^a-z])(?:guia|guide|cue|cues)(?:[^a-z]|$).*");}
  public static boolean isClickName(String name){String n=Normalizer.normalize(name,Normalizer.Form.NFD).replaceAll("\\p{M}+","").toLowerCase(Locale.ROOT);return n.matches(".*(?:click|clique|claqueta|metronom).*");}
- public static final class Track {public int role;public boolean isGuide(){return role==1||role==0&&isGuideName(name);}public boolean isClick(){return role==2||role==0&&isClickName(name);}public String name="Track",group="VS";public double volume=1,pan;public boolean mute,solo;public final List<Clip> clips=new ArrayList<>();}
+ public static final class Track {public Boolean pitchEnabled;public int role;public boolean isGuide(){return role==1||role==0&&isGuideName(name);}public boolean isClick(){return role==2||role==0&&isClickName(name);}public String name="Track",group="VS";public double volume=1,pan;public boolean mute,solo;public final List<Clip> clips=new ArrayList<>();}
  public static final class Clip {public boolean nativeClick;public String file="";public double position,offset,length=-1,gain=1,pan;}
  public static final class Region {public final String name,color;public final double start,end;public Region(String n,double s,double e,String c){name=n;start=s;end=e;color=c==null?"":c;}}
  public static final class Jump {public final double fromStart,fromEnd,target;public Jump(double s,double e,double t){fromStart=s;fromEnd=e;target=t;}}

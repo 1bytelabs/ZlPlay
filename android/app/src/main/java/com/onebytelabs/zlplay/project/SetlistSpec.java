@@ -3,7 +3,7 @@ import org.json.*;import java.util.*;import java.text.Normalizer;
 /** Read-only desktop setlist: explicit source choices and order survive relocation. */
 public final class SetlistSpec {
  public String title;public final List<Song> songs=new ArrayList<>();
- public static final class Song {public String id,name,folder,project,originalKey,tonalKey;}
+ public static final class Song {public String id,name,folder,project,originalKey,tonalKey,preparedKey="";}
  private static String key(String s){return Normalizer.normalize(s,Normalizer.Form.NFC).toLowerCase(Locale.ROOT);}
  private static String path(String s)throws ProjectSpec.Invalid {String text=s.replace('\\','/');if(text.contains("://")||text.startsWith("/")||text.matches("^[A-Za-z]:.*"))throw new ProjectSpec.Invalid();List<String> parts=new ArrayList<>();for(String p:text.split("/")){if(p.equals(".."))throw new ProjectSpec.Invalid();if(!p.isEmpty()&&!p.equals("."))parts.add(p);}if(parts.isEmpty())throw new ProjectSpec.Invalid();return String.join("/",parts);}
  private static String text(JSONObject row,String key,String fallback){return row.isNull(key)?fallback:row.optString(key,fallback);}

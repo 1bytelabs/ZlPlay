@@ -16,7 +16,7 @@ public final class StreamBank implements AutoCloseable {
         byte[] scratch=new byte[BLOCK_FRAMES*8];
         try{for(int i=0;i<files.size();i++){streams[i]=new StreamTrack(files.get(i),peaks.get(i),scratch);tracks[i]=streams[i];}}
         catch(IOException|RuntimeException failure){for(WavFile file:files)file.close();throw failure;}
-        worker=new Thread(this::prefetch,"ZLPlay-WAV-Prefetch");worker.setDaemon(true);worker.start();
+        worker=new Thread(this::prefetch,"ZLPlay-WAV-Prefetch");worker.setDaemon(true);worker.setPriority(Thread.NORM_PRIORITY+1);worker.start();
     }
     private void prefetch(){byte[] scratch=new byte[BLOCK_FRAMES*8];
         while(!closed){boolean work=false;
@@ -63,7 +63,7 @@ public final class StreamBank implements AutoCloseable {
             long last=Math.min(file.frames-1,(long)Math.floor((frame+Math.max(0,count-1))*(sampleRate/(double)DemoMixer.RATE))+1)/BLOCK_FRAMES;
             heldA=find(start);heldB=last==start?heldA:find(last);return !closed&&failure==null&&heldA!=null&&heldB!=null;
         }
-        private float at(long sourceFrame,int channel){if(sourceFrame>=file.frames)return 0;long key=sourceFrame/BLOCK_FRAMES;Block block=heldA!=null&&heldA.key==key?heldA:heldB!=null&&heldB.key==key?heldB:null;if(block==null)return 0;int index=(int)(sourceFrame-key*BLOCK_FRAMES)*channels+(channels==1?0:channel);return block.values[index];}
+        private float at(long sourceFrame,int channel){if(sourceFrame>=file.frames)return 0;long key=sourceFrame/BLOCK_FRAMES;Block block=heldA!=null&&heldA.key==key?heldA:heldB!=null&&heldB.key==key?heldB:null;if(block==null&&key<2)block=head[(int)key];if(block==null)return 0;int index=(int)(sourceFrame-key*BLOCK_FRAMES)*channels+(channels==1?0:channel);return block.values[index];}
         @Override public float sample(long frame,int channel){double source=frame*(sampleRate/(double)DemoMixer.RATE);long index=(long)source;if(index>=file.frames)return 0;float a=at(index,channel),b=at(Math.min(index+1,file.frames-1),channel);return a+(b-a)*(float)(source-index);}
         @Override public void addPeaks(float[] into,double duration){for(int bin=0;bin<into.length;bin++){double second=bin/(double)into.length*duration;if(second>=duration())break;int i=Math.min(peaks.length-1,(int)(second/duration()*peaks.length));into[bin]+=peaks[i]*.7f;}}
         @Override public void close(){StreamBank.this.close();}

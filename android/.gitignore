@@ -7,3 +7,19 @@ local.properties
 *.jks
 *.keystore
 captures/
+
+# Android native build intermediates contain local SDK/compiler paths.
+.cxx/
+.externalNativeBuild/
+
+# Signing keys and private local signing configuration
+*.p12
+*.pfx
+keystore.properties
+signing.properties
+
+# APKs belong to release assets, never to the source tree
+*.apk
+*.aab
+*.apks
+*.idsig
