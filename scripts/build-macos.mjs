@@ -31,17 +31,20 @@ if(!fs.existsSync(path.join(electronDist,'Electron.app/Contents/MacOS/Electron')
 }
 run('/usr/bin/lipo',[path.join(electronDist,'Electron.app/Contents/MacOS/Electron'),'-verify_arch',arch==='x64'?'x86_64':'arm64']);
 const require=createRequire(import.meta.url),{build,Platform,Arch}=require('electron-builder');
+const {prepareMacLicenses}=require('./prepare-macos-licenses.cjs');
 const revision=spawnSync('git',['rev-parse','HEAD'],{encoding:'utf8'});
 if(revision.status!==0)throw Error('Cannot identify source commit.');
 const dirty=spawnSync('git',['status','--porcelain','--untracked-files=no'],{encoding:'utf8'});
 if(dirty.status!==0)throw Error('Cannot identify source status.');
+const sourceCommit=process.env.ZLPLAY_SOURCE_COMMIT||revision.stdout.trim();
+const licenses=prepareMacLicenses(process.cwd(),path.resolve('.cache','macos-licenses-'+arch),{commit:revision.stdout.trim(),sourceCommit});
 await build({targets:Platform.MAC.createTarget(args.includes('--dir')?['dir']:['dmg','zip'],arch==='arm64'?Arch.arm64:Arch.x64),publish:'never',config:{
   directories:{output:'dist/macos-'+arch},electronDist,
-  extraMetadata:{zlplayBuild:{commit:revision.stdout.trim(),arch,dirty:!!dirty.stdout.trim(),minimumMacOS:'15.0'}},
+  extraMetadata:{zlplayBuild:{commit:revision.stdout.trim(),arch,dirty:!!dirty.stdout.trim(),minimumMacOS:'15.0',sourceCommit}},
   // electron-builder concatenates config arrays; replace the inherited Intel
   // resources before it creates file matchers, rather than appending to them.
   beforePack:context=>{
-    context.packager.config.extraResources=[{from:'native/bin-'+arch,to:'native'},{from:speech,to:'speech'}];
+    context.packager.config.extraResources=[{from:'native/bin-'+arch,to:'native'},{from:speech,to:'speech'},{from:licenses,to:'licenses'}];
   },
   mac:{minimumSystemVersion:'15.0',identity:process.env.ZLPLAY_MAC_IDENTITY||'-',artifactName:'ZLPlay-${version}-macOS-'+arch+'.${ext}'},
 }});

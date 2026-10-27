@@ -8,3 +8,5 @@
 6. Abra um pull request descrevendo o comportamento, a validação e as plataformas efetivamente testadas. A revisão em Windows não substitui a avaliação de áudio em um Mac.
 
 Contribuições ao código próprio são recebidas sob a AGPLv3 do projeto. Preserve as licenças de arquivos de terceiros.
+
+Diários de trabalho, resumos de conversas e planejamento privado devem permanecer em local-notes/ (ignorada pelo Git). Publique somente documentação técnica necessária ao projeto; não adicione diários ao repositório.

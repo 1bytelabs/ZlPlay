@@ -37,6 +37,7 @@ else {
       webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, backgroundThrottling: false }
     });
     const nativeAudio = setupNativeAudio({ app, ipcMain, window });
+    require('./remote-ipc.cjs').setupRemote({app,ipcMain,window,authorize:nativeAudio.authorize});
     const locale=require('./locale.cjs').localeStore(app);await locale.read();
     const tr=(pt,en,es)=>locale.language==='pt-BR'?pt:locale.language==='es'?es:en;
     ipcMain.handle('zlplay:language',event=>{nativeAudio.authorize(event);return locale.read();});

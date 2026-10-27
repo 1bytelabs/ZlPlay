@@ -16,3 +16,7 @@ A AGPLv3 escolhida para o código próprio não substitui as licenças das depen
 Os avisos LLVM, MinGW e winpthreads mantidos em `native/speech/` correspondem aos binários Windows usados no ambiente de desenvolvimento anterior. Compilar o reconhecimento em outra plataforma pode envolver um runtime diferente, cujo aviso também deve acompanhar a distribuição quando exigido.
 
 Os arquivos de áudio dos usuários e os Pads não estão incluídos nem licenciados por este repositório. Nome e logotipo do projeto identificam a 1Byte Labs; a licença do código não concede autorização de uso das marcas.
+
+## QR pairing / Pareamento QR / Vinculación QR
+
+The shared local-network remote uses node-qrcode 1.5.4 under MIT (Copyright (c) 2012 Ryan Day). Original notice: `docs/licenses/QRCode-MIT.txt`; included in macOS `Contents/Resources/licenses/QRCode-MIT.txt`. Runtime dependencies and exact versions are recorded in `package-lock.json`; their bundled license notices remain in the package. This does not add ASIO to macOS.

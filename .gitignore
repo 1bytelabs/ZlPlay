@@ -110,3 +110,6 @@ app/LEIA-ME.txt
 /native/bin-*/
 /native/speech-*/
 /native/build-*/
+
+# Private local continuity notes never ship.
+/local-notes/

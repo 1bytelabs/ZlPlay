@@ -29,10 +29,14 @@ const require=createRequire(import.meta.url),asar=require('@electron/asar'),arch
 const metadata=JSON.parse(asar.extractFile(archive,'package.json').toString());
 const head=execFileSync('git',['rev-parse','HEAD'],{cwd:project,encoding:'utf8'}).trim();
 if(metadata.zlplayBuild?.commit!==head||metadata.zlplayBuild?.arch!==arch||metadata.zlplayBuild?.dirty!==false)throw Error('Build provenance does not match clean source commit.');
+if(plist('CFBundleShortVersionString')!==metadata.version)throw Error('Bundle version mismatch.');
+for(const license of ['ZLPlay-AGPL-3.0.txt','THIRD_PARTY_NOTICES.md','QRCode-MIT.txt','SOURCE_CODE.txt'])if(!fs.existsSync(path.join(root,'Resources/licenses',license)))throw Error('Missing license: '+license);
+const sourceNotice=fs.readFileSync(path.join(root,'Resources/licenses/SOURCE_CODE.txt'),'utf8');
+if(!sourceNotice.includes(metadata.zlplayBuild.sourceCommit)||!sourceNotice.includes(head))throw Error('License source reference mismatch.');
 const files=execFileSync('git',['ls-files','-z','--','app','desktop'],{cwd:project,encoding:'utf8'}).split('\0').filter(Boolean);
 for(const file of files){
   // electron-builder excludes explicit extraResources from app.asar.
-  const packaged=file==='desktop/zlplay-document.icns'?fs.readFileSync(path.join(root,'Resources/zlplay-document.icns')):asar.extractFile(archive,file);
+  const packaged=file.startsWith('desktop/macos-locales/')?fs.readFileSync(path.join(root,'Resources',file.slice('desktop/macos-locales/'.length))):file==='desktop/zlplay-document.icns'?fs.readFileSync(path.join(root,'Resources/zlplay-document.icns')):asar.extractFile(archive,file);
   if(!packaged.equals(fs.readFileSync(path.join(project,file))))throw Error('Packaged source mismatch: '+file);
 }
 console.log(JSON.stringify({version:metadata.version,arch,minimumMacOS:'15.0',sourceCommit:head,sourceFilesVerified:files.length,offlineModel:'verified',signatureIntegrity:'verified',runtimeTested:arch===process.arch?'see test report':false},null,2));
