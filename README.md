@@ -2,6 +2,12 @@
 
 Player de multitracks e performance ao vivo da **1Byte Labs**, com interface Electron e motor de áudio C++ separado. Inclui mixer, regiões, repertórios, transposição, click e Pads personalizados. A reprodução usa arquivos locais; a detecção de regiões pela Guia funciona offline após instalar o runtime opcional de reconhecimento.
 
+## Instalar o aplicativo no Mac
+
+Baixe o ZIP Intel ou Apple Silicon nas [releases](https://github.com/1bytelabs/ZlPlay/releases), extraia e arraste **ZLPlay.app** para **Aplicativos** no Finder. Abra pela pasta Aplicativos. Para atualizar, feche o ZLPlay e escolha **Substituir** ao copiar a nova versão. Não é necessário compilar nem instalar Node.js para usar os pacotes prontos.
+
+[Guia de instalação e atualização em português, inglês e espanhol](docs/INSTALAR-macOS.txt), também incluído nos ZIPs como `LEIA-ME-INSTALACAO-macOS.txt`.
+
 ## Plataformas
 
 | Plataforma | Situação |

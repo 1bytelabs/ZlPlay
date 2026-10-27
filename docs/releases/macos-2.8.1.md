@@ -30,3 +30,7 @@ Os scripts registram commit local, arquitetura e revisão dos fontes publicados.
 Pareamento é voluntário pelo botão Controle remoto; manter Mac e Mobile na mesma rede. Não modificar firewall/TCC automaticamente. Validar QR, certificado, transporte, saltos/cancelamento, Loop/Click solo, Pad/BPM/mixer e desconexão durante áudio. Teste por cliente de protocolo no próprio Mac não equivale a teste físico do Android ou da câmera/Wi-Fi entre aparelhos.
 
 Publicar somente os dois ZIPs 2.8.1 e SHA256SUMS-macOS.txt na v2.8.1 existente. As notas finais devem registrar os testes e limitações realmente observados, o commit do build e os fontes correspondentes. Preservar Windows/Android, a classificação da release, a v2.8.0 e ambas as tags.
+
+## Guia no ZIP
+
+O ZIP de distribuição deve conter `ZLPlay.app` e `LEIA-ME-INSTALACAO-macOS.txt` na raiz. Copiar o guia `docs/INSTALAR-macOS.txt` para esse nome e acrescentá-lo com `zip -j` ao arquivo gerado por ditto, sem modificar o bundle assinado. Conferir o texto extraído, os arquivos originais do ZIP, a integridade e os novos SHA-256 antes de publicar. Uma alteração somente neste guia não muda o commit do executável; registrar separadamente a revisão da documentação nas notas da release.

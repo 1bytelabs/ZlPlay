@@ -1,0 +1,95 @@
+ZLPlay — Instalação no macOS / Installation / Instalación
+======================================================
+
+PORTUGUÊS
+
+Requisito: macOS 15 Sequoia ou superior.
+Baixe Apple Silicon para Mac com chip Apple (M1, M2, M3, M4 etc.)
+ou Intel para Mac com processador Intel. Confira em menu Apple > Sobre Este Mac.
+
+INSTALAR
+1. Abra o ZIP baixado com dois cliques para extrair os arquivos.
+2. No Finder, arraste ZLPlay.app para a pasta Aplicativos na barra lateral.
+   Se ela não aparecer, use Ir > Aplicativos (Shift + Command + A).
+3. Abra ZLPlay pela pasta Aplicativos. Depois, pode adicioná-lo ao Dock.
+
+Não é necessário executar um instalador: copiar o .app para Aplicativos
+é a instalação. Se abrir direto em Downloads, ele continua naquela pasta.
+Não precisa instalar Node.js, ferramentas de desenvolvimento nem ASIO.
+
+ATUALIZAR
+1. Feche o ZLPlay (ZLPlay > Encerrar ZLPlay ou Command + Q).
+2. Arraste a nova cópia de ZLPlay.app para Aplicativos.
+3. Quando o Finder perguntar, escolha Substituir.
+4. Abra o aplicativo pela pasta Aplicativos.
+
+Substituir o aplicativo não apaga seus projetos, repertórios ou dados de
+usuário. Mantenha seus arquivos de música e backups nas pastas habituais.
+Após conferir a instalação, pode apagar o ZIP e a cópia de Downloads;
+não apague o aplicativo da pasta Aplicativos.
+
+PRIMEIRA ABERTURA
+Estes pacotes ainda não têm notarização Apple nem assinatura Developer ID.
+O macOS pode bloquear a primeira abertura. Confira se baixou da release
+oficial e, se decidir permitir, use Ajustes do Sistema > Privacidade e
+Segurança > Abrir Mesmo Assim, quando essa opção estiver disponível.
+Não é necessário desativar o Gatekeeper ou as proteções do sistema.
+Para o controle remoto, mantenha Mac e celular na mesma rede e permita
+acesso à rede local quando o macOS solicitar esse acesso ao ZLPlay.
+
+ENGLISH
+
+Requires macOS 15 Sequoia or later. Choose Apple Silicon for Apple M-series
+chips or Intel for Intel processors (Apple menu > About This Mac).
+
+1. Double-click the downloaded ZIP to extract it.
+2. In Finder, drag ZLPlay.app to Applications in the sidebar.
+   Or open Go > Applications (Shift + Command + A).
+3. Launch ZLPlay from Applications. You may then add it to the Dock.
+
+Copying the app to Applications installs it; there is no installer wizard.
+Launching it from Downloads leaves it there. Node.js, development tools
+and ASIO are not required.
+
+To update, quit ZLPlay (Command + Q), drag the new app to Applications,
+choose Replace and launch it from Applications. Replacing the app does not
+delete your projects, setlists or user data. Keep your music and backups.
+After checking the installation, you can delete the ZIP and the copy in
+Downloads; keep the copy in Applications.
+
+These packages do not yet have Apple notarization or a Developer ID
+signature. macOS may block the first launch. Verify the official download
+and, if you decide to allow it, use System Settings > Privacy & Security >
+Open Anyway when available. Do not disable Gatekeeper or system protections.
+For remote control, use the same local network and allow ZLPlay local
+network access if macOS requests it.
+
+ESPAÑOL
+
+Requiere macOS 15 Sequoia o posterior. Elige Apple Silicon para chips Apple
+serie M o Intel para procesadores Intel (menú Apple > Acerca de este Mac).
+
+1. Haz doble clic en el ZIP descargado para extraerlo.
+2. En Finder, arrastra ZLPlay.app a Aplicaciones en la barra lateral.
+   También puedes usar Ir > Aplicaciones (Mayúsculas + Command + A).
+3. Abre ZLPlay desde Aplicaciones. Después puedes añadirlo al Dock.
+
+Copiar la app a Aplicaciones es la instalación; no hay asistente.
+Si la abres desde Descargas, permanece allí. No necesitas Node.js,
+herramientas de desarrollo ni ASIO.
+
+Para actualizar, cierra ZLPlay (Command + Q), arrastra la nueva app a
+Aplicaciones, elige Reemplazar y ábrela desde Aplicaciones. Reemplazar la
+app no elimina proyectos, repertorios ni datos de usuario. Conserva tu
+música y copias de seguridad. Tras comprobar la instalación, puedes borrar
+el ZIP y la copia de Descargas; conserva la copia de Aplicaciones.
+
+Estos paquetes aún no tienen notarización Apple ni firma Developer ID.
+macOS puede bloquear la primera apertura. Verifica la descarga oficial y,
+si decides permitirla, usa Ajustes del Sistema > Privacidad y seguridad >
+Abrir igualmente, cuando esté disponible. No desactives Gatekeeper ni las
+protecciones del sistema. Para el control remoto, usa la misma red local y
+permite a ZLPlay el acceso a ella si macOS lo solicita.
+
+Downloads oficiais / Official downloads / Descargas oficiales:
+https://github.com/1bytelabs/ZlPlay/releases
