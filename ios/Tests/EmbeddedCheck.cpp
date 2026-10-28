@@ -2,6 +2,7 @@
 #include <juce_events/juce_events.h>
 #include <iostream>
 #include "ProjectImportCheck.h"
+#include "PerformanceStateCheck.h"
 #include <stdexcept>
 using namespace juce;
 static var obj(std::initializer_list<std::pair<const char*,var>> p){auto* o=new DynamicObject();for(auto& a:p)o->setProperty(a.first,a.second);return var(o);}
@@ -10,7 +11,7 @@ int main(int argc,char** argv){
     if(argc!=2)return 2;
     auto* engine=zlplay::createEngine();
     try{
-        projectImportCheck(File(String(argv[1])));
+        performanceStateCheck();projectImportCheck(File(String(argv[1])));
         auto call=[&](var v){return zlplay::engineCommand(engine,v);};
         auto file = obj({{"token","fixture"},{"path",String(argv[1])}});
         auto probe=call(obj({{"op","probe"},{"files",Array<var>{file}}}));
