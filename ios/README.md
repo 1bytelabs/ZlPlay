@@ -4,13 +4,13 @@ Development port from the macOS audio engine. This is a **0.1.0 development foun
 
 ## Current implementation
 
-- Universal iPhone/iPad JUCE target, iOS 15+; iPhone portrait/landscape and iPad orientations.
+- Universal iPhone/iPad JUCE target, iOS 15+; landscape left/right only on both devices, including launch.
 - The existing C++ engine is embedded in process using `native/embedded-engine.h`. The desktop console transport remains the default build. Audio streaming/DSP retain their native worker/callback.
 - Native touch controls for audio import, play/pause/stop, seek, track gain, Master and project-clock Click/BPM.
 - Audio selected through the system picker is copied to private app storage on a worker while the picker grant is valid; the callback reads only the engine cache. Up to 32 mono/stereo files, at most 1 GiB each in this first importer. Originals are not modified.
 - New interface text in pt-BR/en/es. Leaving the application pauses playback; this first target does not claim background playback.
 
-Not yet implemented/validated here: RPP/ZLPlay/setlist import, arrangements/region editing and jumps, pad-bank UI, musical-key selection, QR remote client, iOS output-routing/interruption handling, restoration and complete About/license UI. The desktop C++ core contains many of these primitives, but UI/platform integration must be completed. This target does not host Electron and does not run a desktop executable as a subprocess.
+Initial read-only folder import now supports basic RPP, version-1 `.zlplay` and version-1 `.zlset` manifests. Not yet implemented/validated here: arrangements/region editing and jumps, pad-bank UI, interactive musical-key selection, QR remote client, iOS output-routing/interruption handling, restoration and complete About/license UI. The desktop C++ core contains many of these primitives, but UI/platform integration must be completed. This target does not host Electron and does not run a desktop executable as a subprocess.
 
 ## Build
 
@@ -40,4 +40,22 @@ cmake --build .cache/ios-host-check --config Release
 
 This checks the actual embedded C++ engine's probe, rendered PCM, seek, zero gain and Stop. It is not an iOS simulator/device or physical-audio test. The normal desktop engine and its existing tests must also continue to pass before merging changes. iPhone and iPad hardware, route changes, interruptions, memory/performance and licensing resources in the final app must be validated before any distribution.
 
-Debug builds expose a translated Synthetic test button, which creates an original eight-second stereo sine fixture in temporary app storage on a worker. This exercises the same probe/load/native transport without requiring a signed-in document provider in Simulator. It does not replace testing the real iOS picker or physical audio. The button and generator are excluded by JUCE_DEBUG in Release builds. No test recording or user music is bundled.
+Debug builds expose an Open > Synthetic test menu action, which creates an original eight-second stereo sine fixture in temporary app storage on a worker. This exercises the same probe/load/native transport without requiring a signed-in document provider in Simulator. It does not replace testing the real iOS picker or physical audio. The menu action and generator are excluded by JUCE_DEBUG in Release builds. No test recording or user music is bundled.
+
+
+## Import during development
+
+The iOS Files picker has its own storage; it does not expose the host Mac's Downloads or music folders. The app creates Documents and enables file sharing/opening documents in place, so its folder can appear in Files. In Simulator, copy a **synthetic fixture** into the app's Documents directory (obtain the container with `xcrun simctl get_app_container booted com.onebytelabs.zlplay.ios.dev data`), then choose it in Import audio. Debug Synthetic test also creates a fixture under Documents/ZLPlay Examples. Use Open > Project / setlist folder for projects, including the referenced audio; audio-file import remains a separate option.
+
+Import probes audio and prepares the engine offline, so viewing tracks, waveform and gain controls does not start the audio device. Play opens the actual output and reloads at the selected position; offline import success does not certify playback. The main view follows Android's header/song/timeline/transport/mixer organization, with native safe-area insets. The app is designed for horizontal use; portrait is excluded in both the bundle and the JUCE runtime orientation mask. It is still missing Android's project/setlist/key/pad/remote screens. The first two Intel simulator audio attempts aborted with a CoreAudio RPC timeout. A later imported-project simulator test opened output successfully: the position advanced, Pause held 6.3 seconds and Stop returned to zero. This is a runtime/transport observation, not a physical acoustic, pitch-quality or latency measurement. No physical-device test has been performed.
+
+
+## Project and setlist folder import
+
+Choose **Open > Project / setlist folder** in the system Files picker. The selected tree is copied to private storage while the folder grant is held; the original project/audio files are never rewritten. A selector lists every project when there are multiple candidates, including distinct RPP filenames/keys; the word Original does not give a file priority. A `.zlset` respects saved song order and an explicit saved source. Missing/ambiguous sources produce an error; missing songs are retained in the list rather than replaced with arbitrary audio.
+
+The first readers preserve basic track gain/pan/mute/solo, RPP folder gain/mute/solo, item positions/offsets/lengths, fixed tempo, region bounds and saved Original/Play in keys (including native transposition for eligible tracks). Timeline peaks are sampled from the arranged clips at project time, not drawn as a decorative waveform. Setlist target overrides apply to pitch-enabled tracks. Existing application audio remains native, with offline preparation before opening the real output on Play.
+
+Limits: 32 tracks, 128 items, 512 regions, 256 setlist songs, 24 folder levels, 2048 supported files, 1 GiB per file and 8 GiB per imported folder; JSON/RPP manifests up to 4 MiB. Symlinks and path escapes are rejected. Relocated absolute Windows/Mac audio paths use a basename only when unique inside that song; relative paths are preferred. Only WAV/MP3/AIFF/FLAC mono/stereo sources are accepted. No REAPER plugins or project code are executed. Item stretch/pitch/gain/pan requiring unimplemented processing and built-in REAPER CLICK sources are rejected: render those parts to audio first. Plugin effects, fades, tempo envelopes and saved automation/settings not yet supported produce a compatibility confirmation before using the imported audio; they are not claimed to be reproduced. Full desktop/Android DSP/session parity is not certified. Project edits and session restoration are not implemented yet.
+
+The embedded host check also covers structural readers, saved keys, setlist order, missing/ambiguous paths, path escape rejection, unchanged folder-copy bytes and actual arranged PCM (a silent leading gap followed by nonzero clip audio). These checks use synthetic fixtures. Simulator/provider and device tests must be reported separately.

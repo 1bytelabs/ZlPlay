@@ -1,6 +1,7 @@
 #include "embedded-engine.h"
 #include <juce_events/juce_events.h>
 #include <iostream>
+#include "ProjectImportCheck.h"
 #include <stdexcept>
 using namespace juce;
 static var obj(std::initializer_list<std::pair<const char*,var>> p){auto* o=new DynamicObject();for(auto& a:p)o->setProperty(a.first,a.second);return var(o);}
@@ -9,6 +10,7 @@ int main(int argc,char** argv){
     if(argc!=2)return 2;
     auto* engine=zlplay::createEngine();
     try{
+        projectImportCheck(File(String(argv[1])));
         auto call=[&](var v){return zlplay::engineCommand(engine,v);};
         auto file = obj({{"token","fixture"},{"path",String(argv[1])}});
         auto probe=call(obj({{"op","probe"},{"files",Array<var>{file}}}));
@@ -27,7 +29,7 @@ int main(int argc,char** argv){
         if(double(call(obj({{"op","status"}}))["position"])!=0)throw std::runtime_error("stop failed");
         call(obj({{"op","events"}}));
         zlplay::destroyEngine(engine);
-        std::cout<<"Embedded Mac engine: probe, PCM, seek, gain and stop passed. No iOS runtime claimed.\n";
+        std::cout<<"Project import and embedded engine: RPP, ZLPlay, setlist, paths, PCM, seek, gain and stop passed. No iOS runtime claimed.\n";
         return 0;
-    }catch(const std::exception& e){zlplay::destroyEngine(engine);std::cerr<<e.what()<<'\n';return 1;}
+    }catch(const mobile::ImportError& e){zlplay::destroyEngine(engine);std::cerr<<"Import error kind="<<int(e.kind)<<" detail="<<e.detail<<"\n";return 1;}catch(const std::exception& e){zlplay::destroyEngine(engine);std::cerr<<e.what()<<'\n';return 1;}
 }

@@ -17,17 +17,21 @@ endif()
 if(ZLPLAY_HOST_CHECK)
   juce_add_console_app(ZLPlayEmbeddedCheck PRODUCT_NAME "ZLPlayEmbeddedCheck")
   set(app ZLPlayEmbeddedCheck)
-  target_sources(${app} PRIVATE Tests/EmbeddedCheck.cpp)
+  target_sources(${app} PRIVATE Tests/EmbeddedCheck.cpp Source/ProjectImport.cpp)
 else()
   juce_add_gui_app(ZLPlayMobile PRODUCT_NAME "ZLPlay Mobile" COMPANY_NAME "1Byte Labs"
     BUNDLE_ID com.onebytelabs.zlplay.ios.dev TARGETED_DEVICE_FAMILY "1,2"
-    ICON_BIG ../desktop/icon.png FILE_SHARING_ENABLED TRUE
-    IPHONE_SCREEN_ORIENTATIONS UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
-    IPAD_SCREEN_ORIENTATIONS UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight)
+    ICON_BIG ../desktop/icon.png FILE_SHARING_ENABLED TRUE REQUIRES_FULL_SCREEN TRUE
+    PLIST_TO_MERGE "<plist><dict><key>LSSupportsOpeningDocumentsInPlace</key><true/><key>UIStatusBarStyle</key><string>UIStatusBarStyleLightContent</string></dict></plist>"
+    IPHONE_SCREEN_ORIENTATIONS UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+    IPAD_SCREEN_ORIENTATIONS UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight)
+  juce_add_binary_data(ZLPlayMobileBrand SOURCES ../desktop/icon.png)
   set(app ZLPlayMobile)
-  target_sources(${app} PRIVATE Source/Main.cpp)
+  target_link_libraries(${app} PRIVATE ZLPlayMobileBrand)
+  target_sources(${app} PRIVATE Source/Main.cpp Source/ProjectImport.cpp)
   target_link_libraries(${app} PRIVATE juce::juce_gui_extra)
   if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    target_sources(${app} PRIVATE Source/PlatformInsets.mm)
     set_target_properties(${app} PROPERTIES XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "15.0")
   endif()
   target_sources(${app} PRIVATE ../app/Meuclick.wav)
