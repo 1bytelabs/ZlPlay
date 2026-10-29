@@ -6,6 +6,7 @@
 #include "SoundBankCheck.h"
 #include "RemoteProtocolCheck.h"
 #include "GuidePreviewCheck.h"
+#include "SoloClickFadeCheck.h"
 #include <stdexcept>
 using namespace juce;
 static var obj(std::initializer_list<std::pair<const char*,var>> p){auto* o=new DynamicObject();for(auto& a:p)o->setProperty(a.first,a.second);return var(o);}
@@ -38,8 +39,9 @@ int main(int argc,char** argv){
         if(double(call(obj({{"op","status"}}))["position"])!=0)throw std::runtime_error("stop failed");
         call(obj({{"op","events"}}));
         guidePreviewCheck(engine);
+        soloClickFadeCheck(engine);
         zlplay::destroyEngine(engine);
-        std::cout<<"Project import and embedded engine: RPP, ZLPlay, setlist, paths, PCM, seek, gain, stop and guide preview/cancellation passed. No iOS runtime claimed.\n";
+        std::cout<<"Project import and embedded engine: RPP, ZLPlay, setlist, paths, PCM, seek, gain, stop and guide preview/cancellation and 1.5s solo Click fades passed. No iOS runtime claimed.\n";
         return 0;
     }catch(const mobile::ImportError& e){zlplay::destroyEngine(engine);std::cerr<<"Import error kind="<<int(e.kind)<<" detail="<<e.detail<<"\n";return 1;}catch(const std::exception& e){zlplay::destroyEngine(engine);std::cerr<<e.what()<<'\n';return 1;}
 }

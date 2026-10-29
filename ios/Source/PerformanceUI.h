@@ -41,6 +41,11 @@ public:
         auto r=getLocalBounds().toFloat().reduced(1);bool active=getToggleState();g.setGradientFill(ColourGradient(active?Colour(0xff28213e):Colour(0xff121d29),0,0,Colour(0xff0e1722),0,r.getBottom(),false));g.fillRoundedRectangle(r,7);g.setColour(active?purple:over?line.brighter(.4f):line);g.drawRoundedRectangle(r,7,active?1.4f:.7f);auto body=getLocalBounds().reduced(10,5);auto cover=body.removeFromLeft(jmin(48,body.getHeight()));g.setColour(Colour(0xff242238));g.fillRoundedRectangle(cover.toFloat(),5);if(art.isValid())g.drawImageWithin(art,cover.getX()+4,cover.getY()+4,cover.getWidth()-8,cover.getHeight()-8,RectanglePlacement::centred);body.removeFromLeft(9);if(key.isNotEmpty()){auto badge=body.removeFromRight(40).withSizeKeepingCentre(36,25);g.setColour(Colour(0xff29223e));g.fillRoundedRectangle(badge.toFloat(),5);g.setColour(Colour(0xffd9c6ff));g.setFont(FontOptions(12.f));g.drawText(key,badge,Justification::centred);}g.setColour(ink);g.setFont(FontOptions(13).withStyle("Bold"));auto first=body; if(artist.isNotEmpty())first=body.removeFromTop(body.getHeight()/2);g.drawFittedText(song,first,Justification::centredLeft,1);if(artist.isNotEmpty()){g.setColour(muted);g.setFont(FontOptions(11.f));g.drawFittedText(artist,body,Justification::centredLeft,1);}if(down){g.setColour(purple.withAlpha(.12f));g.fillRoundedRectangle(r,7);}
     }
 };
+// Android transport's single BPM card; minus/value/plus are children of this panel.
+class TempoCard final : public Component {
+public:
+    void paint(Graphics& g)override{g.setColour(panel);g.fillRoundedRectangle(getLocalBounds().toFloat(),9);g.setColour(line);g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(.5f),9,.7f);}
+};
 class MixerBank final : public Component {
 public:
     struct Group{Rectangle<int> area;String title;};std::vector<Group> groups;
