@@ -41,7 +41,7 @@ int main(int argc,char** argv){
         guidePreviewCheck(engine);
         soloClickFadeCheck(engine);
         zlplay::destroyEngine(engine);
-        std::cout<<"Project import and embedded engine: RPP, ZLPlay, setlist, paths, PCM, seek, gain, stop and guide preview/cancellation and 1.5s solo Click fades passed. No iOS runtime claimed.\n";
+        std::cout<<"Project import and embedded engine: RPP, ZLPlay, setlist, paths, PCM, seek, gain, stop and guide preview/cancellation and 1.5s solo Click fades and project Guide/Click meters passed. No iOS runtime claimed.\n";
         return 0;
     }catch(const mobile::ImportError& e){zlplay::destroyEngine(engine);std::cerr<<"Import error kind="<<int(e.kind)<<" detail="<<e.detail<<"\n";return 1;}catch(const std::exception& e){zlplay::destroyEngine(engine);std::cerr<<e.what()<<'\n';return 1;}
 }

@@ -100,3 +100,6 @@ Key selectors expose the same twelve flat pitch classes as Android; saved minor-
 
 
 The mobile transport uses one shared BPM card containing minus/value/plus, matching Android. Click solo during playback sends `fadeSeconds: 1.5` to the existing native gain ramps on both activation and deactivation. Imported music/guide gains fade toward their effective targets while Click stays audible; stored fader values are not rewritten. Repeated mix refreshes with unchanged targets preserve in-flight native ramps. No desktop audio callback or engine source is changed. Remote mode continues to delegate audio transitions to its host.
+
+
+Click and Guide strips display measured levels from their imported tracks. Click also includes the engine's native/standalone Click meter; each strip uses the highest measured channel peak among its actual role sources. VS tracks are excluded from both special meters. This is a display-only mapping and does not alter audio gains, routing, playback or source projects. Remote snapshots without meter data continue to display no signal.

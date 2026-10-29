@@ -28,4 +28,8 @@ inline GuidePreview guidePreview(const juce::Array<juce::var>& regions,double bo
 struct ViewportState{double zoom,start;};
 inline ViewportState pinchViewport(double duration,double zoom,double start,double factor,double oldFocus,double newFocus,double width){width=juce::jmax(1.,width);double anchor=start+oldFocus/width*duration/zoom;double next=juce::jlimit(1.,24.,zoom*factor);return {next,juce::jlimit(0.,juce::jmax(0.,duration-duration/next),anchor-newFocus/width*duration/next)};}
 
+inline float meterPeak(const juce::var& values){float peak=0;if(values.isArray())for(int channel=0;channel<juce::jmin(2,values.size());++channel){double value=double(values[channel]);if(std::isfinite(value)&&value>peak)peak=float(value);}return peak;}
+struct SpecialMeterLevels{float click=0,guide=0;};
+inline SpecialMeterLevels specialMeterLevels(const juce::var& meters,const juce::Array<int>& roles){SpecialMeterLevels result{meterPeak(meters["click"]),0};for(int i=0;i<roles.size();++i){float value=meterPeak(meters[juce::Identifier("track:"+juce::String(i))]);if(roles[i]==2)result.click=juce::jmax(result.click,value);else if(roles[i]==1)result.guide=juce::jmax(result.guide,value);}return result;}
+
 }
