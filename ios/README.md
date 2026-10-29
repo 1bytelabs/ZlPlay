@@ -103,3 +103,6 @@ The mobile transport uses one shared BPM card containing minus/value/plus, match
 
 
 Click and Guide strips display measured levels from their imported tracks. Click also includes the engine's native/standalone Click meter; each strip uses the highest measured channel peak among its actual role sources. VS tracks are excluded from both special meters. This is a display-only mapping and does not alter audio gains, routing, playback or source projects. Remote snapshots without meter data continue to display no signal.
+
+
+New installations default to native ZLPlay Click, including projects containing an imported Click track. The quick-settings switch uses the same default as playback. An explicitly saved source choice is retained, and projects without a Click track always use native Click.
