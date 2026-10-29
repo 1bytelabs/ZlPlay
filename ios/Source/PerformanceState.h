@@ -23,4 +23,9 @@ template<class T>int movePreservingSelection(juce::Array<T>& items,int from,int 
 struct OutputPair{int left,right;};
 inline OutputPair outputChannels(const juce::String& route,int count,bool master=false){count=juce::jlimit(1,64,count);OutputPair fallback=master?OutputPair{0,count>1?1:-1}:OutputPair{64,65};if(route=="none")return {-1,-1};bool mono=route.startsWith("mono:"),stereo=route.startsWith("stereo:");if(!mono&&!stereo)return fallback;auto number=route.fromFirstOccurrenceOf(":",false,false);if(number.isEmpty()||number.length()>2||!number.containsOnly("0123456789"))return fallback;int left=number.getIntValue();if(left>=count||(stereo&&left+1>=count))return fallback;return {left,mono?-1:left+1};}
 inline double effectiveGain(double gain,bool muted,bool solo,bool anySolo){return muted||(anySolo&&!solo)?0.:gain;}
+struct GuidePreview{bool enabled=false;double start=0,end=0,source=0;};
+inline GuidePreview guidePreview(const juce::Array<juce::var>& regions,double boundary,double target){if(target<=0||boundary<=0)return {};double previous=0;for(auto& region:regions){double from=double(region["start"]);if(from<target&&from>previous)previous=from;}double source=juce::jmax(0.,target-8.,previous),lead=target-source;if(lead<=.03)return {};return {true,boundary-lead,boundary,source};}
+struct ViewportState{double zoom,start;};
+inline ViewportState pinchViewport(double duration,double zoom,double start,double factor,double oldFocus,double newFocus,double width){width=juce::jmax(1.,width);double anchor=start+oldFocus/width*duration/zoom;double next=juce::jlimit(1.,24.,zoom*factor);return {next,juce::jlimit(0.,juce::jmax(0.,duration-duration/next),anchor-newFocus/width*duration/next)};}
+
 }

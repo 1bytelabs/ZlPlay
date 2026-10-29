@@ -17,6 +17,7 @@ struct Song { String id,name,folder,source,originalKey,targetKey; };
 struct Setlist {String title; Array<Song> songs;};
 File copyFolder(const File& source,const File& destination);
 Array<File> projectFiles(const File& root);
+inline Array<File> importCandidates(const Array<File>& files,bool repertoireOnly){Array<File> result;for(auto& file:files)if(file.hasFileExtension(repertoireOnly?"zlset;zlplaylibrary":"rpp;zlplay"))result.add(file);return result;}
 File resolveFile(const File& root,const File& manifest,const String& reference);
 Project readProject(const File& manifest,const File& root);
 Setlist readSetlist(const File& manifest,const File& root);

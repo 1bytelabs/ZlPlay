@@ -30,7 +30,7 @@ else()
     target_sources(ZLPlayMobile PRIVATE "Resources/${locale}.lproj/InfoPlist.strings")
     set_source_files_properties("Resources/${locale}.lproj/InfoPlist.strings" PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/${locale}.lproj")
   endforeach()
-  juce_add_binary_data(ZLPlayMobileBrand SOURCES ../desktop/icon.png)
+  juce_add_binary_data(ZLPlayMobileBrand SOURCES ../desktop/icon.png Resources/Fonts/inter.ttf)
   set(app ZLPlayMobile)
   target_link_libraries(${app} PRIVATE ZLPlayMobileBrand)
   target_sources(${app} PRIVATE Source/Main.cpp Source/ProjectImport.cpp)
@@ -50,7 +50,25 @@ else()
   configure_file(../native/vendor/signalsmith-stretch-main/LICENSE.txt "${legal_dir}/Signalsmith-Stretch-LICENSE.txt" COPYONLY)
   configure_file(../native/vendor/linear-main/LICENSE.txt "${legal_dir}/Signalsmith-Linear-LICENSE.txt" COPYONLY)
   configure_file(../native/vendor/libebur128/COPYING "${legal_dir}/libebur128-LICENSE.txt" COPYONLY)
-  foreach(name ZLPlay-AGPL-3.0.txt THIRD_PARTY_NOTICES.md JUCE-LICENSE.md Signalsmith-Stretch-LICENSE.txt Signalsmith-Linear-LICENSE.txt libebur128-LICENSE.txt)
+  configure_file(licenses/Inter-OFL-1.1.txt "${legal_dir}/Inter-OFL-1.1.txt" COPYONLY)
+  configure_file(licenses/IOS-NOTICES.md "${legal_dir}/IOS-NOTICES.md" COPYONLY)
+  # Preserve the upstream notices of JUCE's embedded codecs/rendering libraries.
+  set(juce_notices "juce_core/zip/zlib/LICENSE" "juce_audio_formats/codecs/flac/Flac Licence.txt"
+    "juce_audio_formats/codecs/ogg/COPYING" "juce_audio_formats/codecs/vorbis/COPYING"
+    "juce_audio_formats/codecs/opus/opus/COPYING" "juce_audio_formats/codecs/opus/opusfile/COPYING"
+    "juce_audio_formats/codecs/opus/libopusenc/COPYING" "juce_graphics/fonts/harfbuzz/COPYING"
+    "juce_graphics/unicode/sheenbidi/LICENSE" "juce_graphics/drawables/lunasvg/LICENSE"
+    "juce_graphics/drawables/lunasvg/plutovg/LICENSE" "juce_graphics/image_formats/jpglib/README" "juce_graphics/image_formats/pnglib/LICENSE"
+    "juce_graphics/image_formats/libwebp/COPYING")
+  file(WRITE "${legal_dir}/JUCE-THIRD-PARTY.txt" "Original upstream notices from the pinned JUCE source. Some optional codecs are not enabled on iOS.\n")
+  foreach(notice IN LISTS juce_notices)
+    file(READ "${zlplay_juce_dir}/modules/${notice}" notice_text)
+    file(APPEND "${legal_dir}/JUCE-THIRD-PARTY.txt" "\n--- ${notice} ---\n${notice_text}\n")
+  endforeach()
+  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../native/vendor/libebur128/sys/queue.h" queue_source)
+  string(REGEX MATCH "/\\*[^*]*\\*+([^/*][^*]*\\*+)*/" queue_notice "${queue_source}")
+  file(APPEND "${legal_dir}/libebur128-LICENSE.txt" "\nBSD queue notice:\n${queue_notice}\n")
+  foreach(name Inter-OFL-1.1.txt IOS-NOTICES.md JUCE-THIRD-PARTY.txt ZLPlay-AGPL-3.0.txt THIRD_PARTY_NOTICES.md JUCE-LICENSE.md Signalsmith-Stretch-LICENSE.txt Signalsmith-Linear-LICENSE.txt libebur128-LICENSE.txt)
     target_sources(${app} PRIVATE "${legal_dir}/${name}")
     set_source_files_properties("${legal_dir}/${name}" PROPERTIES MACOSX_PACKAGE_LOCATION Resources/licenses)
   endforeach()
