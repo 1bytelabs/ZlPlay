@@ -10,7 +10,7 @@ struct ImportError : std::runtime_error {
     ImportError(Kind k, String d={}) : std::runtime_error("Mobile import failed"),kind(k),detail(d) {}
 };
 struct Project {
-    String title,originalKey,targetKey; double bpm=120,duration=0; int meter=4;
+    String title,originalKey,targetKey,warningRevision; double bpm=120,duration=0; int meter=4;
     Array<var> tracks,regions; StringArray names,warnings; Array<var> peaks;
 };
 struct Song { String id,name,folder,source,originalKey,targetKey; };
