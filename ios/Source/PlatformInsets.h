@@ -7,3 +7,8 @@ juce::BorderSize<int> mobileSafeInsets(juce::Component&);
 #if JUCE_IOS
 void withMobileFolderAccess(juce::URL, const std::function<void(const juce::File&)>&);
 #endif
+#if JUCE_IOS
+void mobileKeepAwake(bool);
+void mobileOpenAppSettings();
+void mobileShowOutputPicker();
+#endif

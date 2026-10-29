@@ -25,3 +25,15 @@ void withMobileFolderAccess(juce::URL url,const std::function<void(const juce::F
         if(granted)[location stopAccessingSecurityScopedResource];
     }
 }
+#import <AVKit/AVKit.h>
+void mobileKeepAwake(bool enabled){[UIApplication sharedApplication].idleTimerDisabled=enabled;}
+void mobileOpenAppSettings(){NSURL* url=[NSURL URLWithString:UIApplicationOpenSettingsURLString];[[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];}
+void mobileShowOutputPicker(){
+    UIWindow* window=nil;
+    for(UIScene* scene in [UIApplication sharedApplication].connectedScenes)if([scene isKindOfClass:[UIWindowScene class]])for(UIWindow* candidate in ((UIWindowScene*)scene).windows)if(candidate.isKeyWindow)window=candidate;
+    if(!window)return;
+    static AVRoutePickerView* picker=nil;
+    if(picker)[picker removeFromSuperview];
+    picker=[[AVRoutePickerView alloc] initWithFrame:CGRectMake(window.bounds.size.width-80,50,44,44)];picker.tintColor=[UIColor colorWithRed:.65 green:.46 blue:1 alpha:1];[window addSubview:picker];
+    for(UIView* child in picker.subviews)if([child isKindOfClass:[UIButton class]]){[(UIButton*)child sendActionsForControlEvents:UIControlEventTouchUpInside];break;}
+}

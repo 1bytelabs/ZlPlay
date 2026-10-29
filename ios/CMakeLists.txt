@@ -17,21 +17,27 @@ endif()
 if(ZLPLAY_HOST_CHECK)
   juce_add_console_app(ZLPlayEmbeddedCheck PRODUCT_NAME "ZLPlayEmbeddedCheck")
   set(app ZLPlayEmbeddedCheck)
-  target_sources(${app} PRIVATE Tests/EmbeddedCheck.cpp Source/ProjectImport.cpp)
+  target_sources(${app} PRIVATE Tests/EmbeddedCheck.cpp Source/ProjectImport.cpp Source/RemoteTransport.mm)
+  target_link_libraries(${app} PRIVATE "-framework Security")
 else()
   juce_add_gui_app(ZLPlayMobile PRODUCT_NAME "ZLPlay Mobile" COMPANY_NAME "1Byte Labs"
     BUNDLE_ID com.onebytelabs.zlplay.ios.dev TARGETED_DEVICE_FAMILY "1,2"
     ICON_BIG ../desktop/icon.png FILE_SHARING_ENABLED TRUE REQUIRES_FULL_SCREEN TRUE
-    PLIST_TO_MERGE "<plist><dict><key>LSSupportsOpeningDocumentsInPlace</key><true/><key>UIStatusBarStyle</key><string>UIStatusBarStyleLightContent</string></dict></plist>"
+    PLIST_TO_MERGE "<plist><dict><key>NSCameraUsageDescription</key><string>Scan the ZLPlay pairing QR code on your computer.</string><key>NSLocalNetworkUsageDescription</key><string>Connect to ZLPlay on your computer over the local network.</string><key>LSSupportsOpeningDocumentsInPlace</key><true/><key>UIStatusBarStyle</key><string>UIStatusBarStyleLightContent</string></dict></plist>"
     IPHONE_SCREEN_ORIENTATIONS UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
     IPAD_SCREEN_ORIENTATIONS UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight)
+  foreach(locale en pt-BR es)
+    target_sources(ZLPlayMobile PRIVATE "Resources/${locale}.lproj/InfoPlist.strings")
+    set_source_files_properties("Resources/${locale}.lproj/InfoPlist.strings" PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/${locale}.lproj")
+  endforeach()
   juce_add_binary_data(ZLPlayMobileBrand SOURCES ../desktop/icon.png)
   set(app ZLPlayMobile)
   target_link_libraries(${app} PRIVATE ZLPlayMobileBrand)
   target_sources(${app} PRIVATE Source/Main.cpp Source/ProjectImport.cpp)
   target_link_libraries(${app} PRIVATE juce::juce_gui_extra)
   if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
-    target_sources(${app} PRIVATE Source/PlatformInsets.mm)
+    target_sources(${app} PRIVATE Source/PlatformInsets.mm Source/MobileRemote.mm Source/RemoteTransport.mm)
+    target_link_libraries(${app} PRIVATE "-framework AVKit" "-framework Security")
     set_target_properties(${app} PROPERTIES XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "15.0")
   endif()
   target_sources(${app} PRIVATE ../app/Meuclick.wav)
