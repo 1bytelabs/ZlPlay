@@ -14,6 +14,7 @@
 !/app/
 !/desktop/
 !/native/
+!/ios/
 !/tests/
 !/scripts/
 !/docs/
@@ -23,7 +24,7 @@ node_modules/
 tools/
 dist/
 build/
-native/bin/
+native/bin
 native/speech/*
 !native/speech/*LICENSE.txt
 !native/speech/README.md
@@ -113,3 +114,8 @@ app/LEIA-ME.txt
 
 # Private local continuity notes never ship.
 /local-notes/
+
+# Generated Apple build products and private Xcode settings
+/ios/build*/
+**/xcuserdata/
+*.xcuserstate
