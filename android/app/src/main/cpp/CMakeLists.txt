@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(zlplay_android_dsp LANGUAGES CXX)
+get_filename_component(ZLPLAY_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../../../.." ABSOLUTE)
+add_library(zlplay_pitch SHARED pitch.cpp)
+target_compile_features(zlplay_pitch PRIVATE cxx_std_17)
+target_compile_options(zlplay_pitch PRIVATE -O3 -fexceptions)
+target_include_directories(zlplay_pitch PRIVATE "${ZLPLAY_ROOT}/native/vendor/signalsmith-stretch-main" "${ZLPLAY_ROOT}/native/vendor/linear-main/include")

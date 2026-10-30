@@ -1,3 +1,9 @@
+# Publicação vigente: v2.8.1
+
+O usuário autorizou uma nova release v2.8.1 com Windows 2.8.1 (somente instalador) e Mobile 0.11.1 (APK assinado, versionCode 24). A v2.8.0 e sua tag devem ser preservadas. O macOS será acrescentado depois pelo ambiente Mac, seguindo HANDOFF-MAC-2.8.1.md. Não reutilizar os binários 2.8.0 apenas renomeando-os. Publicar os fontes correspondentes, checksums e limitações efetivamente verificadas. Não publicar APK de depuração, chaves, senhas, diários ou bundles privados.
+
+As instruções históricas abaixo documentam a v2.8.0 e não substituem a autorização atual.
+
 # Publicar Windows na release existente do ZLPlay 2.8.0
 
 Em 25/10/2026, o usuário escolheu atualizar a release v2.8.0 existente com a nova logo de ondas verticais. O Mac está sendo atualizado primeiro; o chat Windows deve atualizar somente o instalador Windows e seu checksum quando o usuário solicitar. Não criar release v2.8.1 ou duplicar a v2.8.0.

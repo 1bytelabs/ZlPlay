@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.ZLPlay" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="android:colorAccent">#9F75F4</item>
+        <item name="android:windowBackground">#0B0F17</item>
+        <item name="android:statusBarColor">#0B0F17</item>
+        <item name="android:navigationBarColor">#0B0F17</item>
+    </style>
+</resources>

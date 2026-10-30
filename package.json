@@ -1,7 +1,7 @@
 {
   "name": "zlplay-desktop",
   "productName": "ZLPlay",
-  "version": "2.8.0",
+  "version": "2.8.1",
   "description": "ZLPlay — multitracks e performance para computador",
   "author": "1Byte Labs",
   "private": true,
@@ -119,5 +119,8 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
   }
 }

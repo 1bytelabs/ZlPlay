@@ -11,7 +11,8 @@ app.setName('ZLPlay');
 protocol.registerSchemesAsPrivileged([{ scheme: 'zlplay', privileges: {
   standard: true, secure: true, supportFetchAPI: true, stream: true
 } }]);
-function openProjectLink(url){try{const parsed=new URL(url);if(parsed.protocol!=='https:')return;const allowed=(parsed.hostname==='livepix.gg'&&parsed.pathname==='/1bytelabs')||(parsed.hostname==='1bytelabs.com.br'&&parsed.pathname==='/');if(allowed)shell.openExternal(parsed.href).catch(()=>{});}catch{}}
+const {allowedProjectLink}=require('./project-links.cjs');
+function openProjectLink(url){if(allowedProjectLink(url))shell.openExternal(url).catch(()=>{});}
 let window;
 let pendingOpen=process.argv.find(a=>/\.(zlplay|zlset|zlplaylibrary)$/i.test(a)&&path.isAbsolute(a))||null;
 app.on('open-file',(event,file)=>{event.preventDefault();if(/\.(zlplay|zlset|zlplaylibrary)$/i.test(file)){pendingOpen=file;window?.webContents.send('zlplay:open-request');}});
@@ -31,6 +32,14 @@ else {
     const nativeAudio = setupNativeAudio({ app, ipcMain, window });
     const locale=require('./locale.cjs').localeStore(app);await locale.read();
     const tr=(pt,en,es)=>locale.language==='pt-BR'?pt:locale.language==='es'?es:en;
+    const {RemoteHost}=require('./remote-host.cjs');
+    const remoteRequests=new Map();let remoteSerial=0;
+    const remoteHost=new RemoteHost({command:c=>new Promise((resolve,reject)=>{const id=++remoteSerial;const timer=setTimeout(()=>{remoteRequests.delete(id);reject(Error('Remote timeout'));},8000);remoteRequests.set(id,{resolve,reject,timer});window.webContents.send('zlplay:remote-command',{id,command:c});})});
+    ipcMain.handle('zlplay:remote-config',async(event,action)=>{nativeAudio.authorize(event);if(process.platform!=='win32')return {enabled:false,supported:false};if(action==='start'){await remoteHost.start();const invitation=remoteHost.invite();const qr=await require('qrcode').toDataURL(invitation,{errorCorrectionLevel:'M',margin:4,width:420});return {...remoteHost.status(),qr};}if(action==='stop')await remoteHost.stop();return {...remoteHost.status(),supported:true};});
+    ipcMain.on('zlplay:remote-state',(event,state)=>{try{nativeAudio.authorize(event);remoteHost.publish(state);}catch{}});
+    ipcMain.on('zlplay:remote-result',(event,result)=>{nativeAudio.authorize(event);const pending=remoteRequests.get(result?.id);if(!pending)return;remoteRequests.delete(result.id);clearTimeout(pending.timer);if(result.error)pending.reject(Error('Command rejected'));else pending.resolve(result.state);});
+    app.on('before-quit',()=>{remoteHost.stop().catch(()=>{});for(const pending of remoteRequests.values()){clearTimeout(pending.timer);pending.reject(Error('Closed'));}remoteRequests.clear();});
+
     ipcMain.handle('zlplay:language',event=>{nativeAudio.authorize(event);return locale.read();});
     ipcMain.handle('zlplay:set-language',(event,value)=>{nativeAudio.authorize(event);return locale.write(value);});
     Menu.setApplicationMenu(null);window.setMenuBarVisibility(false);

@@ -109,3 +109,5 @@ app/LEIA-ME.txt
 # Private development notes must never be published
 /local-notes/
 /docs/DIARIO-DESENVOLVIMENTO.md
+
+!/android/
