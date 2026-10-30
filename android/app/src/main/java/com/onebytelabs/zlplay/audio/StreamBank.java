@@ -65,6 +65,14 @@ public final class StreamBank implements AutoCloseable {
         }
         private float at(long sourceFrame,int channel){if(sourceFrame>=file.frames)return 0;long key=sourceFrame/BLOCK_FRAMES;Block block=heldA!=null&&heldA.key==key?heldA:heldB!=null&&heldB.key==key?heldB:null;if(block==null&&key<2)block=head[(int)key];if(block==null)return 0;int index=(int)(sourceFrame-key*BLOCK_FRAMES)*channels+(channels==1?0:channel);return block.values[index];}
         @Override public float sample(long frame,int channel){double source=frame*(sampleRate/(double)DemoMixer.RATE);long index=(long)source;if(index>=file.frames)return 0;float a=at(index,channel),b=at(Math.min(index+1,file.frames-1),channel);return a+(b-a)*(float)(source-index);}
+        @Override public void readStereo(long frame,int count,float[] output,int offset){
+            double ratio=sampleRate/(double)DemoMixer.RATE;
+            for(int i=0;i<count;i++){double source=(frame+i)*ratio;if(source>=file.frames){output[offset+i*2]=output[offset+i*2+1]=0;continue;}long index=(long)source;float fraction=(float)(source-index);
+                float l=at(index,0),r=channels==1?l:at(index,1);long next=Math.min(index+1,file.frames-1);
+                output[offset+i*2]=l+(at(next,0)-l)*fraction;
+                output[offset+i*2+1]=channels==1?output[offset+i*2]:r+(at(next,1)-r)*fraction;
+            }
+        }
         @Override public void addPeaks(float[] into,double duration){for(int bin=0;bin<into.length;bin++){double second=bin/(double)into.length*duration;if(second>=duration())break;int i=Math.min(peaks.length-1,(int)(second/duration()*peaks.length));into[bin]+=peaks[i]*.7f;}}
         @Override public void close(){StreamBank.this.close();}
     }

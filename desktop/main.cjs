@@ -11,7 +11,8 @@ app.setName('ZLPlay');
 protocol.registerSchemesAsPrivileged([{ scheme: 'zlplay', privileges: {
   standard: true, secure: true, supportFetchAPI: true, stream: true
 } }]);
-function openProjectLink(url){try{const parsed=new URL(url);if(parsed.protocol!=='https:')return;const allowed=(parsed.hostname==='livepix.gg'&&parsed.pathname==='/1bytelabs')||(parsed.hostname==='1bytelabs.com.br'&&parsed.pathname==='/');if(allowed)shell.openExternal(parsed.href).catch(()=>{});}catch{}}
+const {allowedProjectLink}=require('./project-links.cjs');
+function openProjectLink(url){if(allowedProjectLink(url))shell.openExternal(url).catch(()=>{});}
 let window;
 let pendingOpen=process.argv.find(a=>/\.(zlplay|zlset|zlplaylibrary)$/i.test(a)&&path.isAbsolute(a))||null;
 app.on('open-file',(event,file)=>{event.preventDefault();if(/\.(zlplay|zlset|zlplaylibrary)$/i.test(file)){pendingOpen=file;window?.webContents.send('zlplay:open-request');}});

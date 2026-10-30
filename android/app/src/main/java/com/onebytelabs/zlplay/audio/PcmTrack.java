@@ -13,6 +13,10 @@ public class PcmTrack implements AutoCloseable {
     public void setPitch(int semitones){if(semitones!=0)throw new UnsupportedOperationException("Pitch source unavailable");}
     public boolean prepare(long frame,int count){return true;}
     public void hint(long frame){}
+    /** Interleaved stereo, bounded quantum. Called only by the owner render/prefetch thread. */
+    public void readStereo(long frame,int count,float[] output,int offset){
+        for(int i=0;i<count;i++){output[offset+i*2]=sample(frame+i,0);output[offset+i*2+1]=sample(frame+i,1);}
+    }
     public float previewPeak(double seconds){int frame=(int)(seconds*sampleRate);if(frame<0||frame>=samples.length/channels)return 0;float value=0;for(int f=frame;f<Math.min(frame+32,samples.length/channels);f++)for(int c=0;c<channels;c++)value=Math.max(value,Math.abs(samples[f*channels+c]));return value;}
     public boolean failed(){return false;}
     @Override public void close(){}

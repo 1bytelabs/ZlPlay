@@ -18,6 +18,7 @@ public final class StreamingWavTest {
   try{
    create(file);FileChannel channel=FileChannel.open(file.toPath(),StandardOpenOption.READ);WavFile source=new WavFile("10 minute fixture",channel,channel,0,channel.size());
    float[] preview=source.preview();bank=new StreamBank(Collections.singletonList(source),Collections.singletonList(preview));PcmTrack track=bank.tracks[0];
+   float[] bulk=new float[1024];for(long at:new long[]{0,StreamBank.BLOCK_FRAMES-20,48000L*600-100,48000L*600+1}){ready(track,at);track.readStereo(at,512,bulk,0);for(int j=0;j<512;j++)for(int c=0;c<2;c++)check(Math.abs(bulk[j*2+c]-track.sample(at+j,c))<1e-6,"stream bulk matches scalar at "+at);}
    check(file.length()>100L*1024*1024&&Math.abs(track.duration()-600)<.001,"long source opened");check(track.decodedBytes()<1024*1024,"cache independent of source duration");
    DemoMixer mixer=new DemoMixer();mixer.load(bank.tracks);mixer.play();float[] pcm=new float[1024];mixer.render(pcm,512);check(pcm[0]>0&&pcm[1]<0,"prefilled intro");
    long frame=300L*StreamBank.BLOCK_FRAMES+123;mixer.seek(frame/(double)48000);mixer.render(pcm,512);check(mixer.position()*48000>=frame,"seek does not move backwards");ready(track,frame);mixer.seek(frame/(double)48000);mixer.render(pcm,512);check(pcm[0]>.1&&pcm[1]<-.05,"seeked PCM");
