@@ -18,3 +18,5 @@
 .zl-region-boundaries>i.selected-edge{background:#e7f4ffb3;box-shadow:0 0 2px #e7f4ff33}
 .vs-channel-top>.zl-fx-button,.vs-channel-top>.vs-channel-menu>summary{box-sizing:border-box!important;width:38px!important;min-width:38px!important;max-width:38px!important;height:25px!important;min-height:25px!important;padding:0!important;display:grid!important;place-items:center;line-height:1!important;border-radius:5px!important}
 .vs-channel-top>.vs-channel-menu{flex:0 0 38px;width:38px}.vs-channel-top{align-items:center!important;justify-content:center!important}
+
+.zl-timeline-panning, .zl-timeline-panning * { cursor: grabbing !important; user-select: none; }

@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 contextBridge.exposeInMainWorld('zlplayNative', {
+  platform: process.platform,
   remoteConfig: action => ipcRenderer.invoke('zlplay:remote-config',action),
   remoteState: state => ipcRenderer.send('zlplay:remote-state',state),
   remoteResult: result => ipcRenderer.send('zlplay:remote-result',result),
