@@ -80,7 +80,7 @@ html,body{font-family:'Segoe UI',Inter,system-ui,sans-serif;background:#090d15;c
 #zosma-vs-study:fullscreen .vs-timeline-content{flex:1 1 0!important;height:auto!important}
 #zosma-vs-study:fullscreen .vs-timeline-scroll{margin:8px 0!important;padding:8px 10px!important;min-height:145px!important}
 #zosma-vs-study:fullscreen .vs-timeline-scroll .vs-regions{flex:0 0 68px;min-height:68px!important}
-@media(max-width:1500px){.vs-compact-layout .vs-title{font-size:21px}.vs-compact-layout .vs-performance-bar{gap:7px}.vs-compact-layout .vs-pad-row{flex-basis:100%;justify-content:flex-end}.vs-compact-layout .vs-head-actions .vs-mode{padding:7px 8px}.vs-compact-layout .vs-key label{font-size:11px}}
+@media(max-width:1500px){.vs-compact-layout .vs-title{font-size:21px}.vs-compact-layout .vs-performance-bar{gap:7px}.vs-compact-layout .vs-head-actions .vs-mode{padding:7px 8px}.vs-compact-layout .vs-key label{font-size:11px}}
 @media(max-height:800px){
  .vs-compact-layout .vs-title-row{padding:7px 10px}.vs-compact-layout .vs-title{font-size:20px}.vs-compact-layout .vs-meta .vs-pill{font-size:11px;margin-right:9px}
  .vs-compact-layout .vs-performance-bar{padding:6px 10px;gap:5px}.vs-compact-layout .vs-transport .vs-btn{min-height:34px;font-size:12px;padding:7px 9px}

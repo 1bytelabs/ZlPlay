@@ -462,8 +462,8 @@ public:
         }
         if(op=="meters"){
             std::lock_guard<std::mutex> l(renderMutex);DynamicObject* object=new DynamicObject();
-            auto put=[&](const std::string& id,LevelMeter& meter){auto values=meter.read();auto& previous=lastMeterLevels[id];for(int ch=0;ch<2;ch++)previous[ch]=std::max(float(double(values[ch])),previous[ch]*.75f);object->setProperty(Identifier(String(id)),Array<var>{double(previous[0]),double(previous[1])});};
-            for(auto& t:tracks)if(!t->effectId.empty())put(t->effectId,t->fx.meter);for(auto& bus:busMeters)if(bus.first!="VS")put("group:"+bus.first,bus.second->meter);put("vs",vsMeter);put("master",masterMeter);put("pad",padFx.meter);put("click",soloFx.meter);for(auto& g:groups)if(g->profile=="click"){auto values=g->fx.meter.read();auto old=object->getProperty("click");object->setProperty("click",Array<var>{std::max(double(old[0]),double(values[0])),std::max(double(old[1]),double(values[1]))});}return var(object);
+            auto put=[&](const std::string& id,LevelMeter& meter,float decay=.75f){auto values=meter.read();auto& previous=lastMeterLevels[id];for(int ch=0;ch<2;ch++)previous[ch]=std::max(float(double(values[ch])),previous[ch]*decay);object->setProperty(Identifier(String(id)),Array<var>{double(previous[0]),double(previous[1])});};
+            for(auto& t:tracks)if(!t->effectId.empty())put(t->effectId,t->fx.meter,t->effectId=="click"?.3f:.75f);for(auto& bus:busMeters)if(bus.first!="VS")put("group:"+bus.first,bus.second->meter);put("vs",vsMeter);put("master",masterMeter);put("pad",padFx.meter);put("click",soloFx.meter,.3f);for(auto& g:groups)if(g->profile=="click"){auto values=g->fx.meter.read();auto old=object->getProperty("click");object->setProperty("click",Array<var>{std::max(double(old[0]),double(values[0])),std::max(double(old[1]),double(values[1]))});}return var(object);
         }
         if(op=="devices"){ensureDevice(44100);return deviceInfo();}
         if(op=="configureDevice")return configureDevice(request);

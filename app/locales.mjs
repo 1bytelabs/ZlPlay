@@ -15,6 +15,25 @@ const rows=[
 ['Idioma / Language','Language / Idioma','Idioma / Language'],['Escolha o idioma','Choose your language','Elige el idioma'],['Continuar','Continue','Continuar'],['As alterações de idioma não modificam seus projetos.','Changing language does not modify your projects.','Cambiar el idioma no modifica tus proyectos.'],['Operação cancelada.','Operation canceled.','Operación cancelada.'],['Projeto pronto para reproduzir.','Project ready to play.','Proyecto listo para reproducir.'],['Preparando tracks...','Preparing tracks...','Preparando pistas...'],['Montando o mixer...','Building the mixer...','Preparando el mezclador...'],['Projeto .zlplay aberto. Os stems foram carregados somente da pasta deste projeto.','Project opened. Stems were loaded from this project folder.','Proyecto abierto. Los audios se cargaron desde la carpeta de este proyecto.'],['Tom não informado: Pad mantido.','Key not provided: Pad unchanged.','Tonalidad no indicada: Pad sin cambios.'],['Escolha sua pasta de pads em Config.','Choose your Pad folder in Settings.','Elige tu carpeta de pads en Configuración.'],['Próxima','Next','Siguiente'],['Executada','Executed','Ejecutada'],['Região ausente','Missing region','Región ausente'],['Modo das automações: clique para alternar ensaio / ao vivo','Automation mode: click to switch rehearsal / live','Modo de automatización: pulsa para alternar ensayo / en vivo'],['Usar mesma saída','Use same output','Usar la misma salida']
 ];
 rows.push(["Descartar alterações","Discard changes","Descartar cambios"]);
+rows.push(["Descartar as alterações deste editor?","Discard changes in this editor?","¿Descartar los cambios de este editor?"]);
+rows.push(["Salvar alterações no repertório?","Save changes to the setlist?","¿Guardar los cambios del repertorio?"]);
+rows.push(["Há áudios das edições do repertório fora da pasta da música.","Some audio used by the setlist edits is outside the song folder.","Hay audios usados por las ediciones del repertorio fuera de la carpeta de la canción."]);
+rows.push(["Atualizar pastas","Refresh folders","Actualizar carpetas"]);
+rows.push(["Selecione a pasta principal deste repertório.","Select the root folder of this setlist.","Selecciona la carpeta principal del repertorio."]);
+rows.push(["Alterações pendentes","Unsaved changes","Cambios pendientes"]);
+rows.push(["Adicionar música","Add song","Añadir canción"]);
+rows.push(["Remover","Remove","Quitar"]);
+rows.push(["Carregar banco de guias","Load guide bank","Cargar banco de guías"]);
+rows.push(["Inserir guia","Insert guide","Insertar guía"]);
+rows.push(["Nenhuma guia de áudio encontrada na pasta.","No guide audio found in this folder.","No se encontró audio de guía en esta carpeta."]);
+rows.push(["Adicionar guia externa","Add external guide","Añadir guía externa"]);
+rows.push(["Abra um projeto ou pasta antes de adicionar uma guia.","Open a project or folder before adding a guide.","Abre un proyecto o una carpeta antes de añadir una guía."]);
+rows.push(["Dividir no cursor","Split at playhead","Dividir en el cursor"]);
+rows.push(["Silenciar trecho","Mute clip","Silenciar clip"]);
+rows.push(["Reativar trecho","Unmute clip","Reactivar clip"]);
+rows.push(["Excluir trecho","Delete clip","Eliminar clip"]);
+rows.push(["Idioma da guia","Guide language","Idioma de la guía"]);
+rows.push(["Início","Start","Inicio"]);
 rows.push(["Aceitar alterações","Accept changes","Aceptar cambios"]);
 rows.push(["Aceitar mantém as edições na sessão. Use Salvar para gravar o projeto.","Accept keeps edits in this session. Use Save to write the project.","Aceptar mantiene los cambios en la sesión. Usa Guardar para guardar el proyecto."]);
 rows.push(["Sair","Exit","Salir"]);

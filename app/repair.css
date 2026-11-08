@@ -20,3 +20,5 @@
 .vs-channel-top>.vs-channel-menu{flex:0 0 38px;width:38px}.vs-channel-top{align-items:center!important;justify-content:center!important}
 
 .zl-timeline-panning, .zl-timeline-panning * { cursor: grabbing !important; user-select: none; }
+
+[data-next-song]>strong{font-size:14px;color:#eef4ff}

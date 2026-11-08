@@ -73,7 +73,7 @@ export function installNativeAudio(Player) {
   p.prepareNative = async function() {
     if (!isNative(this)) return false;
     const mix = this.nativeMix();
-    const tracks = this.tracks.map((t, i) => ({ ...mix.mix[i], items: t.items.map(it => ({ nativeRef: it.buffer.nativeRef, position: it.position || 0, offset: it.offset || 0, length: it.length ?? Math.max(0, it.buffer.duration - (it.offset || 0)), rate: it.playbackRate || 1 })) }));
+    const tracks = this.tracks.map((t, i) => ({ ...mix.mix[i], items: t.items.filter(it => !it.muted).map(it => ({ nativeRef: it.buffer.nativeRef, position: it.position || 0, offset: it.offset || 0, length: it.length ?? Math.max(0, it.buffer.duration - (it.offset || 0)), rate: it.playbackRate || 1 })) }));
     const signature = JSON.stringify(tracks.map(t => t.items));
     if (this._nativeSignature === signature && this._nativeReady && (this._nativeConfigured || this._nativeConfiguring)) { await this._nativeReady; return true; }
     this._nativeSignature = signature; this._nativeConfigured = false; this._nativeConfiguring = true;

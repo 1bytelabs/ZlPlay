@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('zlplayNative', {
     return filename ? ipcRenderer.invoke('zlplay:describe', filename) : Promise.resolve(null);
   },
   command: message => ipcRenderer.invoke('zlplay:audio', message),
+  importGuide: message => ipcRenderer.invoke('zlplay:import-guide',message),
   bindProject: token => ipcRenderer.invoke('zlplay:bind-project',token),
   saveProject: message => ipcRenderer.invoke('zlplay:save-project',message),
   onGuideProgress: callback => {const listener=(_e,progress)=>callback(progress);ipcRenderer.on('zlplay:guide-progress',listener);return ()=>ipcRenderer.removeListener('zlplay:guide-progress',listener);},
