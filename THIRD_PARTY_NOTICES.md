@@ -23,3 +23,7 @@ Modelo de licença, fontes e escopo por plataforma: [docs/LICENSING.md](docs/LIC
 ## QR code generation (Windows remote)
 node-qrcode 1.5.4, Copyright (c) 2012 Ryan Day, MIT. Full license in docs/licenses/QRCode-MIT.txt and packaged node_modules/qrcode/license. Sources: https://github.com/soldair/node-qrcode/tree/v1.5.4. Runtime dependencies retain their license files in the packaged node_modules tree.
 
+## Guias de voz integradas
+
+Os clipes MP3 em `app/guide-banks/` foram sintetizados para o ZLPlay. Os modelos foram usados na geração e não são dependências do aplicativo. Consulte a [origem dos clipes](app/guide-banks/NOTICE.md).
+

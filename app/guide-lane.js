@@ -4,7 +4,7 @@ export function mountGuideLane(study, scroll, reportError, language) {
  const content = scroll.querySelector('.vs-timeline-content');
  const lane = document.createElement('section');
  lane.className = 'zl-guide-lane';
- lane.innerHTML = '<header><strong>Guia</strong><select data-guide-voice aria-label="Voz da guia"><option value="1">Voz 1</option><option value="2">Voz 2</option></select><select data-guide-preset aria-label="Guia"></select><button data-insert-guide>Adicionar guia</button><button data-import-guide>Adicionar guia externa</button><button data-duplicate-guide>Duplicar</button><button data-split>Dividir no cursor</button><button data-mute>Silenciar trecho</button><button data-delete-guide>Excluir trecho</button></header><div class="zl-guide-clips"></div>';
+ lane.innerHTML = '<header><strong>Guia</strong><select data-guide-voice aria-label="Voz da guia"><option value="1">Voz masculina</option><option value="2">Voz feminina</option></select><select data-guide-preset aria-label="Guia"></select><button data-insert-guide>Adicionar guia</button><button data-import-guide>Adicionar guia externa</button><button data-duplicate-guide>Duplicar</button><button data-split>Dividir no cursor</button><button data-mute>Silenciar trecho</button><button data-delete-guide>Excluir trecho</button></header><div class="zl-guide-clips"></div>';
  const clips = lane.querySelector('.zl-guide-clips');
  const grid = document.createElementNS('http://www.w3.org/2000/svg','svg');
  grid.classList.add('zl-guide-grid');

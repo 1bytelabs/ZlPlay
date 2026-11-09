@@ -4,7 +4,7 @@ function setupProjectStore({app,ipcMain,window,authorize,lookup,register,dialog:
 ipcMain.handle('zlplay:guide-bank',async(e,language)=>{
  authorize(e);
  if(!['pt','en','es'].includes(language))return [];
- const root=app.isPackaged?path.join(app.getAppPath(),'app','guide-banks'):path.join(app.getAppPath(),'local-notes','guide-banks');
+ const root=path.join(app.getAppPath(),'app','guide-banks');
  const entries=[];
  for(const voice of ['1','2']){
   const folder=path.join(root,language,voice);
