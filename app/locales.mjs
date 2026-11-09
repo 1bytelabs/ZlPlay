@@ -36,6 +36,7 @@ rows.push(["Dividir no cursor","Split at playhead","Dividir en el cursor"]);
 rows.push(["Silenciar trecho","Mute clip","Silenciar clip"]);
 rows.push(["Reativar trecho","Unmute clip","Reactivar clip"]);
 rows.push(["Excluir trecho","Delete clip","Eliminar clip"]);
+rows.push(["Excluir o trecho selecionado da Guia?","Delete the selected guide clip?","¿Eliminar el clip de guía seleccionado?"]);
 rows.push(["Idioma da guia","Guide language","Idioma de la guía"]);
 rows.push(["Início","Start","Inicio"]);
 rows.push(["Aceitar alterações","Accept changes","Aceptar cambios"]);

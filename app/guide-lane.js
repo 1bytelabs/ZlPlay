@@ -25,6 +25,23 @@ export function mountGuideLane(study, scroll, reportError) {
  const lengthOf = item => item.length ?? Math.max(0, item.buffer.duration - (item.offset || 0)) / (item.playbackRate || 1);
  const pct = time => 100 * time / (study.duration || 1) + '%';
  const t = value => window.__ZL_I18N__?.t(value) || value;
+ const editor = lane.closest('.zl-region-editor');
+ const splitButton = lane.querySelector('[data-split]');
+ const deleteButton = lane.querySelector('[data-delete-guide]');
+ splitButton.setAttribute('aria-keyshortcuts','S');
+ deleteButton.setAttribute('aria-keyshortcuts','Delete');
+ function guideShortcut(event) {
+  const button = event.key.toLowerCase() === 's' ? splitButton : event.key === 'Delete' ? deleteButton : null;
+  if (!button || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey ||
+      event.target.closest('input,textarea,select,[contenteditable],[role=textbox]')) return;
+  const dialogs = [...document.querySelectorAll('.zl-audio-modal,.zl-library-modal,.zl-select-popup')];
+  const top = dialogs.filter(dialog => dialog.getClientRects().length)
+   .sort((a,b) => (+getComputedStyle(a).zIndex||0) - (+getComputedStyle(b).zIndex||0)).at(-1);
+  if (top !== editor) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  if (!event.repeat) button.click();
+ }
  function cursorTime(clientX) {
   const rect = clips.getBoundingClientRect();
   const time = study.duration * Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
@@ -166,7 +183,6 @@ export function mountGuideLane(study, scroll, reportError) {
    clips.append(clip);
   }
   lane.querySelectorAll('[data-duplicate-guide],[data-split],[data-mute],[data-delete-guide]').forEach(button => { button.disabled = !selected || busy; });
-  const deleteButton=lane.querySelector('[data-delete-guide]');
   if(study.tracks.length===1&&study.tracks[0].items.length===1)deleteButton.disabled=true;
   lane.querySelector('[data-mute]').textContent = t(selected?.muted ? 'Reativar trecho' : 'Silenciar trecho');
  }
@@ -300,8 +316,8 @@ export function mountGuideLane(study, scroll, reportError) {
   selected={...item,position};
   track.items.splice(track.items.indexOf(item)+1,0,selected);
  });
- lane.querySelector('[data-split]').onclick = () => {
-  const at = study.snapEnabled ? snapToBeat(study.position(), study.tempo, study.duration) : study.position();
+ splitButton.onclick = () => {
+  const at = study.position();
   if (!selected || at <= selected.position + .01 || at >= selected.position + lengthOf(selected) - .01) return;
   edit((track, item) => {
    const left = at - item.position;
@@ -312,24 +328,30 @@ export function mountGuideLane(study, scroll, reportError) {
   });
  };
  lane.querySelector('[data-mute]').onclick = () => edit((_, item) => { item.muted = !item.muted; });
- lane.querySelector('[data-delete-guide]').onclick = () => edit((track, item) => {
-  if (study.tracks.length===1 && track.items.length===1) return;
-  track.items = track.items.filter(clip => clip !== item);
-  if (!track.items.length && study.tracks.length > 1) study.tracks = study.tracks.filter(candidate => candidate !== track);
-  selected = null;
- });
+ deleteButton.onclick = () => {
+  if (!selected || busy || deleteButton.disabled) return;
+  const name = selected.displayName || selected.file.split(/[\\/]/).at(-1);
+  if (!confirm(t('Excluir o trecho selecionado da Guia?') + '\n\n' + name)) return;
+  edit((track, item) => {
+   track.items = track.items.filter(clip => clip !== item);
+   if (!track.items.length && study.tracks.length > 1) study.tracks = study.tracks.filter(candidate => candidate !== track);
+   selected = null;
+  });
+ };
  let frame;
  function paint() {
   cursor.style.left = pct(cursorDrag?.time ?? study.position());
   frame = requestAnimationFrame(paint);
  }
  document.addEventListener('zl-edit-restored', render);
+ document.addEventListener('keydown', guideShortcut, true);
  render();
  paint();
  function cleanup() {
   clipDrag?.abort();
   cancelAnimationFrame(frame);
   document.removeEventListener('zl-edit-restored', render);
+  document.removeEventListener('keydown', guideShortcut, true);
   language.removeEventListener('change',updateBank);
   lane.remove();
  }
