@@ -20,9 +20,32 @@ export function mountGuideLane(study, scroll, reportError) {
  cursor.className = 'zl-guide-cursor';
  content.append(lane);
  let selected = null, busy = false;
+ let cursorDrag = null;
+ let clipDrag;
  const lengthOf = item => item.length ?? Math.max(0, item.buffer.duration - (item.offset || 0)) / (item.playbackRate || 1);
  const pct = time => 100 * time / (study.duration || 1) + '%';
  const t = value => window.__ZL_I18N__?.t(value) || value;
+ function cursorTime(clientX) {
+  const rect = clips.getBoundingClientRect();
+  const time = study.duration * Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  return study.snapEnabled ? snapToBeat(time, study.tempo, study.duration) : time;
+ }
+ clips.onpointerdown = event => {
+  if (event.button !== 0 || busy || event.target.closest('.zl-guide-clip')) return;
+  cursorDrag = {id:event.pointerId,time:cursorTime(event.clientX)};
+  clips.setPointerCapture(event.pointerId);
+ };
+ clips.onpointermove = event => {
+  if (cursorDrag?.id === event.pointerId) cursorDrag.time = cursorTime(event.clientX);
+ };
+ clips.onpointerup = event => {
+  if (cursorDrag?.id !== event.pointerId) return;
+  cursorDrag = null;
+  study.seek(cursorTime(event.clientX));
+ };
+ clips.onlostpointercapture = event => {
+  if (cursorDrag?.id === event.pointerId) cursorDrag = null;
+ };
  function render() {
   const points = study.tempo.points?.length ? study.tempo.points : [{time:0,bpm:study.projectBpm()}];
   const marks=[];
@@ -68,24 +91,43 @@ export function mountGuideLane(study, scroll, reportError) {
     wave.append(path);
     clip.prepend(wave);
    }
-   clip.onclick = () => { selected = item; render(); };
+   if (item === selected) {
+    for (const edge of ['start','end']) {
+     const handle = document.createElement('span');
+     handle.className = 'zl-guide-trim';
+     handle.dataset.edge = edge;
+     handle.setAttribute('aria-hidden','true');
+     clip.append(handle);
+    }
+   }
+   let trimming = false;
+   clip.onclick = event => {
+    if (event.detail && trimming) return;
+    if (event.detail) study.seek(cursorTime(event.clientX));
+    selected = item;
+    render();
+   };
    clip.onpointerdown = event => {
     if (event.button !== 0 || busy) return;
-    const rect = clip.getBoundingClientRect();
-    const mode = event.clientX - rect.left < 6 ? 'start' : rect.right - event.clientX < 6 ? 'end' : 'move';
+    const mode = event.target.dataset.edge || 'move';
+    trimming = mode !== 'move';
     const first = event.clientX;
     const position = item.position || 0, length = lengthOf(item), offset = item.offset || 0;
     const rate = item.playbackRate || 1;
     const secondsPerPixel = study.duration / clips.getBoundingClientRect().width;
     const limit = (value, low, high) => Math.max(low, Math.min(high, value));
     let moved = false, next = {position,length,offset};
+    clipDrag?.abort();
+    const drag = clipDrag = new AbortController();
+    const options = {signal:drag.signal};
     clip.setPointerCapture(event.pointerId);
-    clip.onpointermove = move => {
+    window.addEventListener('pointermove', move => {
+     if (move.pointerId !== event.pointerId) return;
      if (!moved && Math.abs(move.clientX - first) < 4) return;
      moved = true;
      const anchor = mode === 'end' ? position + length : position;
      let at = anchor + (move.clientX - first) * secondsPerPixel;
-     if (study.snapEnabled) at = snapToBeat(at,study.tempo,study.duration);
+     if (study.snapEnabled && !(mode !== 'move' && move.shiftKey)) at = snapToBeat(at,study.tempo,study.duration);
      if (mode === 'start') {
       at = limit(at,Math.max(0,position-offset/rate),position+length-.01);
       next = {position:at,length:position+length-at,offset:offset+(at-position)*rate};
@@ -96,14 +138,20 @@ export function mountGuideLane(study, scroll, reportError) {
      }
      clip.style.left = pct(next.position);
      clip.style.width = pct(next.length);
-    };
-    clip.onpointercancel = render;
-    clip.onpointerup = () => {
+    },options);
+    window.addEventListener('pointercancel', cancel => {
+     if (cancel.pointerId !== event.pointerId) return;
+     drag.abort();
+     render();
+    },options);
+    window.addEventListener('pointerup', up => {
+     if (up.pointerId !== event.pointerId) return;
+     drag.abort();
      if (!moved) return;
      clip.onclick = null;
      selected = item;
      edit((_,item) => Object.assign(item,next));
-    };
+    },options);
    };
    clips.append(clip);
   }
@@ -262,13 +310,14 @@ export function mountGuideLane(study, scroll, reportError) {
  });
  let frame;
  function paint() {
-  cursor.style.left = pct(study.position());
+  cursor.style.left = pct(cursorDrag?.time ?? study.position());
   frame = requestAnimationFrame(paint);
  }
  document.addEventListener('zl-edit-restored', render);
  render();
  paint();
  function cleanup() {
+  clipDrag?.abort();
   cancelAnimationFrame(frame);
   document.removeEventListener('zl-edit-restored', render);
   language.removeEventListener('change',updateBank);
