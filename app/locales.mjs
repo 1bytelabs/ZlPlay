@@ -23,9 +23,13 @@ rows.push(["Selecione a pasta principal deste repertório.","Select the root fol
 rows.push(["Alterações pendentes","Unsaved changes","Cambios pendientes"]);
 rows.push(["Adicionar música","Add song","Añadir canción"]);
 rows.push(["Remover","Remove","Quitar"]);
-rows.push(["Carregar banco de guias","Load guide bank","Cargar banco de guías"]);
-rows.push(["Inserir guia","Insert guide","Insertar guía"]);
-rows.push(["Nenhuma guia de áudio encontrada na pasta.","No guide audio found in this folder.","No se encontró audio de guía en esta carpeta."]);
+rows.push(["Adicionar guia","Add guide","Añadir guía"]);
+rows.push(["Voz da guia","Guide voice","Voz de la guía"]);
+rows.push(["Voz 1","Voice 1","Voz 1"]);
+rows.push(["Voz 2","Voice 2","Voz 2"]);
+rows.push(["Partes da música","Song sections","Secciones de la canción"]);
+rows.push(["Comandos para a banda","Band cues","Indicaciones para la banda"]);
+rows.push(["Duplicar","Duplicate","Duplicar"]);
 rows.push(["Adicionar guia externa","Add external guide","Añadir guía externa"]);
 rows.push(["Abra um projeto ou pasta antes de adicionar uma guia.","Open a project or folder before adding a guide.","Abre un proyecto o una carpeta antes de añadir una guía."]);
 rows.push(["Dividir no cursor","Split at playhead","Dividir en el cursor"]);

@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('zlplayNative', {
     return filename ? ipcRenderer.invoke('zlplay:describe', filename) : Promise.resolve(null);
   },
   command: message => ipcRenderer.invoke('zlplay:audio', message),
+  guideBank: language => ipcRenderer.invoke('zlplay:guide-bank',language),
   importGuide: message => ipcRenderer.invoke('zlplay:import-guide',message),
   bindProject: token => ipcRenderer.invoke('zlplay:bind-project',token),
   saveProject: message => ipcRenderer.invoke('zlplay:save-project',message),
