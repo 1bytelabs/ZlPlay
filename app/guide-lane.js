@@ -111,6 +111,7 @@ export function mountGuideLane(study, scroll, reportError) {
     if (event.button !== 0 || busy) return;
     const mode = event.target.dataset.edge || 'move';
     trimming = mode !== 'move';
+    if (trimming && !event.shiftKey) return;
     const first = event.clientX;
     const position = item.position || 0, length = lengthOf(item), offset = item.offset || 0;
     const rate = item.playbackRate || 1;
@@ -123,11 +124,16 @@ export function mountGuideLane(study, scroll, reportError) {
     clip.setPointerCapture(event.pointerId);
     window.addEventListener('pointermove', move => {
      if (move.pointerId !== event.pointerId) return;
+     if (trimming && !move.shiftKey) {
+      drag.abort();
+      render();
+      return;
+     }
      if (!moved && Math.abs(move.clientX - first) < 4) return;
      moved = true;
      const anchor = mode === 'end' ? position + length : position;
      let at = anchor + (move.clientX - first) * secondsPerPixel;
-     if (study.snapEnabled && !(mode !== 'move' && move.shiftKey)) at = snapToBeat(at,study.tempo,study.duration);
+     if (study.snapEnabled && !trimming) at = snapToBeat(at,study.tempo,study.duration);
      if (mode === 'start') {
       at = limit(at,Math.max(0,position-offset/rate),position+length-.01);
       next = {position:at,length:position+length-at,offset:offset+(at-position)*rate};
@@ -148,6 +154,10 @@ export function mountGuideLane(study, scroll, reportError) {
      if (up.pointerId !== event.pointerId) return;
      drag.abort();
      if (!moved) return;
+     if (trimming && !up.shiftKey) {
+      render();
+      return;
+     }
      clip.onclick = null;
      selected = item;
      edit((_,item) => Object.assign(item,next));
