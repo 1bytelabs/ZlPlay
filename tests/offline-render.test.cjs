@@ -6,6 +6,19 @@ const {setTimeout:delay}=require('node:timers/promises');
 const {NativeAudio}=require('../desktop/native-audio.cjs');
 const {nativeExecutable}=require('../desktop/runtime-paths.cjs');
 
+test('render atravessa uma fala MP3 curta inserida na timeline',{timeout:15000},async()=>{
+  const engine=new NativeAudio(nativeExecutable(path.resolve('native/bin')));
+  try{
+    const file=path.resolve('app/guide-banks/pt/1/sections/Verso um.mp3');
+    const [clip]=await engine.request({op:'probe',files:[{path:file}]});
+    const position=1, duration=position+clip.duration+1;
+    await engine.request({op:'load',offline:true,sampleRate:48000,duration,
+      tracks:[{items:[{path:file,position,length:clip.duration}]}]});
+    const rendered=await engine.request({op:'renderTest',position:.5,frames:Math.floor((duration-.5)*48000)});
+    assert.ok(rendered.peak>.01,'a fala deve sair na renderização');
+  }finally{engine.close();}
+});
+
 test('render offline nao antecipa a fila ou rampas entre comandos',{timeout:30000},async()=>{
   const rate=44100,frames=rate*4,value=4096;
   const bytes=Buffer.alloc(44+frames*4);

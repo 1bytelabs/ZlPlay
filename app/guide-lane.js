@@ -1,10 +1,13 @@
 import {snapToBeat} from './beat-grid.mjs';
 
-export function mountGuideLane(study, scroll, reportError, language) {
+export function mountGuideLane(study, scroll, reportError) {
  const content = scroll.querySelector('.vs-timeline-content');
  const lane = document.createElement('section');
  lane.className = 'zl-guide-lane';
- lane.innerHTML = '<header><strong>Guia</strong><select data-guide-voice aria-label="Voz da guia"><option value="1">Voz masculina</option><option value="2">Voz feminina</option></select><select data-guide-preset aria-label="Guia"></select><button data-insert-guide>Adicionar guia</button><button data-import-guide>Adicionar guia externa</button><button data-duplicate-guide>Duplicar</button><button data-split>Dividir no cursor</button><button data-mute>Silenciar trecho</button><button data-delete-guide>Excluir trecho</button></header><div class="zl-guide-clips"></div>';
+ lane.innerHTML = '<header><strong>Guia</strong><label>Idioma da guia <select data-guide-language><option value="pt">Português</option><option value="en">English</option><option value="es">Español</option></select></label><select data-guide-voice aria-label="Voz da guia"><option value="1">Voz masculina</option><option value="2">Voz feminina</option></select><select data-guide-preset aria-label="Guia"></select><button data-insert-guide>Adicionar guia</button><button data-import-guide>Adicionar guia externa</button><button data-duplicate-guide>Duplicar</button><button data-split>Dividir no cursor</button><button data-mute>Silenciar trecho</button><button data-delete-guide>Excluir trecho</button></header><div class="zl-guide-clips"></div>';
+ const language = lane.querySelector('[data-guide-language]');
+ const appLanguage = (window.__ZL_I18N__?.language || 'pt').slice(0,2);
+ language.value = ['pt','en','es'].includes(appLanguage) ? appLanguage : 'pt';
  const clips = lane.querySelector('.zl-guide-clips');
  const grid = document.createElementNS('http://www.w3.org/2000/svg','svg');
  grid.classList.add('zl-guide-grid');
@@ -265,10 +268,11 @@ export function mountGuideLane(study, scroll, reportError, language) {
  document.addEventListener('zl-edit-restored', render);
  render();
  paint();
- return () => {
+ function cleanup() {
   cancelAnimationFrame(frame);
   document.removeEventListener('zl-edit-restored', render);
   language.removeEventListener('change',updateBank);
   lane.remove();
- };
+ }
+ return {language,cleanup};
 }

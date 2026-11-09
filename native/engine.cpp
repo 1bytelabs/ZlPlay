@@ -24,6 +24,25 @@ static std::string str(const var& o,const char* k) { return o[k].toString().toSt
 static std::mutex outputMutex;
 static void send(const var& value) { std::lock_guard<std::mutex> l(outputMutex); std::cout << JSON::toString(value,true).toStdString() << std::endl; }
 constexpr int blockSize=512, queueSize=32, maxOutputs=64, renderOutputs=maxOutputs+2;
+class Mp3ReadAheadSource final : public AudioFormatReader {
+public:
+    explicit Mp3ReadAheadSource(std::unique_ptr<AudioFormatReader> reader)
+        : AudioFormatReader(nullptr, reader->getFormatName()), source(std::move(reader)) {
+        sampleRate=source->sampleRate;
+        lengthInSamples=source->lengthInSamples;
+        numChannels=source->numChannels;
+        bitsPerSample=source->bitsPerSample;
+        usesFloatingPointData=source->usesFloatingPointData;
+    }
+    bool readSamples(int* const* dest,int channels,int offset,int64 start,int count) override {
+        clearSamplesBeyondAvailableLength(dest,channels,offset,start,count,lengthInSamples);
+        // JUCE's MP3 decoder zero-fills the remainder at EOF and returns false.
+        // Keep that partial page so read-ahead can play the decoded samples.
+        return count<=0||source->readSamples(dest,channels,offset,start,count)||start+count>=lengthInSamples;
+    }
+private:
+    std::unique_ptr<AudioFormatReader> source;
+};
 struct Clip {
     std::unique_ptr<AudioFormatReader> reader;
     std::unique_ptr<AudioFormatReader> standby;
@@ -97,6 +116,13 @@ public:
         if(!r)throw std::runtime_error("Formato de áudio não suportado: "+filename.toStdString());
         if(r->numChannels>2)throw std::runtime_error("Use áudio mono ou estéreo.");
         return r;
+    }
+    std::unique_ptr<BufferingAudioReader> openBuffered(const String& filename) {
+        auto source=open(filename);
+        if(File(filename).hasFileExtension("mp3"))source=std::make_unique<Mp3ReadAheadSource>(std::move(source));
+        auto reader=std::make_unique<BufferingAudioReader>(source.release(),diskThread,262144);
+        reader->setReadTimeout(2000);
+        return reader;
     }
     var probe(const var& files) {
         Array<var> result;
@@ -199,11 +225,10 @@ public:
         for(auto& value:*array) {
             auto t=std::make_unique<Track>();t->gain=num(value,"gain",1);t->gainTarget=t->gain;t->pan=num(value,"pan");t->pitch=num(value,"pitch");t->left=int(num(value,"outputLeft",maxOutputs));t->right=int(num(value,"outputRight",maxOutputs+1));
             if(auto* items=value["items"].getArray()) for(auto& it:*items) {
-                auto c=std::make_unique<Clip>();auto source=open(it["path"].toString());
-                auto buffered=std::make_unique<BufferingAudioReader>(source.release(),diskThread,262144);
-                buffered->setReadTimeout(2000);c->reader=std::move(buffered);
-                auto alternate=std::make_unique<BufferingAudioReader>(open(it["path"].toString()).release(),diskThread,262144);
-                alternate->setReadTimeout(2000);c->standby=std::move(alternate);
+                auto c=std::make_unique<Clip>();
+                const auto filename=it["path"].toString();
+                c->reader=openBuffered(filename);
+                c->standby=openBuffered(filename);
                 c->position=num(it,"position"); c->offset=num(it,"offset"); c->rate=num(it,"rate",1);
                 if(c->rate<=0||c->rate>4)throw std::runtime_error("Velocidade inválida.");
                 c->length=num(it,"length",std::max(0.0,double(c->reader->lengthInSamples)/c->reader->sampleRate-c->offset)/c->rate);
@@ -282,7 +307,7 @@ public:
                 int first=std::clamp(int(std::ceil((begin-trackPosition)*sampleRate-1e-7)),0,n);
                 int last=std::clamp(int(std::ceil((end-trackPosition)*sampleRate-1e-7)),0,n);
                 if(last<=first)continue;
-                double source=(c->offset+(trackPosition+first/sampleRate-c->position)*c->rate)*c->reader->sampleRate;
+                double source=std::max(0.0,(c->offset+(trackPosition+first/sampleRate-c->position)*c->rate)*reader->sampleRate);
                 auto sourceStart=int64(std::floor(source));
                 double ratio=c->reader->sampleRate/sampleRate*c->rate;
                 int count=int(std::ceil((last-first)*ratio))+2;
@@ -296,7 +321,10 @@ public:
                     c->cachedCount=std::max(count,std::min(c->scratch.getNumSamples(),pageRemaining));
                     const bool previewRead=t->preview&&inputPosition>=t->previewStart;
                     static_cast<BufferingAudioReader*>(reader)->setReadTimeout(previewRead?0:2000);
-                    if(!reader->read(&c->scratch,0,c->cachedCount,sourceStart,true,true)){
+                    // The interpolation window can extend beyond a short clip.
+                    // Keep that part zero-filled without asking read-ahead for it.
+                    const int readable=int(std::clamp<int64>(reader->lengthInSamples-sourceStart,0,c->cachedCount));
+                    if(readable>0&&!reader->read(&c->scratch,0,readable,sourceStart,true,true)){
                         // A late preview request must never stop the music while
                         // its guide snippet is still being fetched in the background.
                         if(previewRead){c->scratch.clear();c->cachedCount=0;}

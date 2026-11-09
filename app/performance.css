@@ -46,9 +46,9 @@
 @media(max-width:950px){.zl-arrangement-workspace>.zl-audio-box{grid-template-columns:1fr}.zl-editor-fields{grid-template-columns:1fr 1fr 1fr}.zl-level-result{grid-template-columns:1fr 1fr}.zl-editor-tools span{flex-basis:100%;margin:0}.zl-region-box{overflow:auto}}
 @media(max-height:800px){.zl-region-box{padding:10px;gap:7px}.zl-region-box header strong{font-size:20px}.zl-editor-fields{gap:7px}.zl-region-box button{padding:6px 9px;font-size:12px}.zl-region-box footer>span{font-size:11px}.vs-compact-layout .vs-regions-head.zl-fixed-timeline-head{height:18px;flex-basis:18px}.vs-compact-layout .vs-regions,#zosma-vs-study:fullscreen .vs-timeline-scroll .vs-regions{flex-basis:33px!important;min-height:33px!important}.vs-compact-layout .vs-regions .vs-segment{height:30px!important}.vs-compact-layout .vs-timeline{min-height:32px!important}}
 .zl-region-editor .vs-timeline-content{min-height:0}
-.zl-guide-lane{display:flex;flex:1 0 35%;flex-direction:column;min-height:76px;background:#111c2c;border-top:1px solid #405474}
+.zl-guide-lane{display:flex;flex:0 0 auto;flex-direction:column;background:#111c2c;border-top:1px solid #405474}
 .zl-guide-lane header{display:flex;justify-content:flex-start;gap:8px;padding:4px 8px;position:sticky;left:0;width:max-content}
-.zl-guide-clips{position:relative;flex:1;min-height:32px}
+.zl-guide-clips{position:relative;height:60px}
 .zl-guide-clips>.zl-guide-clip{position:absolute;inset-block:2px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;background:#2d2549;border-color:#7762aa;padding-inline:5px}
 .zl-guide-clip[aria-pressed="true"]{outline:2px solid #a78bfa;z-index:1}
 .zl-guide-clip.muted{opacity:.5}
@@ -62,3 +62,4 @@
 .zl-guide-grid{z-index:1}
 .zl-guide-lane header{width:100%;max-width:calc(100vw - 70px);box-sizing:border-box;flex-wrap:wrap}
 .zl-guide-lane header select{max-width:160px;background:#182335;border:1px solid #41506d;border-radius:6px;color:#eef1fa;padding:6px}
+.zl-guide-lane header label{display:flex;align-items:center;gap:6px;white-space:nowrap}
