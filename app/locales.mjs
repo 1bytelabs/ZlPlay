@@ -107,6 +107,15 @@ rows.push(
  ['Cada automação executa uma vez por passagem. Stop ou trocar de modo rearma as regras. Somente a próxima regra pode disparar.','Each automation runs once per pass. Stop or switch modes to rearm the rules. Only the next rule can trigger.','Cada automatización se ejecuta una vez por pasada. Pulsa Stop o cambia de modo para reactivar las reglas. Solo puede activarse la siguiente regla.'],
  ['Volte o playhead para repetir os saltos. Somente a próxima regra pode disparar.','Move the playhead back to repeat jumps. Only the next rule can trigger.','Retrocede el cursor para repetir los saltos. Solo puede activarse la siguiente regla.']
 );
+rows.push(
+ ['Entrada do mapeamento','Mapping input','Entrada de asignación'],
+ ['Automático','Automatic','Automático'],
+ ['MIDI CC relativo (1 / 127)','Relative MIDI CC (1 / 127)','MIDI CC relativo (1 / 127)'],
+ ['MIDI CC relativo (65 / 63)','Relative MIDI CC (65 / 63)','MIDI CC relativo (65 / 63)'],
+ ['MIDI CC relativo (1 / 65)','Relative MIDI CC (1 / 65)','MIDI CC relativo (1 / 65)'],
+ ['Mova um fader ou knob MIDI. Delete remove o mapeamento.','Move a MIDI fader or knob. Press Delete to remove the mapping.','Mueve un fader o mando MIDI. Pulsa Supr para quitar la asignación.'],
+ ['Acione um controle MIDI ou pressione uma tecla no modo Automático. Delete remove o mapeamento.','Use a MIDI control or press a key in Automatic mode. Press Delete to remove the mapping.','Usa un control MIDI o pulsa una tecla en modo Automático. Pulsa Supr para quitar la asignación.']
+);
 export const catalogs={en:Object.fromEntries(rows.map(([pt,en])=>[pt,en])),es:Object.fromEntries(rows.map(([pt,,es])=>[pt,es]))};
 export const messagePatterns=[
  [/^(\d+) região$/,'$1 region','$1 región'],[/^(\d+) regiões$/,'$1 regions','$1 regiones'],
