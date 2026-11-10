@@ -14,9 +14,33 @@ public final class ProjectLoader {
  }
  private static boolean guide(String name){String n=Normalizer.normalize(name,Normalizer.Form.NFD).replaceAll("\\p{M}+","").toLowerCase(Locale.ROOT);return n.contains("guia")||n.contains("guide");}
  public static Result read(Context context,ProjectFolder folder,String filename,WavImport.Progress progress)throws Exception{
-  String text=folder.read(context,filename);ProjectSpec spec=filename.toLowerCase(Locale.ROOT).endsWith(".rpp")?RppReader.parse(text,filename.substring(filename.lastIndexOf('/')+1).replaceFirst("(?i)\\.rpp$","")):ZlplayReader.parse(text);
+  return read(context,folder,filename,null,progress);
+ }
+ public static Result read(Context context,ProjectFolder folder,String filename,String snapshot,WavImport.Progress progress)throws Exception{
+  String text=snapshot==null?folder.read(context,filename):snapshot;
+  ProjectSpec spec=snapshot==null&&filename.toLowerCase(Locale.ROOT).endsWith(".rpp")?RppReader.parse(text,filename.substring(filename.lastIndexOf('/')+1).replaceFirst("(?i)\\.rpp$","")):ZlplayReader.parse(text);
   List<Uri> uris=new ArrayList<>();Map<ProjectSpec.Clip,Integer> indices=new IdentityHashMap<>();int guideIndex=-1;
-  for(int i=0;i<spec.tracks.size();i++){ProjectSpec.Track track=spec.tracks.get(i);if(guideIndex<0&&track.isGuide())guideIndex=i;for(ProjectSpec.Clip clip:track.clips){try{Uri uri=folder.resolve(filename,clip.file);indices.put(clip,uris.size());uris.add(uri);}catch(ProjectFolder.Missing missing){if(!clip.file.startsWith("@click:"))throw missing;clip.nativeClick=true;spec.warnings.add("native-click");if(clip.length<=0)throw new ProjectSpec.Processing();}}}
+  for(int i=0;i<spec.tracks.size();i++){
+   ProjectSpec.Track track=spec.tracks.get(i);
+   for(Iterator<ProjectSpec.Clip> clips=track.clips.iterator();clips.hasNext();){
+    ProjectSpec.Clip clip=clips.next();
+    try{
+     Uri uri=folder.resolve(filename,clip.file);
+     indices.put(clip,uris.size());uris.add(uri);
+    }catch(ProjectFolder.Missing missing){
+     if(!missing.ambiguous&&clip.file.startsWith("@click:")){
+      if(clip.length<=0)throw new ProjectSpec.Processing();
+      clip.nativeClick=true;spec.warnings.add("native-click");
+     }else{
+      spec.missingAudio.add(clip.file.replace('\\','/'));
+      if(clip.length>0)spec.duration=Math.max(spec.duration,clip.position+clip.length);
+      clips.remove();
+     }
+    }
+   }
+   if(guideIndex<0&&track.isGuide()&&!track.clips.isEmpty())guideIndex=i;
+  }
+  if(spec.tracks.stream().allMatch(track->track.clips.isEmpty()))throw new ProjectFolder.Missing();
   int previewStart=uris.size();if(guideIndex>=0)for(ProjectSpec.Clip c:spec.tracks.get(guideIndex).clips){if(c.nativeClick)throw new ProjectSpec.Invalid();uris.add(uris.get(indices.get(c)));}
   WavImport.Result sources=uris.isEmpty()?null:WavImport.readSources(context,uris,progress,128);
   try{

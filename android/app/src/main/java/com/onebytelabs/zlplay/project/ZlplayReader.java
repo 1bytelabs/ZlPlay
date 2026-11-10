@@ -33,7 +33,7 @@ public final class ZlplayReader {
    double db=guide(track.name)?value(normalization,"guide",0):special?0:value(normalization,"vs",0);track.volume*=Math.pow(10,db/20);track.mute=muted;
   }
   JSONArray regions=root.optJSONArray("regions");if(regions!=null)for(int i=0;i<regions.length();i++){JSONObject r=regions.getJSONObject(i);result.regions.add(new ProjectSpec.Region(r.optString("name",""),value(r,"start",0),value(r,"end",0),r.optString("color","")));}
-  JSONObject arrangement=root.optJSONObject("arrangement");if(arrangement!=null){result.automationEnabled=arrangement.optBoolean("enabled",true);JSONArray rules=arrangement.optJSONArray("rules");if(rules!=null)for(int i=0;i<rules.length();i++){JSONObject rule=rules.getJSONObject(i),from=rule.getJSONObject("from"),to=rule.getJSONObject("to");result.jumps.add(new ProjectSpec.Jump(value(from,"start",-1),value(from,"end",-1),value(to,"start",-1)));}}
+  JSONObject arrangement=root.optJSONObject("arrangement");if(arrangement!=null){result.automationEnabled=arrangement.optBoolean("enabled",true);result.automationRehearsal=!"live".equals(arrangement.optString("mode"));JSONArray rules=arrangement.optJSONArray("rules");if(rules!=null)for(int i=0;i<rules.length();i++){JSONObject rule=rules.getJSONObject(i),from=rule.getJSONObject("from"),to=rule.getJSONObject("to");result.jumps.add(new ProjectSpec.Jump(value(from,"start",-1),value(from,"end",-1),value(to,"start",-1)));}}
   result.validate();return result;
  }
 }

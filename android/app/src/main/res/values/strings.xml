@@ -148,6 +148,9 @@
     <string name="project_click_source">Project click</string>
 
     <string name="quick_settings">Quick settings</string>
+    <string name="automation_rehearsal">Rehearsal</string>
+    <string name="automation_live">Live</string>
+    <string name="automations_enabled">Enable automations</string>
     <string name="keep_pad">Keep pad playing when changing songs</string>
     <string name="click_accent">Accent the native click</string>
     <string name="about_app">Music for the stage</string>
@@ -215,4 +218,8 @@
     <string name="remote_exit_title">Leave remote control?</string>
     <string name="remote_exit_help">The phone will disconnect. Playback will continue on the computer.</string>
     <string name="remote_exit_confirm">Leave remote control</string>
+    <string name="project_partial_audio">Missing audio (skipped): %1$s</string>
+    <string name="library_remove">Remove</string>
+    <string name="library_clear">Clear list</string>
+    <string name="library_remove_help">This only removes shortcuts from the app. Your files are kept.</string>
 </resources>

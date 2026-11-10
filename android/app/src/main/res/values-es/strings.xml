@@ -148,6 +148,9 @@
     <string name="project_click_source">Clic del proyecto</string>
 
     <string name="quick_settings">Ajustes rápidos</string>
+    <string name="automation_rehearsal">Ensayo</string>
+    <string name="automation_live">En vivo</string>
+    <string name="automations_enabled">Activar automatizaciones</string>
     <string name="keep_pad">Mantener el pad al cambiar de canción</string>
     <string name="click_accent">Acento del clic nativo</string>
     <string name="about_app">Música para el escenario</string>
@@ -215,4 +218,8 @@
     <string name="remote_exit_title">¿Salir del control remoto?</string>
     <string name="remote_exit_help">El móvil se desconectará. La reproducción continuará en el ordenador.</string>
     <string name="remote_exit_confirm">Salir del control remoto</string>
+    <string name="project_partial_audio">Audios ausentes o ambiguos (omitidos): %1$s</string>
+    <string name="library_remove">Quitar</string>
+    <string name="library_clear">Limpiar lista</string>
+    <string name="library_remove_help">Solo se quitan los accesos directos de la aplicación. Tus archivos se conservan.</string>
 </resources>

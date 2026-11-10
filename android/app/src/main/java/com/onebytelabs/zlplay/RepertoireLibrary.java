@@ -7,6 +7,24 @@ public final class RepertoireLibrary {
  public JSONArray entries(){try{return new JSONArray(prefs.getString("entries","[]"));}catch(JSONException e){return new JSONArray();}}
  public static String key(String tree,String file){return tree+"|"+file;}
  public void remember(String tree,String file,String title){try{JSONArray old=entries(),next=new JSONArray();JSONObject row=new JSONObject().put("tree",tree).put("file",file).put("title",title);boolean found=false;for(int i=0;i<old.length();i++){JSONObject entry=old.getJSONObject(i);if(key(tree,file).equals(key(entry.getString("tree"),entry.getString("file")))){next.put(row);found=true;}else next.put(entry);}if(!found)next.put(row);prefs.edit().putString("entries",next.toString()).apply();}catch(JSONException e){throw new IllegalStateException(e);}}
+ public void pruneMissing(String tree,Collection<String> available){
+  JSONArray next=new JSONArray();
+  JSONArray old=entries();
+  for(int i=0;i<old.length();i++){
+   JSONObject entry=old.optJSONObject(i);
+   if(entry!=null&&(!tree.equals(entry.optString("tree"))||available.contains(entry.optString("file"))))next.put(entry);
+  }
+  prefs.edit().putString("entries",next.toString()).apply();
+ }
+ public void remove(String tree,String file){
+  JSONArray old=entries(),next=new JSONArray();
+  for(int i=0;i<old.length();i++){
+   JSONObject entry=old.optJSONObject(i);
+   if(entry!=null&&(!tree.equals(entry.optString("tree"))||!file.equals(entry.optString("file"))))next.put(entry);
+  }
+  prefs.edit().putString("entries",next.toString()).apply();
+ }
+ public void clear(){prefs.edit().remove("entries").apply();}
  public void saveOrder(String key,java.util.List<com.onebytelabs.zlplay.project.SetlistSpec.Song> songs){JSONArray order=new JSONArray();for(var song:songs)order.put(song.id);prefs.edit().putString("order:"+key,order.toString()).apply();}
  public void applyOrder(String key,java.util.List<com.onebytelabs.zlplay.project.SetlistSpec.Song> songs){try{JSONArray order=new JSONArray(prefs.getString("order:"+key,"[]"));List<com.onebytelabs.zlplay.project.SetlistSpec.Song> sorted=new ArrayList<>();Map<String,com.onebytelabs.zlplay.project.SetlistSpec.Song> map=new LinkedHashMap<>();for(var song:songs)map.put(song.id,song);for(int i=0;i<order.length();i++){var song=map.remove(order.getString(i));if(song!=null)sorted.add(song);}sorted.addAll(map.values());songs.clear();songs.addAll(sorted);}catch(JSONException ignored){}}
  public File coverFile(String key){try{byte[] digest=java.security.MessageDigest.getInstance("SHA-256").digest(key.getBytes(java.nio.charset.StandardCharsets.UTF_8));StringBuilder name=new StringBuilder();for(byte b:digest)name.append(String.format(java.util.Locale.ROOT,"%02x",b&255));return new File(new File(context.getFilesDir(),"covers"),name+".png");}catch(Exception e){throw new IllegalStateException(e);}}

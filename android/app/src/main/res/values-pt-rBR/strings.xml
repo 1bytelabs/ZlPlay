@@ -148,6 +148,9 @@
     <string name="project_click_source">Click do projeto</string>
 
     <string name="quick_settings">Ajustes rápidos</string>
+    <string name="automation_rehearsal">Ensaio</string>
+    <string name="automation_live">Ao vivo</string>
+    <string name="automations_enabled">Ativar automações</string>
     <string name="keep_pad">Manter pad tocando ao trocar de música</string>
     <string name="click_accent">Acentuação do click nativo</string>
     <string name="about_app">Música para o palco</string>
@@ -215,4 +218,8 @@
     <string name="remote_exit_title">Sair do controle remoto?</string>
     <string name="remote_exit_help">O celular será desconectado. A reprodução continuará no computador.</string>
     <string name="remote_exit_confirm">Sair do controle remoto</string>
+    <string name="project_partial_audio">Áudios ausentes ou ambíguos (ignorados): %1$s</string>
+    <string name="library_remove">Remover</string>
+    <string name="library_clear">Limpar lista</string>
+    <string name="library_remove_help">Isso remove apenas os atalhos do aplicativo. Seus arquivos são mantidos.</string>
 </resources>

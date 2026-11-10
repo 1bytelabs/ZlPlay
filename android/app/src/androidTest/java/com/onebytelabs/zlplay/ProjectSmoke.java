@@ -31,6 +31,56 @@ public final class ProjectSmoke {
    write(zl,"{\"format\":\"tom-certo-project\",\"formatVersion\":1,\"song\":{\"title\":\"Fixture ZLPlay\",\"bpm\":142,\"duration\":4},\"tracks\":[{\"name\":\"Cue\",\"volume\":0.6,\"pan\":-0.25,\"items\":[{\"file\":\"Audio/tone.wav\",\"position\":0,\"offset\":0.02,\"length\":4}]}],\"regions\":[{\"name\":\"Verso 1\",\"start\":0,\"end\":1},{\"name\":\"Verso 1\",\"start\":1,\"end\":2},{\"name\":\"Final\",\"start\":2,\"end\":4}],\"arrangement\":{\"enabled\":true,\"rules\":[{\"from\":{\"start\":0,\"end\":1},\"to\":{\"start\":2}}]}}");
    write(rpp,"<REAPER_PROJECT 0.1\nTEMPO 138 4 4\nMARKER 1 0.5 \"Verso 1\" 1 0 R\nMARKER 1 1.5 \"\" 0\n<TRACK\nNAME \"MP3 track\"\nVOLPAN 0.6 0\n<ITEM\nPOSITION 0.5\nSOFFS 0.1\nLENGTH 1\nPLAYRATE 1 1 0\n<SOURCE MP3\nFILE \"Audio/tone.mp3\"\n>\n>\n>\n<TRACK\nNAME \"Click Track\"\n<ITEM\nPOSITION 0\nLENGTH 1.5\n<SOURCE CLICK\n>\n>\n>\n>\n");
    ProjectFolder folder=new ProjectFolder(Uri.fromFile(dir));folder.files.put("fixture.zlplay",Uri.fromFile(zl));folder.files.put("fixture.rpp",Uri.fromFile(rpp));folder.files.put("Audio/tone.wav",Uri.fromFile(wav));folder.files.put("Audio/tone.mp3",Uri.fromFile(mp3));check(folder.resolve("fixture.rpp","C:\\VS\\tone.wav").equals(Uri.fromFile(wav)),"Relocated Windows path");try{folder.resolve("fixture.rpp","../tone.wav");throw new AssertionError("Path escapes selected folder");}catch(ProjectFolder.Missing expected){}folder.files.put("Other/tone.wav",Uri.fromFile(wav));try{folder.resolve("fixture.rpp","C:/old/tone.wav");throw new AssertionError("Ambiguous basename accepted");}catch(ProjectFolder.Missing expected){}folder.files.remove("Other/tone.wav");
+   org.json.JSONObject partial=new org.json.JSONObject(folder.read(test.getTargetContext(),"fixture.zlplay"));
+   partial.getJSONArray("tracks").getJSONObject(0).getJSONArray("items").put(new org.json.JSONObject()
+     .put("file","missing.wav").put("position",3).put("length",1));
+   ProjectLoader.Result loaded=ProjectLoader.read(test.getTargetContext(),folder,"fixture.zlplay",partial.toString(),(done,total)->{});
+   try{
+    check(loaded.spec.missingAudio.equals(Set.of("missing.wav")),"Partial project reports the missing file");
+    boolean hasPeaks=false;for(float peak:loaded.peaks)hasPeaks|=peak>0;
+    check(hasPeaks&&loaded.spec.jumps.size()==1,"Available audio and saved jumps survive");
+   }finally{loaded.close();}
+   folder.files.put("Song/fixture.zlplay",Uri.fromFile(zl));
+   org.json.JSONObject row=new org.json.JSONObject().put("name","Song").put("source","fixture.zlplay")
+     .put("sessionSource","fixture.zlplay").put("sessionProject",partial);
+   org.json.JSONObject manifest=new org.json.JSONObject().put("type","zlplay-library").put("version",1)
+     .put("songs",new org.json.JSONArray().put(row));
+   SetlistSpec saved=SetlistSpec.parse(manifest.toString(),"Sunday.zlset",folder);
+   check(saved.songs.get(0).snapshot!=null,"Desktop setlist retains edits for the matching source");
+   row.put("sessionSource","old.zlplay");
+   check(SetlistSpec.parse(manifest.toString(),"Sunday.zlset",folder).songs.get(0).snapshot==null,"Ignore edits from a different source");
+   File setlistFile=new File(dir,"Sunday.zlset");
+   try{
+    row.put("source","fixture.rpp").put("sessionSource","fixture.rpp");
+    folder.files.put("Song/fixture.rpp",Uri.fromFile(rpp));
+    folder.files.put("Song/Audio/tone.wav",Uri.fromFile(wav));
+    folder.files.put("Sunday.zlset",Uri.fromFile(setlistFile));
+    write(setlistFile,manifest.toString());
+    waitImport(test,screen);
+    test.runOnMainSync(()->screen.readSetlist(folder,"Sunday.zlset",false,0));
+    waitImport(test,screen);
+    ProjectSpec fromSetlist=(ProjectSpec)field(screen,"activeProject");
+    check(fromSetlist!=null&&fromSetlist.jumps.size()==1,"The player loads automations saved only in the setlist");
+    DemoMixer loadedMixer=(DemoMixer)field(screen,"mixer");
+    Button modeButton=(Button)field(screen,"automationModeButton");
+    test.runOnMainSync(()->{if(loadedMixer.automationRehearsal())modeButton.performClick();});
+    check(modeButton.getText().toString().contains("0/1"),"Live counter starts at zero");
+    loadedMixer.seek(.4);loadedMixer.play();
+    float[] block=new float[1024];
+    for(int i=0;i<60;i++)loadedMixer.render(block,512);
+    check(loadedMixer.position()>=2,"Setlist automation executes after moving the playhead into its source");
+    test.waitForIdleSync();Thread.sleep(150);
+    check(modeButton.getText().toString().contains("1/1 ✓"),"Live counter marks the completed jump");
+    test.runOnMainSync(()->{
+     modeButton.performClick();
+     check(loadedMixer.automationRehearsal(),"Ensaio selected");
+     modeButton.performClick();
+     check(!loadedMixer.automationRehearsal()&&loadedMixer.isPlaying()&&modeButton.getText().toString().contains("0/1"),"Switching back to Live rearms without pausing");
+     loadedMixer.stop();
+    });
+    row.remove("source");row.remove("sessionSource");
+    check(SetlistSpec.parse(manifest.toString(),"Sunday.zlset",folder).songs.get(0).snapshot!=null,"An embedded project can be the only edited source");
+   }finally{setlistFile.delete();}
    waitImport(test,screen);test.runOnMainSync(()->screen.loadProject(folder,"fixture.zlplay",false));waitImport(test,screen);DemoMixer mixer=(DemoMixer)field(screen,"mixer");ProjectSpec spec=(ProjectSpec)field(screen,"activeProject");check(spec!=null&&spec.regions.size()==3&&mixer.getBpm()==142,"ZLPlay metadata");check(spec.regions.get(0).name.equals(spec.regions.get(1).name),"Exact repeated region names");test.runOnMainSync(()->{mixer.setLoop(false);mixer.stop();});press(test,screen,R.string.play);Thread.sleep(1250);AudioSession audio=(AudioSession)field(screen,"audio");check(audio!=null&&audio.error()==null&&audio.blockRms()>.005,"ZLPlay real PCM output");for(int retry=0;retry<100&&(Integer)field(field(mixer,"arrangement"),"cursor")==0&&mixer.isPlaying();retry++)Thread.sleep(50);check(mixer.position()>2&&mixer.position()<3.7,"Arranged jump at source end: "+mixer.position());test.runOnMainSync(mixer::stop);press(test,screen,R.string.play);Thread.sleep(150);test.runOnMainSync(()->mixer.selectRegion(1));for(int retry=0;retry<100&&mixer.pendingRegion()>=0&&mixer.isPlaying();retry++)Thread.sleep(50);check(mixer.position()>=1&&mixer.position()<2,"Manual queued region takes precedence: "+mixer.position());
    test.runOnMainSync(()->screen.loadProject(folder,"fixture.rpp",false));waitImport(test,screen);spec=(ProjectSpec)field(screen,"activeProject");check(spec!=null&&spec.title.equals("fixture")&&mixer.getBpm()==138&&mixer.trackCount()==2,"RPP/MP3 opened");check(spec.warnings.contains("mp3-cache")&&caches(cache).size()>before.size(),"MP3 temporary storage");press(test,screen,R.string.play);for(int retry=0;retry<100&&mixer.position()<.65&&mixer.isPlaying();retry++)Thread.sleep(50);audio=(AudioSession)field(screen,"audio");check(audio!=null&&audio.error()==null&&audio.blockRms()>.005,"Decoded MP3 reaches real AudioTrack");check(mixer.position()>.5&&!mixer.sourceFailed(),"MP3 timeline playback");
    write(rpp,"<REAPER_PROJECT\n<TRACK\n<ITEM\n<SOURCE MIDI\n>\n>\n>\n>\n");test.runOnMainSync(()->screen.loadProject(folder,"fixture.rpp",false));waitImport(test,screen);check(mixer.getBpm()==138&&mixer.trackCount()==2,"Unsupported source preserves previous project");test.runOnMainSync(mixer::closeImported);check(caches(cache).equals(before),"Decoded MP3 temporary file removed");test.runOnMainSync(mixer::silence);press(test,screen,R.string.solo_click);double clickPeak=0;for(int i=0;i<16;i++){Thread.sleep(80);AudioSession current=(AudioSession)field(screen,"audio");if(current!=null)clickPeak=Math.max(clickPeak,current.blockRms());}check(clickPeak>.005&&mixer.isClick()&&!mixer.isPlaying(),"Desktop click sound plays independently with music stopped");test.runOnMainSync(mixer::silence);Bundle result=new Bundle();result.putString("status","PASS: ZLPlay/RPP import, Windows paths, safe resolution, exact regions, arrangement/manual jump, MP3 AudioTrack, rollback and temporary cleanup");return result;
