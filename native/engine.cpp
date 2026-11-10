@@ -24,14 +24,49 @@ static std::string str(const var& o,const char* k) { return o[k].toString().toSt
 static std::mutex outputMutex;
 static void send(const var& value) { std::lock_guard<std::mutex> l(outputMutex); std::cout << JSON::toString(value,true).toStdString() << std::endl; }
 constexpr int blockSize=512, queueSize=32, maxOutputs=64, renderOutputs=maxOutputs+2;
+class Mp3ReadAheadSource final : public AudioFormatReader {
+public:
+    explicit Mp3ReadAheadSource(std::unique_ptr<AudioFormatReader> reader)
+        : AudioFormatReader(nullptr, reader->getFormatName()), source(std::move(reader)) {
+        sampleRate=source->sampleRate;
+        lengthInSamples=source->lengthInSamples;
+        numChannels=source->numChannels;
+        bitsPerSample=source->bitsPerSample;
+        usesFloatingPointData=source->usesFloatingPointData;
+    }
+    bool readSamples(int* const* dest,int channels,int offset,int64 start,int count) override {
+        clearSamplesBeyondAvailableLength(dest,channels,offset,start,count,lengthInSamples);
+        // JUCE's MP3 decoder zero-fills the remainder at EOF and returns false.
+        // Keep that partial page so read-ahead can play the decoded samples.
+        return count<=0||source->readSamples(dest,channels,offset,start,count)||start+count>=lengthInSamples;
+    }
+private:
+    std::unique_ptr<AudioFormatReader> source;
+};
+#include "channel-dsp.h"
 struct Clip {
     std::unique_ptr<AudioFormatReader> reader;
     std::unique_ptr<AudioFormatReader> standby;
     double position=0,offset=0,length=0,rate=1;
     AudioBuffer<float> scratch{2,16384};
     int64 cachedStart=-1000000; int cachedCount=0;
+    var effect;
+    std::unique_ptr<ChannelDsp> fx;
+    void configureEffects(double sampleRate) {
+        if (!fx) return;
+        fx->configure(effect,sampleRate);
+        fx->wet=fx->wetTarget;
+        fx->trim=fx->trimTarget;
+        for (auto& filter:fx->filters) std::copy_n(filter.target,5,filter.c);
+    }
+    void resetEffects() {
+        if (!fx) return;
+        for (auto& filter:fx->filters) {
+            std::fill_n(filter.z1,2,0.0);
+            std::fill_n(filter.z2,2,0.0);
+        }
+    }
 };
-#include "channel-dsp.h"
 struct Track { std::vector<std::unique_ptr<Clip>> clips; double gain=1; float pan=0; double gainTarget=1,gainStep=0; int gainRemaining=0; double pitch=0; int group=0,left=maxOutputs,right=maxOutputs+1; std::string effectId,bus,special,profile; ChannelDsp fx; AudioBuffer<float> processed{2,blockSize}; bool preview=false; double previewStart=0,previewEnd=0,previewSource=0; };
 struct Group {
     double pitch=0; std::string bus,profile; bool special=false; ChannelDsp fx,vsFx; int left=maxOutputs,right=maxOutputs+1; signalsmith::stretch::SignalsmithStretch<float> stretch;
@@ -97,6 +132,13 @@ public:
         if(!r)throw std::runtime_error("Formato de áudio não suportado: "+filename.toStdString());
         if(r->numChannels>2)throw std::runtime_error("Use áudio mono ou estéreo.");
         return r;
+    }
+    std::unique_ptr<BufferingAudioReader> openBuffered(const String& filename) {
+        auto source=open(filename);
+        if(File(filename).hasFileExtension("mp3"))source=std::make_unique<Mp3ReadAheadSource>(std::move(source));
+        auto reader=std::make_unique<BufferingAudioReader>(source.release(),diskThread,262144);
+        reader->setReadTimeout(2000);
+        return reader;
     }
     var probe(const var& files) {
         Array<var> result;
@@ -166,7 +208,10 @@ public:
             if(previousType.isNotEmpty()){devices.setCurrentAudioDeviceType(previousType,true);devices.setAudioDeviceSetup(previousSetup,true);}
         }
         if(auto* device=devices.getCurrentAudioDevice()){sampleRate=device->getCurrentSampleRate();deviceOpen=true;devices.addAudioCallback(this);}
-        if(configured&&deviceOpen){makeGroups();reset(playhead.load());}
+        if(configured&&deviceOpen){
+            for(auto& track:tracks)for(auto& clip:track->clips)clip->configureEffects(sampleRate);
+            makeGroups();reset(playhead.load());
+        }
         if(error.isNotEmpty())throw std::runtime_error(error.toStdString());
         if(!deviceOpen)throw std::runtime_error("Não foi possível abrir a saída de áudio.");
         return deviceInfo();
@@ -199,15 +244,19 @@ public:
         for(auto& value:*array) {
             auto t=std::make_unique<Track>();t->gain=num(value,"gain",1);t->gainTarget=t->gain;t->pan=num(value,"pan");t->pitch=num(value,"pitch");t->left=int(num(value,"outputLeft",maxOutputs));t->right=int(num(value,"outputRight",maxOutputs+1));
             if(auto* items=value["items"].getArray()) for(auto& it:*items) {
-                auto c=std::make_unique<Clip>();auto source=open(it["path"].toString());
-                auto buffered=std::make_unique<BufferingAudioReader>(source.release(),diskThread,262144);
-                buffered->setReadTimeout(2000);c->reader=std::move(buffered);
-                auto alternate=std::make_unique<BufferingAudioReader>(open(it["path"].toString()).release(),diskThread,262144);
-                alternate->setReadTimeout(2000);c->standby=std::move(alternate);
+                auto c=std::make_unique<Clip>();
+                const auto filename=it["path"].toString();
+                c->reader=openBuffered(filename);
+                c->standby=openBuffered(filename);
                 c->position=num(it,"position"); c->offset=num(it,"offset"); c->rate=num(it,"rate",1);
                 if(c->rate<=0||c->rate>4)throw std::runtime_error("Velocidade inválida.");
                 c->length=num(it,"length",std::max(0.0,double(c->reader->lengthInSamples)/c->reader->sampleRate-c->offset)/c->rate);
                 if(c->reader->sampleRate/sampleRate*c->rate*blockSize+4>c->scratch.getNumSamples())throw std::runtime_error("Taxa de amostragem fora do limite.");
+                if (bool(it["effects"]["enabled"])) {
+                    c->effect=it["effects"];
+                    c->fx=std::make_unique<ChannelDsp>();
+                    c->configureEffects(sampleRate);
+                }
                 t->clips.push_back(std::move(c));
             }
             t->effectId=str(value,"effectId");t->bus=str(value,"bus");t->special=str(value,"special");t->profile=str(value,"pitchProfile");tracks.push_back(std::move(t));
@@ -282,7 +331,7 @@ public:
                 int first=std::clamp(int(std::ceil((begin-trackPosition)*sampleRate-1e-7)),0,n);
                 int last=std::clamp(int(std::ceil((end-trackPosition)*sampleRate-1e-7)),0,n);
                 if(last<=first)continue;
-                double source=(c->offset+(trackPosition+first/sampleRate-c->position)*c->rate)*c->reader->sampleRate;
+                double source=std::max(0.0,(c->offset+(trackPosition+first/sampleRate-c->position)*c->rate)*reader->sampleRate);
                 auto sourceStart=int64(std::floor(source));
                 double ratio=c->reader->sampleRate/sampleRate*c->rate;
                 int count=int(std::ceil((last-first)*ratio))+2;
@@ -296,7 +345,10 @@ public:
                     c->cachedCount=std::max(count,std::min(c->scratch.getNumSamples(),pageRemaining));
                     const bool previewRead=t->preview&&inputPosition>=t->previewStart;
                     static_cast<BufferingAudioReader*>(reader)->setReadTimeout(previewRead?0:2000);
-                    if(!reader->read(&c->scratch,0,c->cachedCount,sourceStart,true,true)){
+                    // The interpolation window can extend beyond a short clip.
+                    // Keep that part zero-filled without asking read-ahead for it.
+                    const int readable=int(std::clamp<int64>(reader->lengthInSamples-sourceStart,0,c->cachedCount));
+                    if(readable>0&&!reader->read(&c->scratch,0,readable,sourceStart,true,true)){
                         // A late preview request must never stop the music while
                         // its guide snippet is still being fetched in the background.
                         if(previewRead){c->scratch.clear();c->cachedCount=0;}
@@ -306,7 +358,16 @@ public:
                 }
                 const float* sl=c->scratch.getReadPointer(0);const float* sr=c->scratch.getReadPointer(1);
                 float* dl=t->processed.getWritePointer(0);float* dr=t->processed.getWritePointer(1);
-                for(int i=first;i<last;i++) {double at=source-c->cachedStart+(i-first)*ratio;int j=int(at);float f=float(at-j);dl[i]+=(sl[j]+(sl[j+1]-sl[j])*f)*gl*levels[i];dr[i]+=(sr[j]+(sr[j+1]-sr[j])*f)*gr*levels[i];}
+                for(int i=first;i<last;i++) {
+                    const double at=source-c->cachedStart+(i-first)*ratio;
+                    const int j=int(at);
+                    const float f=float(at-j);
+                    float left=sl[j]+(sl[j+1]-sl[j])*f;
+                    float right=sr[j]+(sr[j+1]-sr[j])*f;
+                    if(c->fx)c->fx->process(left,right);
+                    dl[i]+=left*gl*levels[i];
+                    dr[i]+=right*gr*levels[i];
+                }
             }
             for(int i=0;i<n;i++){float l=t->processed.getSample(0,i),r=t->processed.getSample(1,i);t->fx.process(l,r);dest.addSample(0,i,l);dest.addSample(1,i,r);}
         }
@@ -370,6 +431,7 @@ public:
         std::lock_guard<std::mutex> c(callbackMutex);
         head=tail=0;callbackOffset=0;inputPosition=audiblePosition=std::clamp(position,0.0,duration);playhead=audiblePosition;
         inputJumpDone=audibleJumpDone=false;renderedJumpSerial=playedJumpSerial.load();
+        for(auto& track:tracks)for(auto& clip:track->clips)clip->resetEffects();
         prepareLoop(true);
         for(auto& g:groups){if(std::abs(g->pitch)>.001)g->stretch.reset();std::fill(g->delayL.begin(),g->delayL.end(),0.0f);std::fill(g->delayR.begin(),g->delayR.end(),0.0f);g->delayIndex=0;}
         Block scratch;
@@ -462,8 +524,8 @@ public:
         }
         if(op=="meters"){
             std::lock_guard<std::mutex> l(renderMutex);DynamicObject* object=new DynamicObject();
-            auto put=[&](const std::string& id,LevelMeter& meter){auto values=meter.read();auto& previous=lastMeterLevels[id];for(int ch=0;ch<2;ch++)previous[ch]=std::max(float(double(values[ch])),previous[ch]*.75f);object->setProperty(Identifier(String(id)),Array<var>{double(previous[0]),double(previous[1])});};
-            for(auto& t:tracks)if(!t->effectId.empty())put(t->effectId,t->fx.meter);for(auto& bus:busMeters)if(bus.first!="VS")put("group:"+bus.first,bus.second->meter);put("vs",vsMeter);put("master",masterMeter);put("pad",padFx.meter);put("click",soloFx.meter);for(auto& g:groups)if(g->profile=="click"){auto values=g->fx.meter.read();auto old=object->getProperty("click");object->setProperty("click",Array<var>{std::max(double(old[0]),double(values[0])),std::max(double(old[1]),double(values[1]))});}return var(object);
+            auto put=[&](const std::string& id,LevelMeter& meter,float decay=.75f){auto values=meter.read();auto& previous=lastMeterLevels[id];for(int ch=0;ch<2;ch++)previous[ch]=std::max(float(double(values[ch])),previous[ch]*decay);object->setProperty(Identifier(String(id)),Array<var>{double(previous[0]),double(previous[1])});};
+            for(auto& t:tracks)if(!t->effectId.empty())put(t->effectId,t->fx.meter,t->effectId=="click"?.3f:.75f);for(auto& bus:busMeters)if(bus.first!="VS")put("group:"+bus.first,bus.second->meter);put("vs",vsMeter);put("master",masterMeter);put("pad",padFx.meter);put("click",soloFx.meter,.3f);for(auto& g:groups)if(g->profile=="click"){auto values=g->fx.meter.read();auto old=object->getProperty("click");object->setProperty("click",Array<var>{std::max(double(old[0]),double(values[0])),std::max(double(old[1]),double(values[1]))});}return var(object);
         }
         if(op=="devices"){ensureDevice(44100);return deviceInfo();}
         if(op=="configureDevice")return configureDevice(request);
