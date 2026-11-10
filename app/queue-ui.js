@@ -48,8 +48,8 @@ export function installQueueUi(Player){
   document.querySelector('.zl-choice-dialog')?.remove();const modal=document.createElement('div');modal.className='zl-audio-modal zl-choice-dialog';
   const isSave=kind==='save',project=this.tracks.length>0,library=!!window.__ZL_LIBRARY_SCAN__?.songs?.length;
   const choices=isSave?[
-   ['save-project','Salvar projeto',project?'Guarda as alterações da música: tom, BPM, mix, grupos e efeitos.':'Abra ou crie um projeto para salvar.',!project],
-   ['save-library','Salvar repertório',library?'Guarda a lista, a ordem das músicas e os projetos associados. Não salva as alterações da música.':'Abra ou crie um repertório para salvar.',!library]
+   ['save-project','Salvar projeto',project?'Salva as alterações no arquivo da música, incluindo as automações.':'Abra ou crie um projeto para salvar.',!project],
+   ['save-library','Salvar repertório',library?'Salva a ordem e as edições das músicas neste repertório, incluindo as automações.':'Abra ou crie um repertório para salvar.',!library]
   ]:kind==='project'?[
    ['project','Abrir projeto salvo','Selecione um arquivo .zlplay ou um projeto REAPER .rpp.'],
    ['folder','Criar novo projeto','Importe uma pasta com os áudios da música para editar e salvar como .zlplay.']
