@@ -1403,6 +1403,12 @@ Play | Pause | Stop | Solo Click | Loop | Início | Ferradura | Status | ... | -
 .vs-control-mapping .vs-map-actions{
   display:inline-flex;
 }
+.vs-map-actions .vs-map-input{
+  width:auto;
+  min-height:34px;
+  padding:6px 9px;
+  font:inherit;
+}
 .vs-map-actions [data-map-import],
 .vs-map-actions [data-map-export]{
   border-color:#6c86b7;
