@@ -45,7 +45,10 @@ else {
     Menu.setApplicationMenu(null);window.setMenuBarVisibility(false);
     const {collectSelection}=require('./file-open.cjs');
     ipcMain.handle('zlplay:about',event=>{nativeAudio.authorize(event);showAbout(window,app.getVersion(),openProjectLink,locale.language);});
-    const selection=async file=>collectSelection(file,nativeAudio.register);
+    const selection=require('./setlists.cjs').setupSetlists({
+      app,ipcMain,window,dialog,authorize:nativeAudio.authorize,tr,
+      collect:file=>collectSelection(file,nativeAudio.register)
+    });
     ipcMain.handle('zlplay:pending-open',async event=>{nativeAudio.authorize(event);if(!pendingOpen)return null;const file=pendingOpen;pendingOpen=null;return selection(file);});
     ipcMain.handle('zlplay:open-selection',async(event,mode)=>{nativeAudio.authorize(event);if(!['project','library','folder','library-folder'].includes(mode))throw Error('Seleção inválida.');const folder=mode.includes('folder');const result=await dialog.showOpenDialog(window,{title:folder?tr('Importar pasta','Import folder','Importar carpeta'):mode==='library'?tr('Abrir repertório','Open setlist','Abrir repertorio'):tr('Abrir projeto','Open project','Abrir proyecto'),properties:[folder?'openDirectory':'openFile'],filters:folder?undefined:[{name:mode==='library'?'Repertório ZLPlay':'Projeto ZLPlay / REAPER',extensions:mode==='library'?['zlset','zlplaylibrary']:['zlplay','rpp']}]});return result.canceled?null:selection(result.filePaths[0]);});
     window.webContents.on('before-input-event',(event,input)=>{if(input.type==='keyDown'&&input.key==='F11'){event.preventDefault();if(!input.isAutoRepeat)window.webContents.executeJavaScript("document.fullscreenElement?document.exitFullscreen():document.querySelector('#zosma-vs-study').requestFullscreen()",true).catch(()=>{});}});

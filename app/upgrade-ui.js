@@ -9,6 +9,7 @@ import {installPerformance} from './performance.js';
 import {installInterfacePolish} from './interface-polish.js';
 import {openChannelEffects} from './eq-editor.js';
 import {installQueueUi} from './queue-ui.js';
+import {showSetlistPicker} from './setlist-picker.js';
 const palette=['#4e9dce','#657cdb','#38a591','#a15ed1','#d65b95','#5f9fa8'];
 export function installUpgradeUi(Player,bridge){
  installQueueUi(Player);
@@ -35,10 +36,29 @@ export function installUpgradeUi(Player,bridge){
   const metro=s.$('.vs-metronome'),storage=document.createElement('div');storage.hidden=true;storage.dataset.clickStorage='';storage.append(metro);s.host.append(storage);const query=s.$;s.$=selector=>query(selector)||document.querySelector('.zl-click-settings')?.querySelector(selector);s.host.querySelectorAll('[data-zoom-in],[data-zoom-out]').forEach(el=>el.remove());
   const tools=s.$('.vs-mixer-tools'),body=s.$('.vs-mixer-body'),warning=s.$('.vs-warning'),card=document.createElement('section');card.className='zl-mixer-card';tools.before(card);card.append(tools,body);if(warning)card.append(warning);
   s.host.addEventListener('wheel',event=>{const mixer=event.target.closest('.vs-mixer-body');if(mixer){const scroll=mixer.querySelector('.vs-mixer-scroll');if(scroll&&scroll.scrollWidth>scroll.clientWidth){event.preventDefault();scroll.scrollLeft+=(Math.abs(event.deltaX)>Math.abs(event.deltaY)?event.deltaX:event.deltaY)*(event.deltaMode===1?20:1);}return;}const area=event.target.closest('.vs-timeline-scroll');if(!area||!event.shiftKey)return;event.preventDefault();const content=s.$('.vs-timeline-content'),rect=area.getBoundingClientRect(),anchor=event.clientX-rect.left,ratio=(area.scrollLeft+anchor)/content.scrollWidth,delta=Math.abs(event.deltaY)>Math.abs(event.deltaX)?event.deltaY:event.deltaX;s.setTimelineZoom(s.timelineZoom+(delta<0?.5:-.5),false);requestAnimationFrame(()=>area.scrollLeft=ratio*content.scrollWidth-anchor);},{passive:false});
-  const open=async selection=>{if(!selection)return;if(s.tracks.length&&!confirm('Abrir outro projeto ou repertório? Salve as alterações antes de continuar.'))return;s.stop();const files=selection.entries.map(e=>{const f=new File([e.text||''],e.name);Object.defineProperty(f,'webkitRelativePath',{value:e.relativePath});f._zlToken=e.token;return f;});if(selection.library||selection.mode==='library-folder'){await window.__ZL_PROCESS_LIBRARY_FILES__(files,{askCreate:false});return;}const wrapped=files.map(f=>s.wrap(f,f.webkitRelativePath)),index=files.findIndex(f=>f.webkitRelativePath===selection.selected);if(index>=0&&/\.zlplay$/i.test(files[index].name))await s.loadTomCerto(wrapped,wrapped[index]);else if(index>=0&&/\.rpp$/i.test(files[index].name))await s.load(wrapped.filter(f=>!/\.zlplay$/i.test(f.name)),wrapped[index]);else await s.openFolderSelection(files);};
-  const pick=async mode=>{try{const selected=await bridge.openSelection(mode);if(selected){selected.mode=mode;await open(selected);}}catch(e){s.status(e.message,true);}};s.$('[data-pick-folder]').onclick=()=>s.openChoiceDialog('project',pick);s.$('[data-pick-library]').onclick=()=>s.openChoiceDialog('library',pick);
+  const selectionFiles=selection=>selection.entries.map(e=>{const f=new File([e.text||""],e.name);Object.defineProperty(f,"webkitRelativePath",{value:e.relativePath});f._zlToken=e.token;return f;});
+  window.__ZL_ADD_LIBRARY_SONG__=async id=>{
+   const entries=await bridge.setlists.addSong(id);
+   return entries&&selectionFiles({entries});
+  };
+  const open=async (selection,{openFirst=false}={})=>{if(!selection)return;if(window.__ZL_LIBRARY_SCAN__){if(!await window.__ZL_LEAVE_LIBRARY__())return;}else if(s.tracks.length&&!confirm('Abrir outro projeto ou repertório? Salve as alterações antes de continuar.'))return;s.stop();const files=selectionFiles(selection);if(selection.library||selection.mode==='library-folder'){
+   const loaded=await window.__ZL_PROCESS_LIBRARY_FILES__(files,{askCreate:false,desktopId:selection.id,createNew:selection.mode==='library-folder',openFirst});
+   if(loaded&&selection.library)await bridge.setlists.activate(selection.id);
+   return;
+  }window.__ZL_LIBRARY_SCAN__=null;window.__ZL_LIBRARY_ORDER__=[];window.__ZL_LIBRARY_CURRENT__=null;const wrapped=files.map(f=>s.wrap(f,f.webkitRelativePath)),index=files.findIndex(f=>f.webkitRelativePath===selection.selected);if(index>=0&&/\.zlplay$/i.test(files[index].name))await s.loadTomCerto(wrapped,wrapped[index]);else if(index>=0&&/\.rpp$/i.test(files[index].name))await s.load(wrapped.filter(f=>!/\.zlplay$/i.test(f.name)),wrapped[index]);else await s.openFolderSelection(files);};
+  const pick=async mode=>{try{const selected=await bridge.openSelection(mode);if(selected){selected.mode=mode;await open(selected);}}catch(e){s.status(e.message,true);}};s.$('[data-pick-folder]').onclick=()=>s.openChoiceDialog('project',pick);s.$('[data-pick-library]').onclick=()=>showSetlistPicker(s,bridge.setlists,pick,open);
   const about=document.createElement('button');about.className='vs-mode';about.textContent='Sobre';about.onclick=()=>bridge.about();s.$('.vs-head-actions').append(about);document.addEventListener('fullscreenchange',()=>{const active=document.fullscreenElement===s.host;for(const button of s.host.querySelectorAll('[data-mobile-fullscreen]')){button.textContent=active?'Sair da tela cheia':'Tela cheia';button.setAttribute('aria-pressed',String(active));}});
-  const pending=()=>bridge.takePendingOpen().then(open).catch(e=>s.status(e.message,true));bridge.onOpenRequest(pending);pending();
+  const pending=async(restore=false)=>{
+   try{
+    const selection=await bridge.takePendingOpen();
+    if(selection)return open(selection);
+    if(restore){
+     const {last}=await bridge.setlists.list();
+     if(last&&!s.tracks.length&&!window.__ZL_LIBRARY_SCAN__)await open(await bridge.setlists.open(last),{openFirst:true});
+    }
+   }catch(error){s.status(error.message,true);}
+  };
+  bridge.onOpenRequest(()=>pending());pending(true);
   s.host.addEventListener('toggle',event=>{const details=event.target;if(!details.matches?.('details.vs-channel-menu')||!details.open)return;const pop=details.querySelector('.vs-channel-menu-pop');if(!pop)return;pop.style.position='fixed';pop.style.zIndex='22000';pop.style.width='230px';pop.style.maxHeight='65vh';pop.style.overflowY='auto';const rect=details.querySelector('summary').getBoundingClientRect();pop.style.left=Math.max(8,Math.min(innerWidth-246,rect.right-230))+'px';pop.style.right='auto';pop.style.top=Math.max(8,Math.min(innerHeight-pop.offsetHeight-8,rect.bottom+4))+'px';},true);
   s.installQueuedControls(pick);installPerformance(Player,bridge,s);installStudio(s);installRepairs(s);installI18n(s);installNextQueue(s);installPersistence(s);installQueue280(s);s.drawTracks();let busy=false;setInterval(async()=>{if(busy||document.hidden)return;busy=true;try{const data=await bridge.command({op:'meters'});for(const el of s.host.querySelectorAll('[data-meter-id]')){const id=el.dataset.meterId,live=s.playing||id==='pad'&&s.padPlaying||id==='click'&&s.standaloneClickActive||id==='master'&&(s.padPlaying||s.standaloneClickActive);const levels=live?data[id]||[0,0]:[0,0];[...el.children].forEach((bar,i)=>{const db=20*Math.log10(Math.max(1e-6,levels[i]||0)),height=Math.max(0,Math.min(100,(db+60)/60*100));bar.style.height=height+'%';bar.classList.toggle('clipping',levels[i]>=1);});}}catch{}finally{busy=false;}},50);
  },0),0),0);

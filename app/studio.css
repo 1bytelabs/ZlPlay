@@ -16,3 +16,10 @@
 [data-tonal-tools][open]>:not(summary){position:absolute!important;right:0;min-width:170px;box-sizing:border-box;margin:0!important;box-shadow:0 8px 22px #0008}[data-tonal-tools][open]>select{top:36px}[data-tonal-tools][open]>button:nth-of-type(1){top:72px}[data-tonal-tools][open]>button:nth-of-type(2){top:109px}.zl-fx-toolbar>label{display:flex!important;flex-direction:row!important;align-items:center;gap:6px}
 .zl-track-box .zl-state-active,.zl-level-modal .zl-state-active,.zl-track-box [data-snap][aria-pressed=true]{background:#62419c!important;border-color:#b08ae8!important;color:#fff!important}
 [data-map-regions][hidden]{display:none!important}
+.zl-track-name>b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zl-track-monitor{display:flex;align-items:center;gap:5px;margin-top:9px}
+.zl-track-monitor button{min-width:24px;min-height:24px;padding:2px 5px;font-size:11px}
+.zl-track-monitor button[aria-pressed=true]{background:#6243a0;border-color:#b397ee;color:#fff}
+.zl-track-monitor input[type=range]{width:76px;min-width:0;margin:0;accent-color:#a78bfa}
+.zl-track-editor .zl-audio-clip.muted{opacity:.45}
+.zl-track-editor .zl-audio-clip.effected{box-shadow:inset 0 -2px #b48df0}

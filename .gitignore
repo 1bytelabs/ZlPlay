@@ -86,7 +86,7 @@ secrets.*
 **/.aws/
 **/.ssh/
 
-# User projects, audio libraries and recordings; retain only the built-in click
+# User projects, audio libraries and recordings; retain built-in sounds
 *.rpp
 *.rpp-bak
 *.zlplay
@@ -101,6 +101,7 @@ secrets.*
 *.m4a
 *.aac
 !app/Meuclick.wav
+!app/guide-banks/**/*.mp3
 app/pads/
 app/LEIA-ME.txt
 **/profiles/

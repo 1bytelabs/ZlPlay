@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('zlplayNative', {
     return filename ? ipcRenderer.invoke('zlplay:describe', filename) : Promise.resolve(null);
   },
   command: message => ipcRenderer.invoke('zlplay:audio', message),
+  guideBank: language => ipcRenderer.invoke('zlplay:guide-bank',language),
+  importGuide: message => ipcRenderer.invoke('zlplay:import-guide',message),
   bindProject: token => ipcRenderer.invoke('zlplay:bind-project',token),
   saveProject: message => ipcRenderer.invoke('zlplay:save-project',message),
   onGuideProgress: callback => {const listener=(_e,progress)=>callback(progress);ipcRenderer.on('zlplay:guide-progress',listener);return ()=>ipcRenderer.removeListener('zlplay:guide-progress',listener);},
@@ -21,6 +23,15 @@ contextBridge.exposeInMainWorld('zlplayNative', {
   saveLeveledProject: (token,data) => ipcRenderer.invoke('zlplay:save-leveled',token,data),
   describeToken: token => ipcRenderer.invoke('zlplay:describe-token',token),
   openSelection: mode => ipcRenderer.invoke('zlplay:open-selection',mode),
+  setlists: {
+    list: () => ipcRenderer.invoke('zlplay:setlists:list'),
+    open: id => ipcRenderer.invoke('zlplay:setlists:open',id),
+    activate: id => ipcRenderer.invoke('zlplay:setlists:activate',id),
+    remove: id => ipcRenderer.invoke('zlplay:setlists:remove',id),
+    clear: () => ipcRenderer.invoke('zlplay:setlists:clear'),
+    addSong: id => ipcRenderer.invoke('zlplay:setlists:add-song',id),
+    save: (id,data) => ipcRenderer.invoke('zlplay:setlists:save',id,data)
+  },
   takePendingOpen: () => ipcRenderer.invoke('zlplay:pending-open'),
   onOpenRequest: callback => { const listener=()=>callback();ipcRenderer.on('zlplay:open-request',listener);return ()=>ipcRenderer.removeListener('zlplay:open-request',listener); },
   language: () => ipcRenderer.invoke('zlplay:language'),
