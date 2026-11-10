@@ -8,7 +8,7 @@ import {PAD_NOTES,regionColor} from './performance-model.mjs';
 import {regionRef,findRegion} from './arrangement.mjs';
 const copy=x=>JSON.parse(JSON.stringify(x));
 export function openRegionEditor(s){
- if(document.querySelector('.zl-region-editor'))return;if(!s.tracks.length)return s.status('Abra uma música para editar regiões.',true);
+ if(document.querySelector('.zl-region-editor,.zl-track-editor'))return;if(!s.tracks.length)return s.status('Abra uma música para editar regiões.',true);
  s._regionEditing=true;const session=s.captureEditSession();const modal=document.createElement('div');modal.className='zl-audio-modal zl-region-editor';modal.innerHTML='<section class="zl-region-box"><header><div><strong>Editor de regiões</strong><p data-song></p></div><button data-close>Concluir</button></header><nav class="zl-editor-tools"><button data-add-region>+ Add Região</button><button data-detect-guide>Detectar Regiões</button><button data-add-pad>+ Mudança de Pad</button><button data-undo>Desfazer</button><button data-redo>Refazer</button><button data-editor-zoom-out aria-label="Diminuir zoom">−</button><button data-editor-zoom-in aria-label="Aumentar zoom">+</button><button data-fit>Ajustar à tela</button><span>Arraste na waveform para selecionar. Shift + arrastar uma borda ajusta apenas esta região.</span></nav><div data-editor-timeline></div><form data-inspector><h3>Região selecionada</h3><div class="zl-editor-fields"><label>Nome<input data-name required></label><label>Início (segundos)<input data-start type="text" readonly tabindex="-1"></label><label>Fim (segundos)<input data-end type="text" readonly tabindex="-1"></label><label>Cor<input data-color type="color"></label><button type="submit">Aplicar alterações</button><button type="button" data-delete>Excluir região</button></div></form><p data-editor-error role="status"></p><footer><div><button data-editor-start>Início</button><button data-editor-play>▶ Play</button><button data-editor-pause>❚❚ Pause</button><button data-editor-stop>■ Stop</button></div><span>Concluir volta à tela principal. Use Salvar para gravar o projeto.</span></footer></section>';
  s.host.append(modal);modal.querySelector('[data-song]').textContent=s.currentProjectName;const area=s.$('.vs-timeline-scroll'),placeholder=document.createComment('timeline principal');area.before(placeholder);modal.querySelector('[data-editor-timeline]').append(area);
  const presets=window.__ZL_REGION_PRESETS__?.flatMap(g=>g.items)||[];let detecting=false;
@@ -33,12 +33,50 @@ export function openRegionEditor(s){
  modal.querySelector('[data-undo]').onclick=()=>{if(undo.length){redo.push(snapshot());restore(undo.pop());}};modal.querySelector('[data-redo]').onclick=()=>{if(redo.length){undo.push(snapshot());restore(redo.pop());}};
  modal.querySelector('[data-editor-zoom-out]').onclick=()=>s.setTimelineZoom(s.timelineZoom-.5);modal.querySelector('[data-editor-zoom-in]').onclick=()=>s.setTimelineZoom(s.timelineZoom+.5);modal.querySelector('[data-fit]').onclick=()=>s.setTimelineZoom(1);modal.querySelector('[data-editor-start]').onclick=()=>{s.seek(0);area.scrollLeft=0;};modal.querySelector('[data-editor-play]').onclick=()=>s.play();modal.querySelector('[data-editor-pause]').onclick=()=>s.pause();modal.querySelector('[data-editor-stop]').onclick=()=>s.stop();
 
- const cleanupHistory=historyButtons(modal,s);document.addEventListener('zl-edit-restored',restored);function restored(){selected=s.sections[0]||null;render();}
+ const mixer=document.createElement('div');
+ mixer.className='zl-region-mixer';
+ const monitor=s._editorMonitor={};
+ const faders=[
+  ['Guia','guideVolume',()=>s.tracks.find(track=>s.isGuideTrack(track))?.volume],
+  ['BUS VS','vsVolume',()=>s.vsVolume??1]
+ ].map(([name,key,original])=>{
+  const label=document.createElement('label');
+  const title=document.createElement('b');
+  title.textContent=name;
+  const range=document.createElement('input');
+  range.type='range';
+  const value=document.createElement('output');
+  value.setAttribute('aria-hidden','true');
+  label.append(title,range,value);
+  mixer.append(label);
+  range.min='0';
+  range.step='0.01';
+  const sync=()=>{
+   const initial=original();
+   range.disabled=initial==null;
+   if(initial!=null){
+    range.max=String(Math.max(1.5,initial,monitor[key]??0));
+    range.value=String(monitor[key]??initial);
+   }
+   value.textContent=initial==null?'—':`${Math.round(Number(range.value)*100)}%`;
+  };
+  range.oninput=()=>{
+   monitor[key]=Number(range.value);
+   s.nativeSync(.04);
+   sync();
+  };
+  return sync;
+ });
+ modal.querySelector('footer > div').append(mixer);
+ const syncFaders=()=>faders.forEach(sync=>sync());
+ document.addEventListener('zl-history',syncFaders);
+ syncFaders();
+ const cleanupHistory=historyButtons(modal,s);document.addEventListener('zl-edit-restored',restored);function restored(){selected=s.sections[0]||null;syncFaders();render();}
  area.addEventListener('click',select,true);function select(e){const segment=e.target.closest('.vs-segment');if(segment){e.preventDefault();e.stopImmediatePropagation();selected=s.sections[+segment.dataset.sectionIndex];range={start:selected.start,end:selected.end};render();}}
  area.addEventListener('pointerdown',pointer,true);function pointer(e){const timeline=e.target.closest('.vs-timeline');if(!timeline||e.button!==0)return;e.preventDefault();e.stopImmediatePropagation();const rect=timeline.getBoundingClientRect(),at=x=>snapToBeat(Math.max(0,Math.min(s.duration,(x-rect.left)/rect.width*s.duration)),s.tempo,s.duration),edge=e.target.dataset.edge,coupled=!e.shiftKey,start=at(e.clientX);let last=start;
   const move=event=>{last=at(event.clientX);if(!edge){range={start:Math.min(start,last),end:Math.max(start,last)};let preview=timeline.querySelector('.zl-range-preview');if(!preview){preview=document.createElement('div');preview.className='zl-range-preview';timeline.append(preview);}preview.style.left=range.start/s.duration*100+'%';preview.style.width=(range.end-range.start)/s.duration*100+'%';error(`Trecho: ${range.start.toFixed(3)} a ${range.end.toFixed(3)} segundos`);}else{const handle=e.target.parentElement;handle.style.left=(edge==='start'?last:selected.start)/s.duration*100+'%';handle.style.width=(edge==='start'?selected.end-last:last-selected.start)/s.duration*100+'%';}};
   const up=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);if(edge&&selected)changeBounds(selected,edge==='start'?last:selected.start,edge==='end'?last:selected.end,selected.name,selected.color,coupled);else if(Math.abs(last-start)<.02)s.seek(start);};document.addEventListener('pointermove',move);document.addEventListener('pointerup',up,{once:true});}
  const editMarker=marker=>{const dialog=document.createElement('div');dialog.className='zl-audio-modal zl-marker-dialog';dialog.innerHTML='<form class="zl-audio-box zl-small-dialog"><header><strong>Mudança de Pad</strong><button type="button" data-cancel>×</button></header><label>Nota<select data-note></select></label><label>Posição (segundos)<input data-time type="number" min="0" step="0.001" required></label><p data-error></p><footer><button type="button" data-delete-marker>Excluir</button><button type="button" data-cancel>Cancelar</button><button type="submit">Salvar marcador</button></footer></form>';s.host.append(dialog);const note=dialog.querySelector('select');for(const value of PAD_NOTES){const option=document.createElement('option');option.value=value;option.textContent=value;note.append(option);}note.value=marker?.note||s.padNote||'C';dialog.querySelector('input').value=(marker?.time??s.position()).toFixed(3);const close=()=>dialog.remove();dialog.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=close);dialog.querySelector('[data-delete-marker]').disabled=!marker;dialog.querySelector('[data-delete-marker]').onclick=()=>{history();s.padMarkers=s.padMarkers.filter(m=>m!==marker);commit();close();};dialog.querySelector('form').onsubmit=e=>{e.preventDefault();const time=+dialog.querySelector('input').value;if(!Number.isFinite(time)||time<0||time>s.duration){dialog.querySelector('[data-error]').textContent='Posição fora da música.';return;}if(s.padMarkers.some(m=>m!==marker&&Math.abs(m.time-time)<.001)){dialog.querySelector('[data-error]').textContent='Já existe um marcador nesse ponto.';return;}history();if(marker)Object.assign(marker,{time,note:note.value});else s.padMarkers.push({id:crypto.randomUUID(),time,note:note.value});s.padMarkers.sort((a,b)=>a.time-b.time);commit();close();};};
  const previousEdit=s.editPadMarker;s.editPadMarker=editMarker;modal.querySelector('[data-add-pad]').onclick=()=>editMarker(null);
- modal.querySelector('[data-close]').onclick=()=>{stopProgress?.();if(detecting)window.zlplayNative.cancelGuide();area.querySelectorAll('.zl-guide-ghost,.zl-range-preview').forEach(el=>el.remove());cleanupHistory();cleanupGuideLane();document.removeEventListener('zl-edit-restored',restored);area.removeEventListener('click',select,true);area.removeEventListener('pointerdown',pointer,true);area.querySelector('.zl-region-selection')?.remove();placeholder.replaceWith(area);s.editPadMarker=previousEdit;s._regionEditing=false;modal.remove();s.drawSections();s.paint(s.position());};editorExit(modal,s,session,()=>!!selected&&(modal.querySelector("[data-name]").value!==selected.name||modal.querySelector("[data-color]").value.toLowerCase()!==(selected.color||regionColor(selected.name)).toLowerCase()));render();requestAnimationFrame(()=>{s.drawTimelineWaveform(area.querySelector('canvas'));s.paint(s.position());});
+ modal.querySelector('[data-close]').onclick=()=>{stopProgress?.();if(detecting)window.zlplayNative.cancelGuide();area.querySelectorAll('.zl-guide-ghost,.zl-range-preview').forEach(el=>el.remove());cleanupHistory();document.removeEventListener('zl-history',syncFaders);cleanupGuideLane();document.removeEventListener('zl-edit-restored',restored);area.removeEventListener('click',select,true);area.removeEventListener('pointerdown',pointer,true);area.querySelector('.zl-region-selection')?.remove();placeholder.replaceWith(area);s.editPadMarker=previousEdit;s._regionEditing=false;s._editorMonitor=null;s.nativeSync(.04);modal.remove();s.drawSections();s.paint(s.position());};editorExit(modal,s,session,()=>!!selected&&(modal.querySelector("[data-name]").value!==selected.name||modal.querySelector("[data-color]").value.toLowerCase()!==(selected.color||regionColor(selected.name)).toLowerCase()));render();requestAnimationFrame(()=>{s.drawTimelineWaveform(area.querySelector('canvas'));s.paint(s.position());});
 }

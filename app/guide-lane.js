@@ -47,14 +47,22 @@ export function mountGuideLane(study, scroll, reportError) {
   const time = study.duration * Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
   return study.snapEnabled ? snapToBeat(time, study.tempo, study.duration) : time;
  }
+ function grabsCursor(event) {
+  if (event.shiftKey && event.target.closest('.zl-guide-trim')) return false;
+  const rect = cursor.getBoundingClientRect();
+  return Math.abs(event.clientX - (rect.left + rect.width / 2)) <= 6;
+ }
  clips.onpointerdown = event => {
-  if (event.button !== 0 || busy || event.target.closest('.zl-guide-clip')) return;
+  if (event.button !== 0 || busy || (event.target.closest('.zl-guide-clip') && !grabsCursor(event))) return;
+  event.preventDefault();
   cursorDrag = {id:event.pointerId,time:cursorTime(event.clientX)};
   clips.setPointerCapture(event.pointerId);
  };
  clips.onpointermove = event => {
   if (cursorDrag?.id === event.pointerId) cursorDrag.time = cursorTime(event.clientX);
+  clips.classList.toggle('zl-guide-cursor-hover', !!cursorDrag || grabsCursor(event));
  };
+ clips.onpointerleave = () => clips.classList.remove('zl-guide-cursor-hover');
  clips.onpointerup = event => {
   if (cursorDrag?.id !== event.pointerId) return;
   cursorDrag = null;
@@ -62,6 +70,7 @@ export function mountGuideLane(study, scroll, reportError) {
  };
  clips.onlostpointercapture = event => {
   if (cursorDrag?.id === event.pointerId) cursorDrag = null;
+  clips.classList.remove('zl-guide-cursor-hover');
  };
  function render() {
   const points = study.tempo.points?.length ? study.tempo.points : [{time:0,bpm:study.projectBpm()}];
@@ -89,8 +98,7 @@ export function mountGuideLane(study, scroll, reportError) {
    clip.classList.toggle('muted', !!item.muted);
    clip.style.left = pct(item.position || 0);
    clip.style.width = pct(lengthOf(item));
-   clip.title = item.displayName || item.file.split(/[\\/]/).at(-1);
-   clip.textContent = clip.title;
+   clip.setAttribute('aria-label', item.displayName || item.file.split(/[\\/]/).at(-1));
    const peaks = item.buffer.peaks;
    if (peaks?.length) {
     const wave = document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -125,7 +133,7 @@ export function mountGuideLane(study, scroll, reportError) {
     render();
    };
    clip.onpointerdown = event => {
-    if (event.button !== 0 || busy) return;
+    if (event.button !== 0 || busy || grabsCursor(event)) return;
     const mode = event.target.dataset.edge || 'move';
     trimming = mode !== 'move';
     if (trimming && !event.shiftKey) return;

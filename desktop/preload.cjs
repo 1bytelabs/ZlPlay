@@ -23,6 +23,15 @@ contextBridge.exposeInMainWorld('zlplayNative', {
   saveLeveledProject: (token,data) => ipcRenderer.invoke('zlplay:save-leveled',token,data),
   describeToken: token => ipcRenderer.invoke('zlplay:describe-token',token),
   openSelection: mode => ipcRenderer.invoke('zlplay:open-selection',mode),
+  setlists: {
+    list: () => ipcRenderer.invoke('zlplay:setlists:list'),
+    open: id => ipcRenderer.invoke('zlplay:setlists:open',id),
+    activate: id => ipcRenderer.invoke('zlplay:setlists:activate',id),
+    remove: id => ipcRenderer.invoke('zlplay:setlists:remove',id),
+    clear: () => ipcRenderer.invoke('zlplay:setlists:clear'),
+    addSong: id => ipcRenderer.invoke('zlplay:setlists:add-song',id),
+    save: (id,data) => ipcRenderer.invoke('zlplay:setlists:save',id,data)
+  },
   takePendingOpen: () => ipcRenderer.invoke('zlplay:pending-open'),
   onOpenRequest: callback => { const listener=()=>callback();ipcRenderer.on('zlplay:open-request',listener);return ()=>ipcRenderer.removeListener('zlplay:open-request',listener); },
   language: () => ipcRenderer.invoke('zlplay:language'),

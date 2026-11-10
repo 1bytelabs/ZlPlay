@@ -43,14 +43,30 @@ public:
 private:
     std::unique_ptr<AudioFormatReader> source;
 };
+#include "channel-dsp.h"
 struct Clip {
     std::unique_ptr<AudioFormatReader> reader;
     std::unique_ptr<AudioFormatReader> standby;
     double position=0,offset=0,length=0,rate=1;
     AudioBuffer<float> scratch{2,16384};
     int64 cachedStart=-1000000; int cachedCount=0;
+    var effect;
+    std::unique_ptr<ChannelDsp> fx;
+    void configureEffects(double sampleRate) {
+        if (!fx) return;
+        fx->configure(effect,sampleRate);
+        fx->wet=fx->wetTarget;
+        fx->trim=fx->trimTarget;
+        for (auto& filter:fx->filters) std::copy_n(filter.target,5,filter.c);
+    }
+    void resetEffects() {
+        if (!fx) return;
+        for (auto& filter:fx->filters) {
+            std::fill_n(filter.z1,2,0.0);
+            std::fill_n(filter.z2,2,0.0);
+        }
+    }
 };
-#include "channel-dsp.h"
 struct Track { std::vector<std::unique_ptr<Clip>> clips; double gain=1; float pan=0; double gainTarget=1,gainStep=0; int gainRemaining=0; double pitch=0; int group=0,left=maxOutputs,right=maxOutputs+1; std::string effectId,bus,special,profile; ChannelDsp fx; AudioBuffer<float> processed{2,blockSize}; bool preview=false; double previewStart=0,previewEnd=0,previewSource=0; };
 struct Group {
     double pitch=0; std::string bus,profile; bool special=false; ChannelDsp fx,vsFx; int left=maxOutputs,right=maxOutputs+1; signalsmith::stretch::SignalsmithStretch<float> stretch;
@@ -192,7 +208,10 @@ public:
             if(previousType.isNotEmpty()){devices.setCurrentAudioDeviceType(previousType,true);devices.setAudioDeviceSetup(previousSetup,true);}
         }
         if(auto* device=devices.getCurrentAudioDevice()){sampleRate=device->getCurrentSampleRate();deviceOpen=true;devices.addAudioCallback(this);}
-        if(configured&&deviceOpen){makeGroups();reset(playhead.load());}
+        if(configured&&deviceOpen){
+            for(auto& track:tracks)for(auto& clip:track->clips)clip->configureEffects(sampleRate);
+            makeGroups();reset(playhead.load());
+        }
         if(error.isNotEmpty())throw std::runtime_error(error.toStdString());
         if(!deviceOpen)throw std::runtime_error("Não foi possível abrir a saída de áudio.");
         return deviceInfo();
@@ -233,6 +252,11 @@ public:
                 if(c->rate<=0||c->rate>4)throw std::runtime_error("Velocidade inválida.");
                 c->length=num(it,"length",std::max(0.0,double(c->reader->lengthInSamples)/c->reader->sampleRate-c->offset)/c->rate);
                 if(c->reader->sampleRate/sampleRate*c->rate*blockSize+4>c->scratch.getNumSamples())throw std::runtime_error("Taxa de amostragem fora do limite.");
+                if (bool(it["effects"]["enabled"])) {
+                    c->effect=it["effects"];
+                    c->fx=std::make_unique<ChannelDsp>();
+                    c->configureEffects(sampleRate);
+                }
                 t->clips.push_back(std::move(c));
             }
             t->effectId=str(value,"effectId");t->bus=str(value,"bus");t->special=str(value,"special");t->profile=str(value,"pitchProfile");tracks.push_back(std::move(t));
@@ -334,7 +358,16 @@ public:
                 }
                 const float* sl=c->scratch.getReadPointer(0);const float* sr=c->scratch.getReadPointer(1);
                 float* dl=t->processed.getWritePointer(0);float* dr=t->processed.getWritePointer(1);
-                for(int i=first;i<last;i++) {double at=source-c->cachedStart+(i-first)*ratio;int j=int(at);float f=float(at-j);dl[i]+=(sl[j]+(sl[j+1]-sl[j])*f)*gl*levels[i];dr[i]+=(sr[j]+(sr[j+1]-sr[j])*f)*gr*levels[i];}
+                for(int i=first;i<last;i++) {
+                    const double at=source-c->cachedStart+(i-first)*ratio;
+                    const int j=int(at);
+                    const float f=float(at-j);
+                    float left=sl[j]+(sl[j+1]-sl[j])*f;
+                    float right=sr[j]+(sr[j+1]-sr[j])*f;
+                    if(c->fx)c->fx->process(left,right);
+                    dl[i]+=left*gl*levels[i];
+                    dr[i]+=right*gr*levels[i];
+                }
             }
             for(int i=0;i<n;i++){float l=t->processed.getSample(0,i),r=t->processed.getSample(1,i);t->fx.process(l,r);dest.addSample(0,i,l);dest.addSample(1,i,r);}
         }
@@ -398,6 +431,7 @@ public:
         std::lock_guard<std::mutex> c(callbackMutex);
         head=tail=0;callbackOffset=0;inputPosition=audiblePosition=std::clamp(position,0.0,duration);playhead=audiblePosition;
         inputJumpDone=audibleJumpDone=false;renderedJumpSerial=playedJumpSerial.load();
+        for(auto& track:tracks)for(auto& clip:track->clips)clip->resetEffects();
         prepareLoop(true);
         for(auto& g:groups){if(std::abs(g->pitch)>.001)g->stretch.reset();std::fill(g->delayL.begin(),g->delayL.end(),0.0f);std::fill(g->delayR.begin(),g->delayR.end(),0.0f);g->delayIndex=0;}
         Block scratch;

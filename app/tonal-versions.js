@@ -48,7 +48,7 @@ export function installTonalVersions(s){
   for(const control of [select,originalSelect])for(const event of ['click','dblclick','mousedown','dragstart'])control.addEventListener(event,e=>e.stopPropagation());
   const source=row.querySelector('.zl-library-rpp select');if(source&&!source._tonalListener){source._tonalListener=true;source.addEventListener('change',()=>window.__ZL_DECORATE_SONG__(row,song));}
  };
- const open=window.__ZL_LIBRARY_OPEN_SONG__;window.__ZL_LIBRARY_OPEN_SONG__=async name=>{const song=window.__ZL_LIBRARY_SCAN__?.songs.find(x=>x.name===name);s._libraryTonalTarget=song?.tonalKey||null;try{if(await open(name)===false)return;if(song?.tonalKey){const manual=s.padManualOverride;s.padManualOverride=manual||!s.padFollow.library||s.padNote===song.tonalKey;try{await s.selectTonalKey(song.tonalKey);}finally{s.padManualOverride=manual;}}const active=window.__ZL_LIBRARY_SCAN__?.active;if(active?.name===name)active.baseline=JSON.stringify(s.projectPayload());}finally{s._libraryTonalTarget=null;}};
+ const open=window.__ZL_LIBRARY_OPEN_SONG__;window.__ZL_LIBRARY_OPEN_SONG__=async name=>{const song=window.__ZL_LIBRARY_SCAN__?.songs.find(x=>x.name===name);s._libraryTonalTarget=song?.tonalKey||null;try{if(await open(name)===false)return false;if(song?.tonalKey){const manual=s.padManualOverride;s.padManualOverride=manual||!s.padFollow.library||s.padNote===song.tonalKey;try{await s.selectTonalKey(song.tonalKey);}finally{s.padManualOverride=manual;}}const active=window.__ZL_LIBRARY_SCAN__?.active;if(active?.name===name)active.baseline=JSON.stringify(s.projectPayload());return true;}finally{s._libraryTonalTarget=null;}};
  s.drawKeyControl();
 }
 

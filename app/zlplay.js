@@ -216,7 +216,7 @@ this.installControlMappingHandlers()}
   async readManifest(file){const data=JSON.parse(await file.text());if(!data||data.format!=="tom-certo-project")throw Error("Arquivo .zlplay inválido.");if((data.formatVersion||1)>1)throw Error("Este projeto foi criado por uma versão mais nova do Tom Certo.");return data}
   showLibrary(files,projects,title){const box=this.$(".vs-library-picker");box.hidden=false;box.innerHTML=`<h3>${esc(title)}</h3><p>${projects.length} projeto(s) disponível(is). Cada projeto usa somente arquivos da própria pasta.</p><div class="vs-library-grid">${projects.map((p,i)=>`<button type="button" data-library-index="${i}"><strong>${esc(baseName(p.name).replace(/\.zlplay$/i,""))}</strong><small>${esc(this.dirName(p.name)||"Pasta selecionada")}</small></button>`).join("")}</div>`;box.querySelectorAll("[data-library-index]").forEach(b=>b.onclick=async()=>{box.hidden=true;await this.loadTomCerto(files,projects[+b.dataset.libraryIndex])});this.status("Escolha uma música do repertório.")}
   async loadTomCerto(files,manifestFile){try{this.status("Abrindo projeto Tom Certo...",false,8);const manifest=await this.readManifest(manifestFile),projectDir=this.dirName(manifestFile.name),prefix=projectDir?projectDir+"/":"",scoped=files.filter(f=>{const path=this.cleanPath(f.name);return prefix?path.startsWith(prefix):!path.includes("/")});const lookup=new Map(scoped.map(f=>[this.cleanPath(f.name),f])),audioFiles=[],missing=[];for(const t of manifest.tracks||[])for(const it of t.items||[{file:t.file}]){const rel=this.cleanPath(it.file);if(rel.split("/").includes("..")||rel.startsWith("/")){missing.push(rel);continue}const full=prefix+rel,f=lookup.get(full);if(f&&!audioFiles.includes(f))audioFiles.push(f);else if(!f)missing.push(rel)}if(missing.length)throw Error(`Arquivos do projeto não encontrados na própria pasta: ${[...new Set(missing)].join(", ")}`);await this.loadProjectManifest(scoped,manifest,manifestFile,projectDir)}catch(e){console.error(e);this.status(e.message||"Não foi possível abrir o projeto .zlplay.",true)}}
-  async loadProjectManifest(files,manifest,manifestFile,projectDir){this.stop();this.tracks=[];this.duration=0;this.groupStates=new Map();this.vsVolume=1;this.vsMute=false;this.vsSolo=false;this.currentProjectDir=projectDir||"";this.currentProjectFiles=files;this.projectManifest=manifest;this.tempoSource="zlplay";const prefix=this.currentProjectDir?this.currentProjectDir+"/":"",lookup=new Map(files.map(f=>[this.cleanPath(f.name),f])),decoded=new Map();this.tempo={bpm:Number(manifest.song?.bpm)||120,numerator:Number(manifest.song?.timeSignature?.numerator)||4,denominator:Number(manifest.song?.timeSignature?.denominator)||4,points:[{time:0,bpm:Number(manifest.song?.bpm)||120}]};this.rawSections={markers:[],regions:(manifest.regions||[]).map(r=>({name:String(r.name||"Região"),start:Number(r.start)||0,end:Number(r.end)||0,color:String(r.color||""),type:"region"}))};let n=0;for(const spec of manifest.tracks||[]){const items=[];for(const raw of spec.items||[{file:spec.file,position:0,offset:0,length:null,pitch:0}]){const rel=this.cleanPath(raw.file);if(rel.startsWith("/")||(rel.split("/").includes("..")&&!window.zlplayNative))continue;const f=lookup.get(prefix+rel);if(!f)continue;let buffer=decoded.get(f.name);if(!buffer){this.status(`Preparando track ${++n}...`,false,15+Math.min(70,n*5));buffer=await this.decodeProjectAudio(f);decoded.set(f.name,buffer)}const it={position:Number(raw.position)||0,offset:Number(raw.offset)||0,length:raw.length==null?null:Number(raw.length),pitch:Number(raw.pitch)||0,muted:raw.muted===true,displayName:raw.displayName,file:f.name,projectFile:rel,buffer};items.push(it);this.duration=Math.max(this.duration,it.position+(it.length||Math.max(0,buffer.duration-it.offset)))}if(items.length)this.tracks.push({name:String(spec.name||baseName(items[0].file).replace(/\.[^.]+$/,"")),group:String(spec.group||"VS"),volume:Number(spec.volume??1),originalVolume:Number(spec.originalVolume??spec.volume??1),mute:!!spec.mute,solo:!!spec.solo,originalMute:!!spec.originalMute,originalSolo:!!spec.originalSolo,pan:Number(spec.pan)||0,output:spec.output||null,pitchEnabled:typeof spec.pitchEnabled==="boolean"?spec.pitchEnabled:undefined,items,restored:true})}if(!this.tracks.length)throw Error("Nenhuma track válida foi encontrada na pasta deste projeto.");this.vsPan=Number(manifest.mixer?.vsPan)||0;this.vsVolume=Number(manifest.mixer?.vsVolume??1);this.vsMute=!!manifest.mixer?.vsMute;this.vsSolo=!!manifest.mixer?.vsSolo;this.groupPans=new Map(manifest.mixer?.groupPans||[]);this.groupStates=new Map();for(const [name,state] of manifest.mixer?.groupStates||[])this.groupStates.set(name,{volume:Number(state?.volume??1),pan:Number(state?.pan??0),mute:!!state?.mute,solo:!!state?.solo,output:state?.output||null});for(const [name,pan] of this.groupPans)this.ensureGroupState(name).pan=Number(pan)||0;for(const t of this.tracks)if(!this.isSpecialTrack(t))this.ensureGroupState(t.group||"VS");this.metroPan=Number(manifest.settings?.metroPan)||0;this.timelineZoom=Math.max(1,Math.min(8,Number(manifest.settings?.timelineZoom)||1));this.snapEnabled=manifest.settings?.snapEnabled!==false;this.toggleSnap(this.snapEnabled);this.finishLoadedProject(manifest.song?.title||baseName(manifestFile.name).replace(/\.zlplay$/i,""),manifest.song?.key||"Não informado",false,true);this.status("Projeto .zlplay aberto. Os stems foram carregados somente da pasta deste projeto.")}
+  async loadProjectManifest(files,manifest,manifestFile,projectDir){this.stop();this.tracks=[];this.duration=0;this.groupStates=new Map();this.vsVolume=1;this.vsMute=false;this.vsSolo=false;this.currentProjectDir=projectDir||"";this.currentProjectFiles=files;this.projectManifest=manifest;this.tempoSource="zlplay";const prefix=this.currentProjectDir?this.currentProjectDir+"/":"",lookup=new Map(files.map(f=>[this.cleanPath(f.name),f])),decoded=new Map();this.tempo={bpm:Number(manifest.song?.bpm)||120,numerator:Number(manifest.song?.timeSignature?.numerator)||4,denominator:Number(manifest.song?.timeSignature?.denominator)||4,points:[{time:0,bpm:Number(manifest.song?.bpm)||120}]};this.rawSections={markers:[],regions:(manifest.regions||[]).map(r=>({name:String(r.name||"Região"),start:Number(r.start)||0,end:Number(r.end)||0,color:String(r.color||""),type:"region"}))};let n=0;for(const spec of manifest.tracks||[]){const items=[];for(const raw of spec.items||[{file:spec.file,position:0,offset:0,length:null,pitch:0}]){const rel=this.cleanPath(raw.file);if(rel.startsWith("/")||(rel.split("/").includes("..")&&!window.zlplayNative))continue;const f=lookup.get(prefix+rel);if(!f)continue;let buffer=decoded.get(f.name);if(!buffer){this.status(`Preparando track ${++n}...`,false,15+Math.min(70,n*5));buffer=await this.decodeProjectAudio(f);decoded.set(f.name,buffer)}const it={position:Number(raw.position)||0,offset:Number(raw.offset)||0,length:raw.length==null?null:Number(raw.length),pitch:Number(raw.pitch)||0,muted:raw.muted===true,effects:raw.effects,displayName:raw.displayName,file:f.name,projectFile:rel,buffer};items.push(it);this.duration=Math.max(this.duration,it.position+(it.length||Math.max(0,buffer.duration-it.offset)))}if(items.length)this.tracks.push({name:String(spec.name||baseName(items[0].file).replace(/\.[^.]+$/,"")),group:String(spec.group||"VS"),volume:Number(spec.volume??1),originalVolume:Number(spec.originalVolume??spec.volume??1),mute:!!spec.mute,solo:!!spec.solo,originalMute:!!spec.originalMute,originalSolo:!!spec.originalSolo,pan:Number(spec.pan)||0,output:spec.output||null,pitchEnabled:typeof spec.pitchEnabled==="boolean"?spec.pitchEnabled:undefined,items,restored:true})}if(!this.tracks.length)throw Error("Nenhuma track válida foi encontrada na pasta deste projeto.");this.vsPan=Number(manifest.mixer?.vsPan)||0;this.vsVolume=Number(manifest.mixer?.vsVolume??1);this.vsMute=!!manifest.mixer?.vsMute;this.vsSolo=!!manifest.mixer?.vsSolo;this.groupPans=new Map(manifest.mixer?.groupPans||[]);this.groupStates=new Map();for(const [name,state] of manifest.mixer?.groupStates||[])this.groupStates.set(name,{volume:Number(state?.volume??1),pan:Number(state?.pan??0),mute:!!state?.mute,solo:!!state?.solo,output:state?.output||null});for(const [name,pan] of this.groupPans)this.ensureGroupState(name).pan=Number(pan)||0;for(const t of this.tracks)if(!this.isSpecialTrack(t))this.ensureGroupState(t.group||"VS");this.metroPan=Number(manifest.settings?.metroPan)||0;this.timelineZoom=Math.max(1,Math.min(8,Number(manifest.settings?.timelineZoom)||1));this.snapEnabled=manifest.settings?.snapEnabled!==false;this.toggleSnap(this.snapEnabled);this.finishLoadedProject(manifest.song?.title||baseName(manifestFile.name).replace(/\.zlplay$/i,""),manifest.song?.key||"Não informado",false,true);this.status("Projeto .zlplay aberto. Os stems foram carregados somente da pasta deste projeto.")}
   finishLoadedProject(project,key,isOriginal=false,isTomCerto=false){this.projectTempo=JSON.parse(JSON.stringify(this.tempo));this.savedProjectTempo=this.tempoSource==="zlplay"?JSON.parse(JSON.stringify(this.tempo)):null;this.freeTempoOverride=false;this.buildSections();for(const t of this.tracks)if(!this.isSpecialTrack(t))this.ensureGroupState(t.group||"VS");this.projectId=`${project}|${this.tracks.map(t=>t.name).join("|")}`;this.clickSource="native";this.applyClickSource();this.drawTracks();this.drawSections();this.setMeterFromProject();this.$(".vs-title").textContent=project;this.currentProjectName=project;this.projectKey=key||"Não informado";this.liveTranspose=0;this.drawKeyControl(isOriginal);const bpmInput=this.$("[data-bpm-input]");if(bpmInput)bpmInput.value=String(Math.round(this.tempo.bpm*100)/100);this.$(".vs-meta").innerHTML=`<span class="vs-pill">${this.tracks.length} tracks</span><span class="vs-pill">${fmt(this.duration)}</span><span class="vs-pill">Compasso ${this.tempo.numerator}/${this.tempo.denominator}</span>${this.sections.length?`<span class="vs-pill">${this.sections.length} ${this.sections.length===1?"região":"regiões"}</span>`:""}${isTomCerto?'<span class="vs-pill">Projeto .zlplay</span>':''}`;this.$("[data-progress]").max=this.duration;this.$(".vs-project").classList.add("active");this.$("[data-mode]").disabled=false;this.$("[data-map-regions]").disabled=false;this.$("[data-save-project]").disabled=false;this.padManualOverride=false;this.padNote=this.padAutoNote();this.preloadPad(this.padNote);this.updatePadUi();this.standaloneBpm=Number(this.tempo.bpm)||120;this.tapTimes=[];this.updateTapTempoUi()}
   projectBpm(){return Math.max(20,Math.min(400,Number(this.projectTempo?.bpm??this.tempo?.bpm)||120))}
   restoreProjectTempo(useSaved=false){this.freeTempoOverride=false;const authoritative=useSaved&&this.tempoSource==="zlplay"&&this.savedProjectTempo?this.savedProjectTempo:this.projectTempo;if(authoritative){if(useSaved&&this.tempoSource==="zlplay")this.projectTempo=JSON.parse(JSON.stringify(authoritative));const numerator=this.tempo?.numerator??authoritative.numerator,denominator=this.tempo?.denominator??authoritative.denominator;this.tempo={...JSON.parse(JSON.stringify(authoritative)),numerator,denominator}}const bpm=Math.max(20,Math.min(400,Number(authoritative?.bpm??this.tempo?.bpm)||120));this.standaloneBpm=bpm;const input=this.$("[data-bpm-input]");if(input)input.value=String(Math.round(bpm*100)/100);this.updateTapTempoUi();this.drawSections();return bpm}
@@ -234,7 +234,7 @@ this.installControlMappingHandlers()}
   saveSelectedRegionName(){const i=this.selectedRegionIndex;if(i<0||!this.regionMarks[i])return;const input=this.$("[data-selected-region-input]"),name=input.value.trim();if(!name)return;this.regionMarks[i].name=name;this.commitRegionMarks();this.status(`Região renomeada para ${name}.`)}
   deleteSelectedRegion(){const i=this.selectedRegionIndex;if(i<0||!this.regionMarks[i])return;const name=this.regionMarks[i].name;this.regionMarks.splice(i,1);this.selectedRegionIndex=-1;this.commitRegionMarks();this.renderRegionEditor();this.status(`${name} excluída.`)}
   markProjectTempoSaved(){this.savedProjectTempo=JSON.parse(JSON.stringify(this.projectTempo||this.tempo));if(this.tempoSource!=="rpp")this.tempoSource="zlplay";this.freeTempoOverride=false}
-  projectPayload(){return{format:"tom-certo-project",formatVersion:1,appVersion:"1.5.0-beta",song:{title:this.currentProjectName||"Projeto Tom Certo",bpm:this.projectBpm(),timeSignature:{numerator:this.tempo?.numerator||4,denominator:this.tempo?.denominator||4},key:this.projectKey||"Não informado",duration:this.duration},tracks:this.tracks.map(t=>({name:t.name,group:t.group||"VS",volume:t.volume,originalVolume:t.originalVolume,mute:t.mute,solo:t.solo,originalMute:t.originalMute,originalSolo:t.originalSolo,pan:t.pan||0,output:t.output||null,pitchEnabled:typeof t.pitchEnabled==="boolean"?t.pitchEnabled:undefined,items:(t.items||[]).map(it=>({file:it.projectFile||this.relativeToProject(it.file),position:it.position||0,offset:it.offset||0,length:it.length,muted:it.muted||undefined,displayName:it.displayName,pitch:it.pitch||0}))})),regions:this.sections.map(s=>({name:s.name,start:s.start,end:s.end,color:s.color||""})),mixer:{vsPan:this.vsPan||0,vsVolume:Number(this.vsVolume??1),vsMute:!!this.vsMute,vsSolo:!!this.vsSolo,groupPans:[...this.allGroupNames().map(name=>[name,this.ensureGroupState(name).pan])],groupStates:[...this.groupStates.entries()].map(([name,state])=>[name,{volume:Number(state.volume??1),pan:Number(state.pan??0),mute:!!state.mute,solo:!!state.solo,output:state.output||null}])},settings:{metroPan:this.metroPan||0,timelineZoom:this.timelineZoom||1,snapEnabled:this.snapEnabled!==false}}}
+  projectPayload(){return{format:"tom-certo-project",formatVersion:1,appVersion:"1.5.0-beta",song:{title:this.currentProjectName||"Projeto Tom Certo",bpm:this.projectBpm(),timeSignature:{numerator:this.tempo?.numerator||4,denominator:this.tempo?.denominator||4},key:this.projectKey||"Não informado",duration:this.duration},tracks:this.tracks.map(t=>({name:t.name,group:t.group||"VS",volume:t.volume,originalVolume:t.originalVolume,mute:t.mute,solo:t.solo,originalMute:t.originalMute,originalSolo:t.originalSolo,pan:t.pan||0,output:t.output||null,pitchEnabled:typeof t.pitchEnabled==="boolean"?t.pitchEnabled:undefined,items:(t.items||[]).map(it=>({file:it.projectFile||this.relativeToProject(it.file),position:it.position||0,offset:it.offset||0,length:it.length,muted:it.muted||undefined,effects:it.effects,displayName:it.displayName,pitch:it.pitch||0}))})),regions:this.sections.map(s=>({name:s.name,start:s.start,end:s.end,color:s.color||""})),mixer:{vsPan:this.vsPan||0,vsVolume:Number(this.vsVolume??1),vsMute:!!this.vsMute,vsSolo:!!this.vsSolo,groupPans:[...this.allGroupNames().map(name=>[name,this.ensureGroupState(name).pan])],groupStates:[...this.groupStates.entries()].map(([name,state])=>[name,{volume:Number(state.volume??1),pan:Number(state.pan??0),mute:!!state.mute,solo:!!state.solo,output:state.output||null}])},settings:{metroPan:this.metroPan||0,timelineZoom:this.timelineZoom||1,snapEnabled:this.snapEnabled!==false}}}
   async saveProjectFile(){if(!this.tracks.length)return;if(this.tempoSource!=="rpp"&&!this.freeTempoOverride){const input=this.$("[data-bpm-input]"),bpm=Math.max(20,Math.min(400,Number(input?.value)||Number(this.tempo?.bpm)||120));this.standaloneBpm=bpm;this.tempo={...this.tempo,bpm,points:[{time:0,bpm}]};this.projectTempo=JSON.parse(JSON.stringify(this.tempo));if(input)input.value=String(Math.round(bpm*100)/100);this.updateTapTempoUi()}const text=JSON.stringify(this.projectPayload(),null,2),safe=(this.currentProjectName||"projeto").replace(/[\\/:*?"<>|]+/g,"-").trim()||"projeto",name=`${safe}.zlplay`;try{if(window.showSaveFilePicker){const handle=await window.showSaveFilePicker({suggestedName:name,types:[{description:"Projeto Tom Certo",accept:{"application/json":[".zlplay"]}}]});const writable=await handle.createWritable();await writable.write(text);await writable.close();this.markProjectTempoSaved();await this.afterProjectSaved?.(handle,text);this.status(`Projeto salvo como ${name}. Mantenha-o na mesma pasta dos stems.`);return}}catch(e){if(e?.name==="AbortError")return}const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:"application/json"}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);this.markProjectTempoSaved();this.status(`Projeto ${name} gerado. Coloque-o na mesma pasta dos stems.`)}
   chooseRpp(files,rpps){const box=this.$(".vs-rpp-picker");box.hidden=false;box.innerHTML=`<h3>Qual projeto deseja abrir?</h3><p>Encontramos ${rpps.length} projetos do REAPER nesta pasta.</p><div class="vs-rpp-row"><select class="vs-select">${rpps.map((r,i)=>`<option value="${i}">${esc(baseName(r.name).replace(/\.rpp$/i,""))}</option>`).join("")}</select><button class="vs-btn">Abrir projeto</button></div>`;box.querySelector("button").onclick=()=>{const rpp=rpps[+box.querySelector("select").value];box.hidden=true;this.load(files,rpp)};this.status("Escolha o tom/projeto que deseja estudar.")}
   async load(files,chosenRpp=null){
@@ -534,7 +534,14 @@ function mount(){
         return false;
       }
     }
-    const saved=await zlDownloadJson(zlLibraryPayload(scan.songs,order),"Repertório.zlset");
+    const payload=zlLibraryPayload(scan.songs,order);
+    let saved;
+    if(scan.desktopId){
+      try{
+        saved=await window.zlplayNative.setlists.save(scan.desktopId,payload);
+        if(saved)study.status?.(`Repertório salvo em ${saved}.`);
+      }catch(error){study.status(error.message,true);return false;}
+    }else saved=await zlDownloadJson(payload,"Repertório.zlset");
     if(saved)scan.saved=zlLibraryState(scan,order);
     return saved;
   }
@@ -574,38 +581,39 @@ function mount(){
     let order=Array.isArray(existing?.order)
       ? existing.order.filter(n=>scan.songs.some(s=>s.name===n))
       : scan.songs.map(s=>s.name);
-    scan.saved??=existing?zlLibraryState(scan,order):"";
+    const initializeSaved=scan.saved==null&&!!existing;
+    scan.saved??="";
     const wrap=document.createElement("div");wrap.className="zl-library-modal";
     const box=document.createElement("div");box.className="zl-library-box";
     box.innerHTML=`<div class="zl-library-head"><strong>Repertório ZLPlay</strong><button type="button" data-close>×</button></div>
       <p>${scan.songs.length} música(s) encontrada(s). Arraste para definir a ordem.</p>
       <div class="zl-library-list"></div>
-      <div class="zl-library-actions"><button type="button" data-rescan>Atualizar pastas</button><select data-add-song aria-label="Adicionar música"></select><button type="button" data-add-song-button>Adicionar música</button><button type="button" data-save>Salvar repertório</button><button type="button" data-open>Abrir primeira música</button></div>`;
+      <div class="zl-library-actions"><button type="button" data-add-song-button>Adicionar música</button><button type="button" data-save>Salvar repertório</button><button type="button" data-open>Abrir primeira música</button></div>`;
     wrap.append(box);(document.fullscreenElement||document.body).append(wrap);
     const list=box.querySelector(".zl-library-list");
     let selected=window.__ZL_LIBRARY_CURRENT__&&order.includes(window.__ZL_LIBRARY_CURRENT__)?window.__ZL_LIBRARY_CURRENT__:order[0]||null;
-    const rescan=box.querySelector("[data-rescan]");
-    rescan.hidden=!window.__ZL_RESCAN_LIBRARY__;
-    rescan.onclick=async()=>{
-      const files=await window.__ZL_RESCAN_LIBRARY__();
-      if(!files?.length)return;
-      if(zlRelativeParts(files[0])[0]!==scan.root){study.status("Selecione a pasta principal deste repertório.",true);return;}
-      for(const song of zlScanSelectedTree(files).songs)if(!scan.songs.some(existing=>existing.name===song.name))scan.songs.push(song);
-      render();
-    };
-    const addSelect=box.querySelector("[data-add-song]");
     const addButton=box.querySelector("[data-add-song-button]");
-    addButton.onclick=()=>{
-      if(!addSelect.value||order.includes(addSelect.value))return;
-      order.push(addSelect.value);
-      window.__ZL_LIBRARY_ORDER__=[...order];
-      selected=addSelect.value;
-      render();
+    addButton.hidden=!scan.desktopId;
+    addButton.onclick=async()=>{
+      addButton.disabled=true;
+      try{
+        const files=await window.__ZL_ADD_LIBRARY_SONG__(scan.desktopId);
+        if(!files||!wrap.isConnected)return;
+        const [song]=zlScanSelectedTree(files).songs;
+        if(!song)return study.status("Nenhuma pasta de música encontrada.",true);
+        if(order.includes(song.name))return;
+        if(!scan.songs.some(item=>item.name===song.name))scan.songs.push(song);
+        order.push(song.name);
+        window.__ZL_LIBRARY_ORDER__=[...order];
+        selected=song.name;
+        render();
+      }catch(error){study.status(error.message,true);}
+      finally{addButton.disabled=false;}
     };
     const render=()=>{
+      const decorations=[];
       const savedSongs=new Map((scan.saved?JSON.parse(scan.saved).songs:[]).map(song=>[song.name,song]));
-      addSelect.replaceChildren(...scan.songs.filter(song=>!order.includes(song.name)).map(song=>new Option(song.name,song.name)));
-      addButton.disabled=addSelect.disabled=!addSelect.options.length;
+      box.querySelector("p").textContent=`${order.length} música(s) encontrada(s). Arraste para definir a ordem.`;
       list.innerHTML="";order.forEach((name,i)=>{const row=document.createElement("div");row.className="zl-library-row"+(name===selected?" selected":"");row.draggable=true;row.dataset.name=name;
       const song=scan.songs.find(s=>s.name===name);
       row.innerHTML=`<span class="zl-grip">☰</span><b>${i+1}.</b><span class="zl-song-name"></span><small>${song?.selectedSource?/\.zlplay$/i.test(song.selectedSource.name)?".zlplay":"RPP":"áudios"}</small>`;
@@ -638,13 +646,18 @@ function mount(){
       row.ondrop=e=>{e.preventDefault();const from=e.dataTransfer.getData("text/plain"),to=name;if(from===to||!order.includes(from))return;const a=order.indexOf(from),b=order.indexOf(to);order.splice(a,1);order.splice(b,0,from);window.__ZL_LIBRARY_ORDER__=[...order];render()};
       row.onclick=e=>{if(e.target.closest("button,select,input,label,.zl-library-keys"))return;selected=name;render()};
       row.ondblclick=e=>{if(e.target.closest("button,select,input,label"))return;selected=name;wrap.remove();window.__ZL_LIBRARY_OPEN_SONG__?.(name)};
-      list.append(row);window.__ZL_DECORATE_SONG__?.(row,song)})};
-    render();
+      list.append(row);decorations.push(window.__ZL_DECORATE_SONG__?.(row,song))});
+      return Promise.all(decorations);
+    };
+    const ready=render().then(()=>{
+      if(initializeSaved&&!scan.saved)scan.saved=zlLibraryState(scan,order);
+    });
     box.querySelector("[data-close]").onclick=()=>wrap.remove();
     box.querySelector("[data-save]").onclick=async()=>{if(await zlSaveLibrary(scan,order))render();};
     box.querySelector("[data-open]").textContent="Abrir música";
     box.querySelector("[data-open]").onclick=()=>{if(selected){wrap.remove();window.__ZL_LIBRARY_OPEN_SONG__?.(selected)}};
     window.__ZL_LIBRARY_ORDER__=[...order];
+    return {wrap,ready};
   }
   study.afterProjectSaved=async(handle,text)=>{
     const scan=window.__ZL_LIBRARY_SCAN__,song=scan?.songs.find(s=>s.name===window.__ZL_LIBRARY_CURRENT__);
@@ -653,15 +666,16 @@ function mount(){
     Object.defineProperty(file,"webkitRelativePath",{value:prefix+"/"+file.name});
     const previous=song.selectedSource||song.projects[0]||song.rpps[0],same=previous?.name===file.name;
     song.files=song.files.filter(f=>f.name!==file.name);song.projects=song.projects.filter(f=>f.name!==file.name);song.files.push(file);song.projects.push(file);song.selectedSource=file;
-    if(!same&&confirm("Projeto salvo. Deseja salvar o repertório usando esta nova versão .zlplay?"))await zlDownloadJson(zlLibraryPayload(scan.songs,window.__ZL_LIBRARY_ORDER__||scan.songs.map(s=>s.name)),"Repertório.zlset");
+    if(!same&&confirm("Projeto salvo. Deseja salvar o repertório usando esta nova versão .zlplay?"))await zlSaveLibrary(scan,window.__ZL_LIBRARY_ORDER__||scan.songs.map(s=>s.name));
   };
   async function zlReadProjectFile(file){try{return JSON.parse(await file.text())}catch{return null}}
 
-  async function zlProcessLibraryFolder(files,{askCreate=true}={}){
+  async function zlProcessLibraryFolder(files,{askCreate=true,desktopId,createNew=false,openFirst=false}={}){
     const scan=zlScanSelectedTree(files);
     if(scan.songs.length<1){study.status?.("Nenhuma pasta de música encontrada.");return false}
     scan.root=zlRelativeParts(files[0])[0];
-    const existingFile=scan.rootProjects.find(f=>/^repertório\.zlplaylibrary$/i.test(f.name||""))||scan.rootProjects.find(zlIsLibrary);
+    scan.desktopId=desktopId;
+    const existingFile=createNew?null:scan.rootProjects.find(f=>/^repertório\.zlplaylibrary$/i.test(f.name||""))||scan.rootProjects.find(zlIsLibrary);
     const existing=existingFile?await zlReadProjectFile(existingFile):null;
     if(existingFile&&existing?.type!=="zlplay-library"){
       study.status?.("Arquivo .zlplaylibrary inválido.");return false;
@@ -670,7 +684,11 @@ function mount(){
       const known=new Set((existing.songs||[]).map(s=>s.folder||s.name));
       const added=scan.songs.filter(s=>!known.has(s.name));
       if(added.length)study.status?.(`${added.length} nova(s) música(s) encontrada(s) no repertório.`);
-      window.__ZL_LIBRARY_CURRENT__=null;window.__ZL_LIBRARY_SCAN__=scan;zlShowLibraryManager(scan,existing);
+      window.__ZL_LIBRARY_CURRENT__=null;window.__ZL_LIBRARY_SCAN__=scan;
+      const {wrap,ready}=zlShowLibraryManager(scan,existing);
+      await ready;
+      const first=window.__ZL_LIBRARY_ORDER__[0];
+      if(openFirst&&first&&await window.__ZL_LIBRARY_OPEN_SONG__?.(first))wrap.remove();
       return true;
     }
     if(scan.songs.length>=2||(!askCreate&&scan.songs.length>=1)){

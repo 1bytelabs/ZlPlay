@@ -29,27 +29,34 @@ export function installNativeAudio(Player) {
     return original.decodeProjectAudio.call(this, file);
   };
   p.nativeMix = function() {
-    const trackSolo = this.tracks.some(t => t.solo), groupSolo = [...this.groupStates.values()].some(s => s.solo);
+    const monitor = this._editorMonitor;
+    const trackSolo = this.tracks.some(track => track.solo);
+    const groupSolo = [...this.groupStates.values()].some(s => s.solo);
     const loop = this.currentLoop && this.currentLoopSection || this.loop && this.loopSection;
     let guidePreview = null;
     if (this.pendingSection) {
       const target = this.pendingSection.section, guide = this.tracks.findIndex(t => this.isGuideTrack(t));
       const previous = this.sections.filter(s => s.start < target.start - .001).reduce((best, s) => !best || s.start > best.start ? s : best, null);
       const source = Math.max(0, target.start - 8 / (this.executionFactor || 1), previous?.start ?? 0), lead = target.start - source;
-      if (guide >= 0 && lead > .03 && !this.tracks[guide].mute && (!trackSolo || this.tracks[guide].solo)) guidePreview = { track: guide, start: this.pendingSection.boundary - lead, end: this.pendingSection.boundary, source };
+      if (guide >= 0 && lead > .03) {
+        const guideMix = this.tracks[guide];
+        if (!guideMix.mute && (!trackSolo || guideMix.solo)) guidePreview = { track: guide, start: this.pendingSection.boundary - lead, end: this.pendingSection.boundary, source };
+      }
     }
     return {
       master: Number(this.$('[data-master]')?.value ?? 1),
       mix: this.tracks.map(t => {
         const click = this.isClickTrack(t), guide = this.isGuideTrack(t), special = click || guide;
         const state = special ? null : this.ensureGroupState(t.group || 'VS');
+
         let muted = t.__clickProjectMuted || (this.soloClick && !(click && this.clickSource === 'project')) || t.mute || (loop && guide) || (trackSolo && !t.solo);
         if (!trackSolo && !special && groupSolo && !state.solo) muted = true;
         if (!trackSolo && special && this.vsSolo) muted = true;
         if (!special && (this.vsMute || state.mute)) muted = true;
         const group = this.pitchGroup(t);
         return {
-          gain: muted ? 0 : Number(t.volume ?? 1) * (special ? 1 : Number(this.vsVolume ?? 1) * Number(state.volume ?? 1)),
+          gain: muted ? 0 : Number((guide ? monitor?.guideVolume : undefined) ?? t.volume ?? 1) *
+            (special ? 1 : Number(monitor?.vsVolume ?? this.vsVolume ?? 1) * Number(state.volume ?? 1)),
           pan: Math.max(-1, Math.min(1, Number(t.pan || 0) + (special ? 0 : Number(this.vsPan || 0) + Number(state.pan || 0)))),
           pitch: group.base + (group.eligible ? this.liveTranspose : 0)
         };
@@ -73,7 +80,7 @@ export function installNativeAudio(Player) {
   p.prepareNative = async function() {
     if (!isNative(this)) return false;
     const mix = this.nativeMix();
-    const tracks = this.tracks.map((t, i) => ({ ...mix.mix[i], items: t.items.filter(it => !it.muted).map(it => ({ nativeRef: it.buffer.nativeRef, position: it.position || 0, offset: it.offset || 0, length: it.length ?? Math.max(0, it.buffer.duration - (it.offset || 0)), rate: it.playbackRate || 1 })) }));
+    const tracks = this.tracks.map((t, i) => ({ ...mix.mix[i], items: t.items.filter(it => !it.muted).map(it => ({ nativeRef: it.buffer.nativeRef, position: it.position || 0, offset: it.offset || 0, length: it.length ?? Math.max(0, it.buffer.duration - (it.offset || 0)), rate: it.playbackRate || 1, effects: it.effects })) }));
     const signature = JSON.stringify(tracks.map(t => t.items));
     if (this._nativeSignature === signature && this._nativeReady && (this._nativeConfigured || this._nativeConfiguring)) { await this._nativeReady; return true; }
     this._nativeSignature = signature; this._nativeConfigured = false; this._nativeConfiguring = true;
