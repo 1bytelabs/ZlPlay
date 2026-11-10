@@ -22,3 +22,7 @@
 .zl-timeline-panning, .zl-timeline-panning * { cursor: grabbing !important; user-select: none; }
 
 [data-next-song]>strong{font-size:14px;color:#eef4ff}
+
+[data-active-setlist]{display:block;margin-top:4px;color:#b4c4dc;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.zl-arrangement-list .zl-auto-executed{color:#a7afbf;opacity:.68}

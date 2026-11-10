@@ -1,6 +1,10 @@
 export function editorExit(modal, s, session, hasDraft = () => false) {
  const close = modal.querySelector('[data-close]');
- const finish = close.onclick;
+ const closeEditor = close.onclick;
+ const finish = () => {
+  modal.dispatchEvent(new Event('zl-editor-exit'));
+  return closeEditor();
+ };
  close.textContent = 'Descartar alterações';
  close.onclick = async () => {
   if (close.disabled) return;

@@ -155,8 +155,8 @@ export function installNativeAudio(Player) {
   p.seek = function(value) {
     if (!isNative(this)) return original.seek.call(this, value);
     const position = Math.max(0, Math.min(this.duration, value)), epoch = this._nativeEpoch = (this._nativeEpoch || 0) + 1;
-    this.offset = position; this.paint(position); this._nativeSeeking = true;
-    if (this._nativeConfigured) return command(this, { op: 'seek', position, playing: this.playing, ...this.nativeMix() }).then(state => { if (epoch === this._nativeEpoch) { this._nativeState = { ...state, stamp: performance.now() }; this._nativeSeeking = false; } }).catch(() => { this._nativeSeeking = false; });
+    this.offset = position; this.paint(position); this._nativeSeeking = this._nativeConfigured;
+    if (this._nativeConfigured) return command(this, { op: 'seek', position, playing: this.playing, ...this.nativeMix() }).then(state => { if (epoch === this._nativeEpoch) { this._nativeState = { ...state, stamp: performance.now() }; this._nativeJumpSerial = state.jumpSerial; this._nativeSeeking = false; } }).catch(() => { if(epoch===this._nativeEpoch)this._nativeSeeking = false; });
   };
   p.tick = function() {
     if (!isNative(this)) return original.tick.call(this);

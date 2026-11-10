@@ -400,7 +400,7 @@ this.installControlMappingHandlers()}
   guideLeadFor(section){const bpm=this.tempoSegmentAt(section.start).point.bpm,pulses=this.tempo.numerator===6&&this.tempo.denominator===8?3:Math.max(1,this.tempo.numerator||4);return Math.min(4,Math.max(.75,pulses*60/bpm))}
   cancelPendingGuide(){for(const src of this.pendingGuideNodes||[])try{src.stop()}catch{}if(this.pendingGuideGain)try{this.pendingGuideGain.disconnect()}catch{}this.pendingGuideNodes=[];this.pendingGuideNode=null;this.pendingGuideGain=null;this.pendingGuidePanner=null;this.pendingGuideTrack=null;this.pendingGuideStartAt=null;this.pendingGuideMutedTracks=[];if(this.guideSuppressed){this.guideSuppressed=false;this.updateGains()}}
   playPendingGuide(p){const pending=this.pendingSection;if(!pending||pending.guidePlayed||!this.ctx)return false;const target=pending.section,previous=this.sections.filter(s=>s.start<target.start-.001).reduce((best,s)=>!best||s.start>best.start?s:best,null),captureStart=Math.max(0,target.start-8,previous?.start??0),lead=target.start-captureStart,threshold=pending.boundary-lead;if(lead<=.03||p<threshold||p>=pending.boundary-.02)return false;const guide=this.tracks.find(t=>this.isGuideTrack(t)),solo=this.tracks.some(t=>t.solo);if(!guide||guide.mute||(solo&&!guide.solo)||!guide.gain||!guide.panner)return false;const late=Math.max(0,p-threshold),wantedStart=captureStart+late,wantedEnd=target.start,segments=[];for(const item of guide.items||[]){if(!item?.buffer||item.muted)continue;const end=item.position+(item.length||Math.max(0,item.buffer.duration-item.offset)),from=Math.max(wantedStart,item.position),to=Math.min(wantedEnd,end);if(to-from>.03)segments.push({item,from,duration:to-from})}if(!segments.length)return false;const gain=this.ctx.createGain();gain.gain.value=Number(guide.volume??1);gain.connect(guide.panner);this.pendingGuideGain=gain;this.pendingGuideTrack=guide;this.pendingGuideNodes=[];guide.gain.gain.value=0;this.guideSuppressed=true;for(const seg of segments){const src=this.ctx.createBufferSource();src.buffer=seg.item.buffer;src.connect(gain);src.start(this.ctx.currentTime+Math.max(0,seg.from-wantedStart),seg.item.offset+(seg.from-seg.item.position),seg.duration);this.pendingGuideNodes.push(src);this.nodes.push(src)}this.pendingGuideNode=this.pendingGuideNodes[0]||null;pending.guidePlayed=true;return true}
-  tick(){if(!this.playing)return;if(this.projectLaunchAt&&this.ctx.currentTime<this.projectLaunchAt){this.paint(this.offset);this.raf=requestAnimationFrame(()=>this.tick());return}if(this.projectLaunchAt&&this.ctx.currentTime>=this.projectLaunchAt)this.projectLaunchAt=0;let p=this.position();if(this.pendingSection)this.playPendingGuide(p);if(this.pendingSection&&p>=this.pendingSection.boundary-.005){const next=this.pendingSection;if(this.currentLoop)this.toggleCurrentLoop(false);if(this.loop){this.loop=false;const repeat=this.$("[data-loop]");if(repeat)repeat.checked=false}this.selectSection(next.index,false);this.lastStatusSectionIndex=-1;this.seek(next.section.start);return}if(this.currentLoop&&this.currentLoopSection&&p>=this.currentLoopSection.end){this.seek(this.currentLoopSection.start);return}if(this.loop&&this.loopSection&&p>=this.loopSection.end){this.seek(this.loopSection.start);return}if(p>=this.duration){this.stop();return}this.paint(p);this.raf=requestAnimationFrame(()=>this.tick())}
+  tick(){if(!this.playing)return;if(this.projectLaunchAt&&this.ctx.currentTime<this.projectLaunchAt){this.paint(this.offset);this.raf=requestAnimationFrame(()=>this.tick());return}if(this.projectLaunchAt&&this.ctx.currentTime>=this.projectLaunchAt)this.projectLaunchAt=0;let p=this.position();if(this.pendingSection)this.playPendingGuide(p);if(this.pendingSection&&p>=this.pendingSection.boundary-.005){const next=this.pendingSection;if(this.currentLoop)this.toggleCurrentLoop(false);if(this.loop){this.loop=false;const repeat=this.$("[data-loop]");if(repeat)repeat.checked=false}this.selectSection(next.index,false);this.lastStatusSectionIndex=-1;this.seek(next.section.start,true);return}if(this.currentLoop&&this.currentLoopSection&&p>=this.currentLoopSection.end){this.seek(this.currentLoopSection.start,true);return}if(this.loop&&this.loopSection&&p>=this.loopSection.end){this.seek(this.loopSection.start,true);return}if(p>=this.duration){this.stop();return}this.paint(p);this.raf=requestAnimationFrame(()=>this.tick())}
   paint(p){this.$("[data-progress]").value=p;this.$(".vs-time").textContent=`${fmt(p)} / ${fmt(this.duration)}`;const timeline=this.host.querySelector(".vs-timeline");if(timeline)timeline.style.setProperty("--played-pct",`${this.duration?Math.max(0,Math.min(100,p/this.duration*100)):0}%`);const playhead=this.host.querySelector(".vs-timeline-playhead");if(playhead)playhead.style.left=`${this.duration?Math.max(0,Math.min(100,p/this.duration*100)):0}%`;this.host.querySelectorAll(".vs-segment").forEach((el,i)=>{const s=this.sections[i];el.classList.toggle("current",!!s&&p>=s.start&&p<s.end)});if(this.playing&&!this.pendingSection){const index=this.sections.findIndex(s=>p>=s.start&&p<s.end);if(index>=0&&index!==this.lastStatusSectionIndex){this.lastStatusSectionIndex=index;this.status(`Tocando agora: ${this.sections[index].name}.`)}}if(this.mappingRegions)this.updateMapperPosition()}
   async ensureClickBuffer(){if(this.clickBuffer)return this.clickBuffer;const data=await fetch("./Meuclick.wav").then(r=>{if(!r.ok)throw Error("Click não encontrado");return r.arrayBuffer()});this.clickBuffer=await this.audioContext().decodeAudioData(data);return this.clickBuffer}
   updateTapTempoUi(){const b=this.$("[data-tap-tempo]");if(b)b.textContent="Tap"}
@@ -542,7 +542,11 @@ function mount(){
         if(saved)study.status?.(`Repertório salvo em ${saved}.`);
       }catch(error){study.status(error.message,true);return false;}
     }else saved=await zlDownloadJson(payload,"Repertório.zlset");
-    if(saved)scan.saved=zlLibraryState(scan,order);
+    if(saved){
+      scan.saved=zlLibraryState(scan,order);
+      if(typeof saved==="string")scan.title=zlSetlistTitle(saved);
+      document.dispatchEvent(new Event("zl-setlist-title"));
+    }
     return saved;
   }
   window.__ZL_LEAVE_LIBRARY__=async()=>{
@@ -670,12 +674,14 @@ function mount(){
   };
   async function zlReadProjectFile(file){try{return JSON.parse(await file.text())}catch{return null}}
 
-  async function zlProcessLibraryFolder(files,{askCreate=true,desktopId,createNew=false,openFirst=false}={}){
+  const zlSetlistTitle=name=>name.replace(/\.(zlset|zlplaylibrary)$/i,"");
+  async function zlProcessLibraryFolder(files,{askCreate=true,desktopId,selectedPath,createNew=false,openFirst=false}={}){
     const scan=zlScanSelectedTree(files);
     if(scan.songs.length<1){study.status?.("Nenhuma pasta de música encontrada.");return false}
     scan.root=zlRelativeParts(files[0])[0];
     scan.desktopId=desktopId;
-    const existingFile=createNew?null:scan.rootProjects.find(f=>/^repertório\.zlplaylibrary$/i.test(f.name||""))||scan.rootProjects.find(zlIsLibrary);
+    const existingFile=createNew?null:scan.rootProjects.find(f=>f.webkitRelativePath===selectedPath&&zlIsLibrary(f))||scan.rootProjects.find(f=>/^repertório\.zlplaylibrary$/i.test(f.name||""))||scan.rootProjects.find(zlIsLibrary);
+    scan.title=existingFile?zlSetlistTitle(existingFile.name):scan.root;
     const existing=existingFile?await zlReadProjectFile(existingFile):null;
     if(existingFile&&existing?.type!=="zlplay-library"){
       study.status?.("Arquivo .zlplaylibrary inválido.");return false;
@@ -684,7 +690,7 @@ function mount(){
       const known=new Set((existing.songs||[]).map(s=>s.folder||s.name));
       const added=scan.songs.filter(s=>!known.has(s.name));
       if(added.length)study.status?.(`${added.length} nova(s) música(s) encontrada(s) no repertório.`);
-      window.__ZL_LIBRARY_CURRENT__=null;window.__ZL_LIBRARY_SCAN__=scan;
+      window.__ZL_LIBRARY_CURRENT__=null;window.__ZL_LIBRARY_SCAN__=scan;document.dispatchEvent(new Event("zl-setlist-title"));
       const {wrap,ready}=zlShowLibraryManager(scan,existing);
       await ready;
       const first=window.__ZL_LIBRARY_ORDER__[0];
@@ -693,7 +699,7 @@ function mount(){
     }
     if(scan.songs.length>=2||(!askCreate&&scan.songs.length>=1)){
       const ok=!askCreate||confirm(`${scan.songs.length} pastas de músicas foram encontradas.\n\nCriar um repertório ZLPlay para esta pasta principal?`);
-      if(ok){window.__ZL_LIBRARY_CURRENT__=null;window.__ZL_LIBRARY_SCAN__=scan;zlShowLibraryManager(scan,null);return true}
+      if(ok){window.__ZL_LIBRARY_CURRENT__=null;window.__ZL_LIBRARY_SCAN__=scan;document.dispatchEvent(new Event("zl-setlist-title"));zlShowLibraryManager(scan,null);return true}
     }else{
       study.status?.("Esta pasta contém apenas uma música. Use Abrir pasta / projeto.");
     }
