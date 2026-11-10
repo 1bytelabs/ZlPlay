@@ -1,3 +1,4 @@
+import { MIDI_CC_MODES, midiFaderValue, readMidiControl } from './midi-fader.mjs';
 import { shortestSemitoneDelta } from './tonal-distance.mjs';
 import { installNativeAudio } from './native-audio.js';
 const AUDIO_EXT=/\.(wav|mp3|flac|ogg|opus|m4a|aac)$/i;
@@ -133,12 +134,13 @@ this.controlMapMode=false;
 this.controlMapTarget=null;
 this.controlMapMidiAccess=null;
 this.controlMapCcState=new Map();
-this.controlMapMidiBound=false;
+this.controlMapMidiRequest=null;
 this.controlMappings={};
-try{this.controlMappings=JSON.parse(localStorage.getItem("zosma-zlplay:control-mappings")||"{}")||{}}catch{}
+try{this.controlMappings=this.sanitizeControlMappings(JSON.parse(localStorage.getItem("zosma-zlplay:control-mappings")||"{}"))}catch{}
 this.render();
 this.bindPadNoteButtons();
-this.installControlMappingHandlers()}
+this.installControlMappingHandlers();
+if(Object.values(this.controlMappings).some(binding=>binding.type!=="key"))void this.initControlMidi()}
   render(){this.host.innerHTML=`<section class="vs-study"><div class="vs-card"><div class="vs-head"><div class="vs-head-main"><button class="vs-back" data-back>← Voltar</button><div class="vs-brand">
   <div class="vs-brand-line">
     <h2><span class="zl-brand-wordmark">ZL<span>Play</span></span></h2>
@@ -150,7 +152,7 @@ this.installControlMappingHandlers()}
        aria-label="Conhecer a 1Byte Labs">1Byte Labs</a>
   </div>
   <p>Abra suas multitracks diretamente no computador.</p>
-</div></div><div class="vs-head-actions"><button class="vs-mode" type="button" data-control-map>Mapear</button><span class="vs-map-actions" data-map-actions><button class="vs-mode" type="button" data-map-import>Importar</button><button class="vs-mode" type="button" data-map-export>Exportar</button><button class="vs-mode" type="button" data-map-clear>Limpar mapeamentos</button><input class="vs-file-input" data-map-file type="file" accept=".zlmap,application/json"></span><button class="vs-mode" data-mode>Modo Ensaio</button></div></div><div class="vs-actions"><button class="vs-btn" data-pick-folder>Abrir pasta / projeto</button><button class="vs-btn secondary" data-pick-library>Abrir repertório</button><button class="vs-btn secondary" data-pick-zip>Abrir ZIP</button></div><input class="vs-file-input" data-folder type="file" webkitdirectory multiple><input class="vs-file-input" data-library type="file" webkitdirectory multiple><input class="vs-file-input" data-zip type="file" accept=".zip,application/zip"><input class="vs-file-input" data-add-track type="file" accept="audio/*,.wav,.mp3,.flac,.ogg,.opus,.m4a,.aac" multiple><input class="vs-file-input" data-replace-track type="file" accept="audio/*,.wav,.mp3,.flac,.ogg,.opus,.m4a,.aac"><div class="vs-status done"><span data-status-text>Os arquivos permanecem no seu dispositivo.</span><div class="vs-progress"><i data-status-progress></i></div></div><div class="vs-rpp-picker" hidden></div><div class="vs-library-picker" hidden></div><div class="vs-project"><div class="vs-title-row"><div><div class="vs-title"></div><div class="vs-meta"></div></div><div class="vs-project-actions"><button class="vs-mode" data-map-regions disabled>Regiões</button><button class="vs-mode" data-save-project disabled>Salvar projeto</button></div><div class="vs-key"></div></div><div class="vs-region-mapper" hidden><div class="vs-mapper-head"><strong>Mapeamento de regiões</strong><span>Marque o fim de cada parte. Cada região é criada para a esquerda, desde o fim da anterior.</span></div><div class="vs-mapper-controls"><span class="vs-mapper-position" data-mapper-position>Cursor 0:00</span><select class="vs-select vs-region-preset-select" data-region-preset-select aria-label="Escolher região pronta"><option value="">Escolher região…</option></select><input class="vs-text-input" data-custom-region-name type="text" placeholder="Ou digite um nome livre"><button class="vs-btn secondary" type="button" data-add-custom-region>Adicionar região</button><button class="vs-btn secondary" data-close-mapper>Concluir</button></div><div class="vs-region-editor" data-region-editor hidden>
+</div></div><div class="vs-head-actions"><button class="vs-mode" type="button" data-control-map>Mapear</button><span class="vs-map-actions" data-map-actions><select class="vs-select vs-map-input" data-map-input aria-label="Entrada do mapeamento"><option value="">Automático</option><option value="midi-note">MIDI Note</option><option value="midi-cc">MIDI CC</option><option value="midi-pitch-bend" data-map-continuous>MIDI Pitch Bend</option></select><button class="vs-mode" type="button" data-map-import>Importar</button><button class="vs-mode" type="button" data-map-export>Exportar</button><button class="vs-mode" type="button" data-map-clear>Limpar mapeamentos</button><input class="vs-file-input" data-map-file type="file" accept=".zlmap,application/json"></span><button class="vs-mode" data-mode>Modo Ensaio</button></div></div><div class="vs-actions"><button class="vs-btn" data-pick-folder>Abrir pasta / projeto</button><button class="vs-btn secondary" data-pick-library>Abrir repertório</button><button class="vs-btn secondary" data-pick-zip>Abrir ZIP</button></div><input class="vs-file-input" data-folder type="file" webkitdirectory multiple><input class="vs-file-input" data-library type="file" webkitdirectory multiple><input class="vs-file-input" data-zip type="file" accept=".zip,application/zip"><input class="vs-file-input" data-add-track type="file" accept="audio/*,.wav,.mp3,.flac,.ogg,.opus,.m4a,.aac" multiple><input class="vs-file-input" data-replace-track type="file" accept="audio/*,.wav,.mp3,.flac,.ogg,.opus,.m4a,.aac"><div class="vs-status done"><span data-status-text>Os arquivos permanecem no seu dispositivo.</span><div class="vs-progress"><i data-status-progress></i></div></div><div class="vs-rpp-picker" hidden></div><div class="vs-library-picker" hidden></div><div class="vs-project"><div class="vs-title-row"><div><div class="vs-title"></div><div class="vs-meta"></div></div><div class="vs-project-actions"><button class="vs-mode" data-map-regions disabled>Regiões</button><button class="vs-mode" data-save-project disabled>Salvar projeto</button></div><div class="vs-key"></div></div><div class="vs-region-mapper" hidden><div class="vs-mapper-head"><strong>Mapeamento de regiões</strong><span>Marque o fim de cada parte. Cada região é criada para a esquerda, desde o fim da anterior.</span></div><div class="vs-mapper-controls"><span class="vs-mapper-position" data-mapper-position>Cursor 0:00</span><select class="vs-select vs-region-preset-select" data-region-preset-select aria-label="Escolher região pronta"><option value="">Escolher região…</option></select><input class="vs-text-input" data-custom-region-name type="text" placeholder="Ou digite um nome livre"><button class="vs-btn secondary" type="button" data-add-custom-region>Adicionar região</button><button class="vs-btn secondary" data-close-mapper>Concluir</button></div><div class="vs-region-editor" data-region-editor hidden>
   <div class="vs-region-editor-info">
     <strong data-selected-region-name>Nenhuma região selecionada</strong>
     <span data-selected-region-time></span>
@@ -252,13 +254,34 @@ this.installControlMappingHandlers()}
 
   saveControlMappings(){try{localStorage.setItem("zosma-zlplay:control-mappings",JSON.stringify(this.controlMappings||{}))}catch{}}
 
-  validControlMappingBinding(id,b){const meta=this.controlTargetMeta(id);if(!meta||!b||typeof b!=="object")return false;if(b.type==="key")return meta.kind!=="fader"&&typeof b.code==="string"&&!!b.code;if(b.type==="midi-note")return meta.kind!=="fader"&&Number.isInteger(Number(b.channel))&&Number(b.channel)>=0&&Number(b.channel)<=15&&Number.isInteger(Number(b.note))&&Number(b.note)>=0&&Number(b.note)<=127;if(b.type==="midi-cc")return Number.isInteger(Number(b.channel))&&Number(b.channel)>=0&&Number(b.channel)<=15&&Number.isInteger(Number(b.cc))&&Number(b.cc)>=0&&Number(b.cc)<=127;return false}
-
-  sanitizeControlMappings(raw){const clean={};if(!raw||typeof raw!=="object"||Array.isArray(raw))return clean;for(const [id,b] of Object.entries(raw)){if(!this.validControlMappingBinding(id,b))continue;if(b.type==="key")clean[id]={type:"key",code:String(b.code),key:typeof b.key==="string"?b.key:""};else if(b.type==="midi-note")clean[id]={type:"midi-note",channel:Number(b.channel),note:Number(b.note)};else if(b.type==="midi-cc")clean[id]={type:"midi-cc",channel:Number(b.channel),cc:Number(b.cc)}}return clean}
+  sanitizeControlMappings(raw){
+    const clean={};
+    if(!raw||typeof raw!=="object"||Array.isArray(raw))return clean;
+    const inRange=(value,max)=>Number.isInteger(Number(value))&&Number(value)>=0&&Number(value)<=max;
+    for(const [id,b] of Object.entries(raw)){
+      const meta=this.controlTargetMeta(id);
+      if(!meta||!b||typeof b!=="object")continue;
+      if(b.type==="key"){
+        if(meta.kind!=="fader"&&typeof b.code==="string"&&b.code){
+          clean[id]={type:"key",code:b.code,key:typeof b.key==="string"?b.key:""};
+        }
+        continue;
+      }
+      if(!inRange(b.channel,15))continue;
+      const channel=Number(b.channel);
+      if(b.type==="midi-note"&&inRange(b.note,127))clean[id]={type:b.type,channel,note:Number(b.note)};
+      if(b.type==="midi-cc"&&inRange(b.cc,127)){
+        clean[id]={type:b.type,channel,cc:Number(b.cc)};
+        if(meta.kind==="fader"&&MIDI_CC_MODES.some(([mode])=>mode===b.mode))clean[id].mode=b.mode;
+      }
+      if(b.type==="midi-pitch-bend"&&meta.kind==="fader")clean[id]={type:b.type,channel};
+    }
+    return clean;
+  }
 
   exportControlMappings(){const mappings=this.sanitizeControlMappings(this.controlMappings||{}),count=Object.keys(mappings).length;if(!count){this.status("Nenhum mapeamento salvo para exportar.");return}const payload={format:"zlplay-control-mappings",version:1,exportedAt:new Date().toISOString(),mappings},blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="ZLPlay-Mapeamento.zlmap";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);this.status(`${count} mapeamento(s) exportado(s) para ZLPlay-Mapeamento.zlmap.`)}
 
-  async importControlMappings(file){try{const data=JSON.parse(await file.text()),raw=data?.format==="zlplay-control-mappings"?data.mappings:(data?.mappings||data),clean=this.sanitizeControlMappings(raw),count=Object.keys(clean).length;if(!count)throw new Error("Arquivo sem mapeamentos compatíveis.");this.controlMappings=clean;this.saveControlMappings();this.controlMapTarget=null;this.refreshControlMappingVisuals();this.status(`${count} mapeamento(s) importado(s). Eles valem para todos os projetos neste navegador.`)}catch(e){console.warn("[ZLPlay mapping import]",e);this.status(`Não foi possível importar o mapeamento: ${e.message||"arquivo inválido"}`,true)}}
+  async importControlMappings(file){try{const data=JSON.parse(await file.text()),raw=data?.format==="zlplay-control-mappings"?data.mappings:(data?.mappings||data),clean=this.sanitizeControlMappings(raw),count=Object.keys(clean).length;if(!count)throw new Error("Arquivo sem mapeamentos compatíveis.");this.controlMappings=clean;this.controlMapCcState.clear();this.saveControlMappings();if(Object.values(clean).some(binding=>binding.type!=="key"))void this.initControlMidi();this.controlMapTarget=null;this.refreshControlMappingVisuals();this.status(`${count} mapeamento(s) importado(s). Eles valem para todos os projetos neste navegador.`)}catch(e){console.warn("[ZLPlay mapping import]",e);this.status(`Não foi possível importar o mapeamento: ${e.message||"arquivo inválido"}`,true)}}
 
   clearAllControlMappings(){const count=Object.keys(this.controlMappings||{}).length;if(!count){this.status("Não há mapeamentos salvos.");return}if(!confirm(`Remover os ${count} mapeamento(s) de controles deste navegador?`))return;this.controlMappings={};this.saveControlMappings();this.controlMapTarget=null;this.controlMapCcState.clear();this.refreshControlMappingVisuals();this.status("Todos os mapeamentos de controles foram removidos.")}
 
@@ -283,7 +306,7 @@ this.installControlMappingHandlers()}
     "volume-pad":{label:"Volume Pad",kind:"fader",selector:'[data-map-control="volume-pad"]'},
     "volume-guide":{label:"Volume Guia",kind:"fader",selector:'[data-map-control="volume-guide"]'},
     "volume-bus-vs":{label:"Volume Bus VS",kind:"fader",selector:'[data-map-control="volume-bus-vs"]'}
-  };if(fixed[id])return fixed[id];if(id?.startsWith("pad-note:")){const note=id.slice(9);return{label:`Pad ${note}`,kind:"button",note,selector:"[data-pad-note]"}}return null}
+  };if(Object.hasOwn(fixed,id))return fixed[id];if(id?.startsWith("pad-note:")){const note=id.slice(9);return{label:`Pad ${note}`,kind:"button",note,selector:"[data-pad-note]"}}return null}
 
   controlTargetFromElement(el){if(!(el instanceof Element))return null;const checks=[
     ["[data-play]","transport-play"],["[data-pause]","transport-pause"],["[data-stop]","transport-stop"],["[data-solo-click]","transport-solo-click"],["[data-loop-current]","transport-loop"],["[data-go-start]","transport-start"],["[data-pad-play]","transport-pad-play"],["[data-pad-stop]","transport-pad-stop"],["[data-snap-toggle]","transport-snap"],["[data-library-prev]","library-prev"],["[data-library-order]","library-open"],["[data-library-next]","library-next"],["[data-tap-tempo]","click-tap"],["[data-zoom-out]","zoom-out"],["[data-zoom-in]","zoom-in"]
@@ -291,27 +314,95 @@ this.installControlMappingHandlers()}
 
   controlMappingElements(){const sels=["[data-play]","[data-pause]","[data-stop]","[data-solo-click]","[data-loop-current]","[data-go-start]","[data-pad-play]","[data-pad-stop]","[data-snap-toggle]","[data-library-prev]","[data-library-order]","[data-library-next]","[data-tap-tempo]","[data-zoom-out]","[data-zoom-in]","[data-pad-note]","[data-map-control]"];return[...this.host.querySelectorAll(sels.join(","))]}
 
-  bindingLabel(b){if(!b)return"";if(b.type==="key")return b.code?.replace(/^Key/,"").replace(/^Digit/,"")||b.key||"Tecla";if(b.type==="midi-note")return`Note ${b.note}`;if(b.type==="midi-cc")return`CC ${b.cc}`;return""}
+  bindingLabel(b){if(!b)return"";if(b.type==="key")return b.code?.replace(/^Key/,"").replace(/^Digit/,"")||b.key||"Tecla";if(b.type==="midi-note")return`Note ${b.note}`;if(b.type==="midi-cc")return`CC ${b.cc}${b.mode?" ↔":""}`;if(b.type==="midi-pitch-bend")return`Pitch Bend · ${b.channel+1}`;return""}
 
-  refreshControlMappingVisuals(){for(const el of this.controlMappingElements()){const info=this.controlTargetFromElement(el);el.classList.remove("vs-map-eligible","vs-map-bound","vs-map-awaiting");el.removeAttribute("data-map-binding");if(this.controlMapMode&&(el.matches("[data-zoom-out]")||el.matches("[data-zoom-in]")))el.disabled=false;if(!this.controlMapMode||!info)continue;el.classList.add("vs-map-eligible");const binding=this.controlMappings?.[info.id];if(binding){el.classList.add("vs-map-bound");el.dataset.mapBinding=this.bindingLabel(binding)}if(this.controlMapTarget?.id===info.id)el.classList.add("vs-map-awaiting")}const b=this.$?.("[data-control-map]");if(b){b.classList.toggle("on",!!this.controlMapMode);const label=this.controlMapMode?"Mapeando…":"Mapear";if(b.textContent!==label)b.textContent=label}}
+  refreshControlMappingVisuals(){const choice=this.$("[data-map-input]");
+    const isButton=this.controlMapTarget?.kind==="button";
+    for(const option of choice.options)option.disabled=isButton&&option.hasAttribute("data-map-continuous");
+    if(choice.selectedOptions[0]?.disabled)choice.value="";
+    for(const el of this.controlMappingElements()){const info=this.controlTargetFromElement(el);el.classList.remove("vs-map-eligible","vs-map-bound","vs-map-awaiting");el.removeAttribute("data-map-binding");if(this.controlMapMode&&(el.matches("[data-zoom-out]")||el.matches("[data-zoom-in]")))el.disabled=false;if(!this.controlMapMode||!info)continue;el.classList.add("vs-map-eligible");const binding=this.controlMappings?.[info.id];if(binding){el.classList.add("vs-map-bound");el.dataset.mapBinding=this.bindingLabel(binding)}if(this.controlMapTarget?.id===info.id)el.classList.add("vs-map-awaiting")}const b=this.$?.("[data-control-map]");if(b){b.classList.toggle("on",!!this.controlMapMode);const label=this.controlMapMode?"Mapeando…":"Mapear";if(b.textContent!==label)b.textContent=label}}
 
   async toggleControlMapping(force){this.controlMapMode=typeof force==="boolean"?force:!this.controlMapMode;this.controlMapTarget=null;this.host.classList.toggle("vs-control-mapping",this.controlMapMode);this.refreshControlMappingVisuals();if(this.controlMapMode){this.status("Mapeamento ativo: clique em um controle destacado e depois pressione uma tecla, MIDI Note ou mova um MIDI CC.");await this.initControlMidi()}else{this.setTimelineZoom(this.timelineZoom,false);this.status("Mapeamento de controles encerrado.")}}
 
-  selectControlMappingTarget(info){if(!info)return;this.controlMapTarget={id:info.id,label:info.label,kind:info.kind};this.refreshControlMappingVisuals();const old=this.controlMappings?.[info.id],suffix=old?` Atual: ${this.bindingLabel(old)}.`:"";this.status(info.kind==="fader"?`${info.label}: mova um fader/knob MIDI CC. Delete remove o mapeamento.${suffix}`:`${info.label}: pressione uma tecla, MIDI Note ou MIDI CC. Delete remove o mapeamento.${suffix}`)}
+  selectControlMappingTarget(info){
+    if(!info)return;
+    this.controlMapTarget={id:info.id,label:info.label,kind:info.kind};
+    this.refreshControlMappingVisuals();
+    this.status(info.kind==="fader"?"Mova um fader ou knob MIDI. Delete remove o mapeamento.":"Acione um controle MIDI ou pressione uma tecla no modo Automático. Delete remove o mapeamento.");
+  }
 
-  sameControlBinding(a,b){return a&&b&&a.type===b.type&&(a.type==="key"?a.code===b.code:a.type==="midi-note"?a.note===b.note&&a.channel===b.channel:a.cc===b.cc&&a.channel===b.channel)}
+  sameControlBinding(a,b){return a&&b&&a.type===b.type&&(a.type==="key"?a.code===b.code:a.type==="midi-note"?a.note===b.note&&a.channel===b.channel:a.channel===b.channel&&(a.type==="midi-pitch-bend"||a.cc===b.cc))}
 
-  assignControlMapping(id,binding){for(const [other,b] of Object.entries(this.controlMappings||{}))if(other!==id&&this.sameControlBinding(b,binding))delete this.controlMappings[other];this.controlMappings[id]=binding;this.saveControlMappings();const meta=this.controlTargetMeta(id);this.status(`${meta?.label||id} mapeado para ${this.bindingLabel(binding)}.`);this.controlMapTarget=null;this.refreshControlMappingVisuals()}
+  assignControlMapping(id,binding){for(const [other,b] of Object.entries(this.controlMappings||{}))if(other!==id&&this.sameControlBinding(b,binding))delete this.controlMappings[other];this.controlMappings[id]=binding;this.controlMapCcState.clear();this.saveControlMappings();const meta=this.controlTargetMeta(id);this.status(`${meta?.label||id} mapeado para ${this.bindingLabel(binding)}.`);this.controlMapTarget=null;this.refreshControlMappingVisuals()}
 
   clearSelectedControlMapping(){const id=this.controlMapTarget?.id;if(!id)return;if(this.controlMappings?.[id]){delete this.controlMappings[id];this.saveControlMappings();this.status(`${this.controlMapTarget.label}: mapeamento removido.`)}else this.status(`${this.controlMapTarget.label}: nenhum mapeamento salvo.`);this.controlMapTarget=null;this.refreshControlMappingVisuals()}
 
-  installControlMappingHandlers(){if(this.controlMapHandlersInstalled)return;this.controlMapHandlersInstalled=true;this.host.addEventListener("pointerdown",e=>{if(!this.controlMapMode)return;const info=this.controlTargetFromElement(e.target);if(!info)return;e.preventDefault();e.stopPropagation();this.selectControlMappingTarget(info)},true);this.host.addEventListener("click",e=>{if(!this.controlMapMode)return;const info=this.controlTargetFromElement(e.target);if(!info)return;e.preventDefault();e.stopPropagation();this.selectControlMappingTarget(info)},true);this._controlMapKeyHandler=e=>{const tag=e.target?.tagName,typing=e.target?.isContentEditable||tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT";if(this.controlMapMode&&this.controlMapTarget){if(e.code==="Escape"){e.preventDefault();this.controlMapTarget=null;this.refreshControlMappingVisuals();this.status("Seleção de mapeamento cancelada.");return}if(e.code==="Delete"||e.code==="Backspace"){e.preventDefault();this.clearSelectedControlMapping();return}if(this.controlMapTarget.kind==="fader"){if(!typing){e.preventDefault();this.status(`${this.controlMapTarget.label}: use MIDI CC para controlar o valor do fader.`)}return}if(typing)return;e.preventDefault();e.stopImmediatePropagation();this.assignControlMapping(this.controlMapTarget.id,{type:"key",code:e.code,key:e.key});return}if(this.controlMapMode||typing||e.repeat)return;for(const [id,b] of Object.entries(this.controlMappings||{})){if(b.type==="key"&&b.code===e.code){e.preventDefault();e.stopImmediatePropagation();this.executeMappedControl(id);return}}};document.addEventListener("keydown",this._controlMapKeyHandler,true);this.controlMapObserver=new MutationObserver(records=>{if(!this.controlMapMode)return;const changedElements=records.some(r=>[...r.addedNodes,...r.removedNodes].some(n=>n.nodeType===1));if(changedElements)this.refreshControlMappingVisuals()});this.controlMapObserver.observe(this.host,{childList:true,subtree:true})}
+  installControlMappingHandlers(){if(this.controlMapHandlersInstalled)return;this.controlMapHandlersInstalled=true;
+    const choice=this.$("[data-map-input]");
+    for(const [mode,label] of MIDI_CC_MODES){
+      const option=new Option(label,mode);
+      option.dataset.mapContinuous="";
+      choice.add(option);
+    }
+    this.host.addEventListener("pointerdown",e=>{if(!this.controlMapMode)return;const info=this.controlTargetFromElement(e.target);if(!info)return;e.preventDefault();e.stopPropagation();this.selectControlMappingTarget(info)},true);this.host.addEventListener("click",e=>{if(!this.controlMapMode)return;const info=this.controlTargetFromElement(e.target);if(!info)return;e.preventDefault();e.stopPropagation();this.selectControlMappingTarget(info)},true);this._controlMapKeyHandler=e=>{const tag=e.target?.tagName,typing=e.target?.isContentEditable||tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT";if(this.controlMapMode&&this.controlMapTarget){if(e.target===choice)return;if(e.code==="Escape"){e.preventDefault();this.controlMapTarget=null;this.refreshControlMappingVisuals();this.status("Seleção de mapeamento cancelada.");return}if(e.code==="Delete"||e.code==="Backspace"){e.preventDefault();this.clearSelectedControlMapping();return}if(typing)return;e.preventDefault();e.stopImmediatePropagation();if(this.controlMapTarget.kind==="fader"||choice.value)return;this.assignControlMapping(this.controlMapTarget.id,{type:"key",code:e.code,key:e.key});return}if(this.controlMapMode||typing||e.repeat)return;for(const [id,b] of Object.entries(this.controlMappings||{})){if(b.type==="key"&&b.code===e.code){e.preventDefault();e.stopImmediatePropagation();this.executeMappedControl(id);return}}};document.addEventListener("keydown",this._controlMapKeyHandler,true);this.controlMapObserver=new MutationObserver(records=>{if(!this.controlMapMode)return;const changedElements=records.some(r=>[...r.addedNodes,...r.removedNodes].some(n=>n.nodeType===1));if(changedElements)this.refreshControlMappingVisuals()});this.controlMapObserver.observe(this.host,{childList:true,subtree:true})}
 
-  async initControlMidi(){if(this.controlMapMidiAccess){this.bindControlMidiInputs();return}if(!navigator.requestMIDIAccess){this.status("Mapeamento ativo. Web MIDI não está disponível neste navegador; teclado continua disponível.");return}try{this.controlMapMidiAccess=await navigator.requestMIDIAccess({sysex:false});this.bindControlMidiInputs();this.controlMapMidiAccess.onstatechange=()=>this.bindControlMidiInputs();this.status(`Mapeamento ativo. MIDI detectado: ${this.controlMapMidiAccess.inputs.size} entrada(s). Clique em um controle para mapear.`)}catch(e){console.warn("[ZLPlay MIDI]",e);this.status("Mapeamento ativo. Acesso MIDI não autorizado; teclado continua disponível.")}}
+  async initControlMidi(){
+    if(this.controlMapMidiAccess)return;
+    if(!navigator.requestMIDIAccess){
+      if(this.controlMapMode)this.status("Mapeamento ativo. Web MIDI não está disponível neste navegador; teclado continua disponível.");
+      return;
+    }
+    try{
+      this.controlMapMidiRequest??=navigator.requestMIDIAccess({sysex:false});
+      this.controlMapMidiAccess=await this.controlMapMidiRequest;
+      this.bindControlMidiInputs();
+      this.controlMapMidiAccess.onstatechange=()=>this.bindControlMidiInputs();
+      if(this.controlMapMode&&!this.controlMapTarget)this.status(`Mapeamento ativo. MIDI detectado: ${this.controlMapMidiAccess.inputs.size} entrada(s). Clique em um controle para mapear.`);
+    }catch(e){
+      console.warn("[ZLPlay MIDI]",e);
+      if(this.controlMapMode)this.status("Mapeamento ativo. Acesso MIDI não autorizado; teclado continua disponível.");
+    }finally{
+      this.controlMapMidiRequest=null;
+    }
+  }
 
   bindControlMidiInputs(){if(!this.controlMapMidiAccess)return;for(const input of this.controlMapMidiAccess.inputs.values())input.onmidimessage=e=>this.handleControlMidiMessage(e)}
 
-  handleControlMidiMessage(e){const [s,d1,d2]=e.data||[],type=s&0xf0,channel=s&0x0f;if(type===0x90&&d2>0){if(this.controlMapMode&&this.controlMapTarget){if(this.controlMapTarget.kind==="fader"){this.status(`${this.controlMapTarget.label}: para fader use MIDI CC.`);return}this.assignControlMapping(this.controlMapTarget.id,{type:"midi-note",channel,note:d1});return}for(const [id,b] of Object.entries(this.controlMappings||{}))if(b.type==="midi-note"&&b.channel===channel&&b.note===d1)this.executeMappedControl(id);return}if(type!==0xb0)return;if(this.controlMapMode&&this.controlMapTarget){this.assignControlMapping(this.controlMapTarget.id,{type:"midi-cc",channel,cc:d1});return}for(const [id,b] of Object.entries(this.controlMappings||{})){if(b.type!=="midi-cc"||b.channel!==channel||b.cc!==d1)continue;const meta=this.controlTargetMeta(id);if(meta?.kind==="fader")this.executeMappedControl(id,d2/127);else{const key=`${channel}:${d1}:${id}`,last=this.controlMapCcState.get(key)||0;this.controlMapCcState.set(key,d2);if(d2>=64&&last<64)this.executeMappedControl(id)}}}
+  handleControlMidiMessage(e){
+    const message=readMidiControl(e.data);
+    if(!message)return;
+    const {binding,value}=message;
+    if(this.controlMapMode){
+      const target=this.controlMapTarget;
+      if(!target||(binding.type==="midi-pitch-bend"&&target.kind!=="fader"))return;
+      const choice=this.$("[data-map-input]").value;
+      const relative=MIDI_CC_MODES.some(([mode])=>mode===choice);
+      const expected=relative?"midi-cc":choice;
+      if(expected&&expected!==binding.type)return;
+      const previous=this.controlMappings[target.id];
+      if(relative)binding.mode=choice;
+      else if(!choice&&this.sameControlBinding(previous,binding)&&previous.mode)binding.mode=previous.mode;
+      this.assignControlMapping(target.id,binding);
+      return;
+    }
+    for(const [id,mapped] of Object.entries(this.controlMappings||{})){
+      if(!this.sameControlBinding(mapped,binding))continue;
+      const meta=this.controlTargetMeta(id);
+      if(meta?.kind==="fader"){
+        const slider=this.host.querySelector(meta.selector);
+        if(!slider)continue;
+        const min=Number(slider.min||0),max=Number(slider.max||1);
+        const current=max>min?(Number(slider.value)-min)/(max-min):0;
+        const next=midiFaderValue(mapped,value,current);
+        if(next!==null)this.executeMappedControl(id,next);
+      }else if(binding.type==="midi-note")this.executeMappedControl(id);
+      else if(binding.type==="midi-cc"){
+        const last=this.controlMapCcState.get(id)||0;
+        this.controlMapCcState.set(id,value);
+        if(value>=64&&last<64)this.executeMappedControl(id);
+      }
+    }
+  }
 
   executeMappedControl(id,value=null){const meta=this.controlTargetMeta(id);if(!meta)return;if(meta.kind==="fader"){const nodes=[...this.host.querySelectorAll(meta.selector)];for(const el of nodes){if(!(el instanceof HTMLInputElement))continue;const min=Number(el.min||0),max=Number(el.max||1),v=min+(max-min)*Math.max(0,Math.min(1,Number(value)||0));el.value=String(v);el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}))}return}let node;if(meta.note)node=[...this.host.querySelectorAll("[data-pad-note]")].find(el=>el.dataset.padNote===meta.note);else node=this.host.querySelector(meta.selector);node?.click()}
 
