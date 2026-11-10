@@ -8,6 +8,8 @@ process.chdir(fileURLToPath(new URL('../',import.meta.url)));
 const args=process.argv.slice(2),arch=args.includes('--arch')?args[args.indexOf('--arch')+1]:'arm64';
 if(!['arm64','x64'].includes(arch))throw Error('Use --arch arm64 or --arch x64.');
 const env={...process.env,ZLPLAY_MAC_ARCH:arch};
+const localPreview=args.includes('--local-preview');
+const output=localPreview?'dist/macos-preview-'+arch:'dist/macos-'+arch;
 function run(exe,argv){const r=spawnSync(exe,argv,{env,stdio:'inherit'});if(r.error)throw r.error;if(r.status!==0)throw Error('Failed: '+exe);}
 run(process.execPath,['scripts/build-native.mjs']);
 run(process.execPath,['scripts/build-speech.mjs']);
@@ -37,10 +39,14 @@ if(revision.status!==0)throw Error('Cannot identify source commit.');
 const dirty=spawnSync('git',['status','--porcelain','--untracked-files=no'],{encoding:'utf8'});
 if(dirty.status!==0)throw Error('Cannot identify source status.');
 const sourceCommit=process.env.ZLPLAY_SOURCE_COMMIT||revision.stdout.trim();
-const licenses=prepareMacLicenses(process.cwd(),path.resolve('.cache','macos-licenses-'+arch),{commit:revision.stdout.trim(),sourceCommit});
+const licenses=prepareMacLicenses(process.cwd(),path.resolve('.cache','macos-licenses-'+arch),{commit:revision.stdout.trim(),sourceCommit,localPreview});
+// The custom Electron ZIP ships these beside Electron.app, outside the bundle.
+for(const [source,target] of [['LICENSE','LICENSE.electron.txt'],['LICENSES.chromium.html','LICENSES.chromium.html']]){
+  fs.copyFileSync(path.join(electronDist,source),path.join(licenses,target));
+}
 await build({targets:Platform.MAC.createTarget(args.includes('--dir')?['dir']:['dmg','zip'],arch==='arm64'?Arch.arm64:Arch.x64),publish:'never',config:{
-  directories:{output:'dist/macos-'+arch},electronDist,
-  extraMetadata:{zlplayBuild:{commit:revision.stdout.trim(),arch,dirty:!!dirty.stdout.trim(),minimumMacOS:'15.0',sourceCommit}},
+  directories:{output},electronDist,
+  extraMetadata:{zlplayBuild:{commit:revision.stdout.trim(),arch,dirty:!!dirty.stdout.trim(),minimumMacOS:'15.0',sourceCommit,...(localPreview?{localPreview}:{})}},
   // electron-builder concatenates config arrays; replace the inherited Intel
   // resources before it creates file matchers, rather than appending to them.
   beforePack:context=>{
@@ -48,7 +54,7 @@ await build({targets:Platform.MAC.createTarget(args.includes('--dir')?['dir']:['
   },
   mac:{minimumSystemVersion:'15.0',identity:process.env.ZLPLAY_MAC_IDENTITY||'-',artifactName:'ZLPlay-${version}-macOS-'+arch+'.${ext}'},
 }});
-const bundle=path.join('dist','macos-'+arch,arch==='arm64'?'mac-arm64':'mac',metadata.productName+'.app','Contents');
+const bundle=path.join(output,arch==='arm64'?'mac-arm64':'mac',metadata.productName+'.app','Contents');
 for(const file of ['MacOS/'+metadata.productName,'Resources/native/zlplay-audio','Resources/native/zlplay-file-types','Resources/native/zlplay-document-icon','Resources/speech/whisper-cli'])run('/usr/bin/lipo',[path.join(bundle,file),'-verify_arch',arch==='x64'?'x86_64':'arm64']);
 if(!fs.readFileSync(path.join(bundle,'Resources/speech',model)).equals(fs.readFileSync(path.join(speech,model))))throw Error('Packaged speech model differs from the verified model.');
 console.log('Packaged '+arch+' architecture and offline model verified.');

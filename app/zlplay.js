@@ -218,7 +218,7 @@ this.installControlMappingHandlers()}
   async readManifest(file){const data=JSON.parse(await file.text());if(!data||data.format!=="tom-certo-project")throw Error("Arquivo .zlplay inválido.");if((data.formatVersion||1)>1)throw Error("Este projeto foi criado por uma versão mais nova do Tom Certo.");return data}
   showLibrary(files,projects,title){const box=this.$(".vs-library-picker");box.hidden=false;box.innerHTML=`<h3>${esc(title)}</h3><p>${projects.length} projeto(s) disponível(is). Cada projeto usa somente arquivos da própria pasta.</p><div class="vs-library-grid">${projects.map((p,i)=>`<button type="button" data-library-index="${i}"><strong>${esc(baseName(p.name).replace(/\.zlplay$/i,""))}</strong><small>${esc(this.dirName(p.name)||"Pasta selecionada")}</small></button>`).join("")}</div>`;box.querySelectorAll("[data-library-index]").forEach(b=>b.onclick=async()=>{box.hidden=true;await this.loadTomCerto(files,projects[+b.dataset.libraryIndex])});this.status("Escolha uma música do repertório.")}
   async loadTomCerto(files,manifestFile){try{this.status("Abrindo projeto Tom Certo...",false,8);const manifest=await this.readManifest(manifestFile),projectDir=this.dirName(manifestFile.name),prefix=projectDir?projectDir+"/":"",scoped=files.filter(f=>{const path=this.cleanPath(f.name);return prefix?path.startsWith(prefix):!path.includes("/")});const lookup=new Map(scoped.map(f=>[this.cleanPath(f.name),f])),audioFiles=[],missing=[];for(const t of manifest.tracks||[])for(const it of t.items||[{file:t.file}]){const rel=this.cleanPath(it.file);if(rel.split("/").includes("..")||rel.startsWith("/")){missing.push(rel);continue}const full=prefix+rel,f=lookup.get(full);if(f&&!audioFiles.includes(f))audioFiles.push(f);else if(!f)missing.push(rel)}if(missing.length)throw Error(`Arquivos do projeto não encontrados na própria pasta: ${[...new Set(missing)].join(", ")}`);await this.loadProjectManifest(scoped,manifest,manifestFile,projectDir)}catch(e){console.error(e);this.status(e.message||"Não foi possível abrir o projeto .zlplay.",true)}}
-  async loadProjectManifest(files,manifest,manifestFile,projectDir){this.stop();this.tracks=[];this.duration=0;this.groupStates=new Map();this.vsVolume=1;this.vsMute=false;this.vsSolo=false;this.currentProjectDir=projectDir||"";this.currentProjectFiles=files;this.projectManifest=manifest;this.tempoSource="zlplay";const prefix=this.currentProjectDir?this.currentProjectDir+"/":"",lookup=new Map(files.map(f=>[this.cleanPath(f.name),f])),decoded=new Map();this.tempo={bpm:Number(manifest.song?.bpm)||120,numerator:Number(manifest.song?.timeSignature?.numerator)||4,denominator:Number(manifest.song?.timeSignature?.denominator)||4,points:[{time:0,bpm:Number(manifest.song?.bpm)||120}]};this.rawSections={markers:[],regions:(manifest.regions||[]).map(r=>({name:String(r.name||"Região"),start:Number(r.start)||0,end:Number(r.end)||0,color:String(r.color||""),type:"region"}))};let n=0;for(const spec of manifest.tracks||[]){const items=[];for(const raw of spec.items||[{file:spec.file,position:0,offset:0,length:null,pitch:0}]){const rel=this.cleanPath(raw.file);if(rel.startsWith("/")||(rel.split("/").includes("..")&&!window.zlplayNative))continue;const f=lookup.get(prefix+rel);if(!f)continue;let buffer=decoded.get(f.name);if(!buffer){this.status(`Preparando track ${++n}...`,false,15+Math.min(70,n*5));buffer=await this.decodeProjectAudio(f);decoded.set(f.name,buffer)}const it={position:Number(raw.position)||0,offset:Number(raw.offset)||0,length:raw.length==null?null:Number(raw.length),pitch:Number(raw.pitch)||0,file:f.name,projectFile:rel,buffer};items.push(it);this.duration=Math.max(this.duration,it.position+(it.length||Math.max(0,buffer.duration-it.offset)))}if(items.length)this.tracks.push({name:String(spec.name||baseName(items[0].file).replace(/\.[^.]+$/,"")),group:String(spec.group||"VS"),volume:Number(spec.volume??1),originalVolume:Number(spec.originalVolume??spec.volume??1),mute:!!spec.mute,solo:!!spec.solo,originalMute:!!spec.originalMute,originalSolo:!!spec.originalSolo,pan:Number(spec.pan)||0,output:spec.output||null,pitchEnabled:typeof spec.pitchEnabled==="boolean"?spec.pitchEnabled:undefined,items,restored:true})}if(!this.tracks.length)throw Error("Nenhuma track válida foi encontrada na pasta deste projeto.");this.vsPan=Number(manifest.mixer?.vsPan)||0;this.vsVolume=Number(manifest.mixer?.vsVolume??1);this.vsMute=!!manifest.mixer?.vsMute;this.vsSolo=!!manifest.mixer?.vsSolo;this.groupPans=new Map(manifest.mixer?.groupPans||[]);this.groupStates=new Map();for(const [name,state] of manifest.mixer?.groupStates||[])this.groupStates.set(name,{volume:Number(state?.volume??1),pan:Number(state?.pan??0),mute:!!state?.mute,solo:!!state?.solo,output:state?.output||null});for(const [name,pan] of this.groupPans)this.ensureGroupState(name).pan=Number(pan)||0;for(const t of this.tracks)if(!this.isSpecialTrack(t))this.ensureGroupState(t.group||"VS");this.metroPan=Number(manifest.settings?.metroPan)||0;this.timelineZoom=Math.max(1,Math.min(8,Number(manifest.settings?.timelineZoom)||1));this.snapEnabled=manifest.settings?.snapEnabled!==false;this.toggleSnap(this.snapEnabled);this.finishLoadedProject(manifest.song?.title||baseName(manifestFile.name).replace(/\.zlplay$/i,""),manifest.song?.key||"Não informado",false,true);this.status("Projeto .zlplay aberto. Os stems foram carregados somente da pasta deste projeto.")}
+  async loadProjectManifest(files,manifest,manifestFile,projectDir){this.stop();this.tracks=[];this.duration=0;this.groupStates=new Map();this.vsVolume=1;this.vsMute=false;this.vsSolo=false;this.currentProjectDir=projectDir||"";this.currentProjectFiles=files;this.projectManifest=manifest;this.tempoSource="zlplay";const prefix=this.currentProjectDir?this.currentProjectDir+"/":"",lookup=new Map(files.map(f=>[this.cleanPath(f.name),f])),decoded=new Map();this.tempo={bpm:Number(manifest.song?.bpm)||120,numerator:Number(manifest.song?.timeSignature?.numerator)||4,denominator:Number(manifest.song?.timeSignature?.denominator)||4,points:[{time:0,bpm:Number(manifest.song?.bpm)||120}]};this.rawSections={markers:[],regions:(manifest.regions||[]).map(r=>({name:String(r.name||"Região"),start:Number(r.start)||0,end:Number(r.end)||0,color:String(r.color||""),type:"region"}))};let n=0;for(const spec of manifest.tracks||[]){const items=[];for(const raw of spec.items||[{file:spec.file,position:0,offset:0,length:null,pitch:0}]){const rel=this.cleanPath(raw.file);if(rel.startsWith("/")||(rel.split("/").includes("..")&&!window.zlplayNative))continue;const f=lookup.get(prefix+rel);if(!f)continue;let buffer=decoded.get(f.name);if(!buffer){this.status(`Preparando track ${++n}...`,false,15+Math.min(70,n*5));buffer=await this.decodeProjectAudio(f);decoded.set(f.name,buffer)}const it={position:Number(raw.position)||0,offset:Number(raw.offset)||0,length:raw.length==null?null:Number(raw.length),pitch:Number(raw.pitch)||0,muted:raw.muted===true,effects:raw.effects,displayName:raw.displayName,file:f.name,projectFile:rel,buffer};items.push(it);this.duration=Math.max(this.duration,it.position+(it.length||Math.max(0,buffer.duration-it.offset)))}if(items.length)this.tracks.push({name:String(spec.name||baseName(items[0].file).replace(/\.[^.]+$/,"")),group:String(spec.group||"VS"),volume:Number(spec.volume??1),originalVolume:Number(spec.originalVolume??spec.volume??1),mute:!!spec.mute,solo:!!spec.solo,originalMute:!!spec.originalMute,originalSolo:!!spec.originalSolo,pan:Number(spec.pan)||0,output:spec.output||null,pitchEnabled:typeof spec.pitchEnabled==="boolean"?spec.pitchEnabled:undefined,items,restored:true})}if(!this.tracks.length)throw Error("Nenhuma track válida foi encontrada na pasta deste projeto.");this.vsPan=Number(manifest.mixer?.vsPan)||0;this.vsVolume=Number(manifest.mixer?.vsVolume??1);this.vsMute=!!manifest.mixer?.vsMute;this.vsSolo=!!manifest.mixer?.vsSolo;this.groupPans=new Map(manifest.mixer?.groupPans||[]);this.groupStates=new Map();for(const [name,state] of manifest.mixer?.groupStates||[])this.groupStates.set(name,{volume:Number(state?.volume??1),pan:Number(state?.pan??0),mute:!!state?.mute,solo:!!state?.solo,output:state?.output||null});for(const [name,pan] of this.groupPans)this.ensureGroupState(name).pan=Number(pan)||0;for(const t of this.tracks)if(!this.isSpecialTrack(t))this.ensureGroupState(t.group||"VS");this.metroPan=Number(manifest.settings?.metroPan)||0;this.timelineZoom=Math.max(1,Math.min(8,Number(manifest.settings?.timelineZoom)||1));this.snapEnabled=manifest.settings?.snapEnabled!==false;this.toggleSnap(this.snapEnabled);this.finishLoadedProject(manifest.song?.title||baseName(manifestFile.name).replace(/\.zlplay$/i,""),manifest.song?.key||"Não informado",false,true);this.status("Projeto .zlplay aberto. Os stems foram carregados somente da pasta deste projeto.")}
   finishLoadedProject(project,key,isOriginal=false,isTomCerto=false){this.projectTempo=JSON.parse(JSON.stringify(this.tempo));this.savedProjectTempo=this.tempoSource==="zlplay"?JSON.parse(JSON.stringify(this.tempo)):null;this.freeTempoOverride=false;this.buildSections();for(const t of this.tracks)if(!this.isSpecialTrack(t))this.ensureGroupState(t.group||"VS");this.projectId=`${project}|${this.tracks.map(t=>t.name).join("|")}`;this.clickSource="native";this.applyClickSource();this.drawTracks();this.drawSections();this.setMeterFromProject();this.$(".vs-title").textContent=project;this.currentProjectName=project;this.projectKey=key||"Não informado";this.liveTranspose=0;this.drawKeyControl(isOriginal);const bpmInput=this.$("[data-bpm-input]");if(bpmInput)bpmInput.value=String(Math.round(this.tempo.bpm*100)/100);this.$(".vs-meta").innerHTML=`<span class="vs-pill">${this.tracks.length} tracks</span><span class="vs-pill">${fmt(this.duration)}</span><span class="vs-pill">Compasso ${this.tempo.numerator}/${this.tempo.denominator}</span>${this.sections.length?`<span class="vs-pill">${this.sections.length} ${this.sections.length===1?"região":"regiões"}</span>`:""}${isTomCerto?'<span class="vs-pill">Projeto .zlplay</span>':''}`;this.$("[data-progress]").max=this.duration;this.$(".vs-project").classList.add("active");this.$("[data-mode]").disabled=false;this.$("[data-map-regions]").disabled=false;this.$("[data-save-project]").disabled=false;this.padManualOverride=false;this.padNote=this.padAutoNote();this.preloadPad(this.padNote);this.updatePadUi();this.standaloneBpm=Number(this.tempo.bpm)||120;this.tapTimes=[];this.updateTapTempoUi()}
   projectBpm(){return Math.max(20,Math.min(400,Number(this.projectTempo?.bpm??this.tempo?.bpm)||120))}
   restoreProjectTempo(useSaved=false){this.freeTempoOverride=false;const authoritative=useSaved&&this.tempoSource==="zlplay"&&this.savedProjectTempo?this.savedProjectTempo:this.projectTempo;if(authoritative){if(useSaved&&this.tempoSource==="zlplay")this.projectTempo=JSON.parse(JSON.stringify(authoritative));const numerator=this.tempo?.numerator??authoritative.numerator,denominator=this.tempo?.denominator??authoritative.denominator;this.tempo={...JSON.parse(JSON.stringify(authoritative)),numerator,denominator}}const bpm=Math.max(20,Math.min(400,Number(authoritative?.bpm??this.tempo?.bpm)||120));this.standaloneBpm=bpm;const input=this.$("[data-bpm-input]");if(input)input.value=String(Math.round(bpm*100)/100);this.updateTapTempoUi();this.drawSections();return bpm}
@@ -236,12 +236,12 @@ this.installControlMappingHandlers()}
   saveSelectedRegionName(){const i=this.selectedRegionIndex;if(i<0||!this.regionMarks[i])return;const input=this.$("[data-selected-region-input]"),name=input.value.trim();if(!name)return;this.regionMarks[i].name=name;this.commitRegionMarks();this.status(`Região renomeada para ${name}.`)}
   deleteSelectedRegion(){const i=this.selectedRegionIndex;if(i<0||!this.regionMarks[i])return;const name=this.regionMarks[i].name;this.regionMarks.splice(i,1);this.selectedRegionIndex=-1;this.commitRegionMarks();this.renderRegionEditor();this.status(`${name} excluída.`)}
   markProjectTempoSaved(){this.savedProjectTempo=JSON.parse(JSON.stringify(this.projectTempo||this.tempo));if(this.tempoSource!=="rpp")this.tempoSource="zlplay";this.freeTempoOverride=false}
-  projectPayload(){return{format:"tom-certo-project",formatVersion:1,appVersion:"2.8.1",song:{title:this.currentProjectName||"Projeto Tom Certo",bpm:this.projectBpm(),timeSignature:{numerator:this.tempo?.numerator||4,denominator:this.tempo?.denominator||4},key:this.projectKey||"Não informado",duration:this.duration},tracks:this.tracks.map(t=>({name:t.name,group:t.group||"VS",volume:t.volume,originalVolume:t.originalVolume,mute:t.mute,solo:t.solo,originalMute:t.originalMute,originalSolo:t.originalSolo,pan:t.pan||0,output:t.output||null,pitchEnabled:typeof t.pitchEnabled==="boolean"?t.pitchEnabled:undefined,items:(t.items||[]).map(it=>({file:it.projectFile||this.relativeToProject(it.file),position:it.position||0,offset:it.offset||0,length:it.length,pitch:it.pitch||0}))})),regions:this.sections.map(s=>({name:s.name,start:s.start,end:s.end,color:s.color||""})),mixer:{vsPan:this.vsPan||0,vsVolume:Number(this.vsVolume??1),vsMute:!!this.vsMute,vsSolo:!!this.vsSolo,groupPans:[...this.allGroupNames().map(name=>[name,this.ensureGroupState(name).pan])],groupStates:[...this.groupStates.entries()].map(([name,state])=>[name,{volume:Number(state.volume??1),pan:Number(state.pan??0),mute:!!state.mute,solo:!!state.solo,output:state.output||null}])},settings:{metroPan:this.metroPan||0,timelineZoom:this.timelineZoom||1,snapEnabled:this.snapEnabled!==false}}}
+  projectPayload(){return{format:"tom-certo-project",formatVersion:1,appVersion:"2.8.1",song:{title:this.currentProjectName||"Projeto Tom Certo",bpm:this.projectBpm(),timeSignature:{numerator:this.tempo?.numerator||4,denominator:this.tempo?.denominator||4},key:this.projectKey||"Não informado",duration:this.duration},tracks:this.tracks.map(t=>({name:t.name,group:t.group||"VS",volume:t.volume,originalVolume:t.originalVolume,mute:t.mute,solo:t.solo,originalMute:t.originalMute,originalSolo:t.originalSolo,pan:t.pan||0,output:t.output||null,pitchEnabled:typeof t.pitchEnabled==="boolean"?t.pitchEnabled:undefined,items:(t.items||[]).map(it=>({file:it.projectFile||this.relativeToProject(it.file),position:it.position||0,offset:it.offset||0,length:it.length,muted:it.muted||undefined,effects:it.effects,displayName:it.displayName,pitch:it.pitch||0}))})),regions:this.sections.map(s=>({name:s.name,start:s.start,end:s.end,color:s.color||""})),mixer:{vsPan:this.vsPan||0,vsVolume:Number(this.vsVolume??1),vsMute:!!this.vsMute,vsSolo:!!this.vsSolo,groupPans:[...this.allGroupNames().map(name=>[name,this.ensureGroupState(name).pan])],groupStates:[...this.groupStates.entries()].map(([name,state])=>[name,{volume:Number(state.volume??1),pan:Number(state.pan??0),mute:!!state.mute,solo:!!state.solo,output:state.output||null}])},settings:{metroPan:this.metroPan||0,timelineZoom:this.timelineZoom||1,snapEnabled:this.snapEnabled!==false}}}
   async saveProjectFile(){if(!this.tracks.length)return;if(this.tempoSource!=="rpp"&&!this.freeTempoOverride){const input=this.$("[data-bpm-input]"),bpm=Math.max(20,Math.min(400,Number(input?.value)||Number(this.tempo?.bpm)||120));this.standaloneBpm=bpm;this.tempo={...this.tempo,bpm,points:[{time:0,bpm}]};this.projectTempo=JSON.parse(JSON.stringify(this.tempo));if(input)input.value=String(Math.round(bpm*100)/100);this.updateTapTempoUi()}const text=JSON.stringify(this.projectPayload(),null,2),safe=(this.currentProjectName||"projeto").replace(/[\\/:*?"<>|]+/g,"-").trim()||"projeto",name=`${safe}.zlplay`;try{if(window.showSaveFilePicker){const handle=await window.showSaveFilePicker({suggestedName:name,types:[{description:"Projeto Tom Certo",accept:{"application/json":[".zlplay"]}}]});const writable=await handle.createWritable();await writable.write(text);await writable.close();this.markProjectTempoSaved();await this.afterProjectSaved?.(handle,text);this.status(`Projeto salvo como ${name}. Mantenha-o na mesma pasta dos stems.`);return}}catch(e){if(e?.name==="AbortError")return}const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:"application/json"}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);this.markProjectTempoSaved();this.status(`Projeto ${name} gerado. Coloque-o na mesma pasta dos stems.`)}
   chooseRpp(files,rpps){const box=this.$(".vs-rpp-picker");box.hidden=false;box.innerHTML=`<h3>Qual RPP representa o Original?</h3><p>Escolha o arquivo que representa o tom original dos áudios.</p><div class="vs-rpp-row"><select class="vs-select">${rpps.map((r,i)=>`<option value="${i}">${esc(baseName(r.name))} — ${esc(flatNote(rppKey(r.name)||"Não informado"))}</option>`).join("")}</select><button class="vs-btn">Abrir projeto</button></div>`;box.querySelector("button").onclick=()=>{const rpp=rpps[+box.querySelector("select").value];box.hidden=true;this.load(files,rpp,true)};this.status("Escolha o tom/projeto que deseja estudar.")}
   async load(files,chosenRpp=null){
     this.stop();this.tracks=[];this.duration=0;this.groupStates=new Map();this.vsVolume=1;this.vsMute=false;this.vsSolo=false;this.host.classList.remove("vs-mode-rehearsal");this.$("[data-mode]").textContent="Modo Ensaio";this.$("[data-mode]").disabled=true;if(!this.currentProjectName)this.$(".vs-project").classList.remove("active");this.status("Analisando projeto...",false,8);try{
-      const projects=files.filter(f=>/\.zlplay$/i.test(f.name));if(projects.length===1){await this.loadTomCerto(files,projects[0]);return}if(projects.length>1){this.showLibrary(files,projects,"Projetos Tom Certo encontrados");return}const rpps=files.filter(f=>/\.rpp$/i.test(f.name)),audios=files.filter(f=>AUDIO_EXT.test(f.name));if(!audios.length)throw Error("Nenhuma track de áudio foi encontrada.");this.currentProjectFiles=files;this.currentProjectDir=this.dirName(audios[0]?.name||"");this.projectManifest=null;if(rpps.length>1&&!chosenRpp){this.chooseRpp(files,rpps);return}this.$(".vs-rpp-picker").hidden=true;
+      const projects=files.filter(f=>/\.zlplay$/i.test(f.name));if(projects.length===1){await this.loadTomCerto(files,projects[0]);return}if(projects.length>1){this.showLibrary(files,projects,"Projetos Tom Certo encontrados");return}const rpps=files.filter(f=>/\.rpp$/i.test(f.name)),audios=files.filter(f=>AUDIO_EXT.test(f.name));if(!audios.length)throw Error("Nenhuma track de áudio foi encontrada.");this.currentProjectFiles=files;this.currentProjectDir=this.dirName(chosenRpp?.name||rpps[0]?.name||audios[0]?.name||"");this.projectManifest=null;if(rpps.length>1&&!chosenRpp){this.chooseRpp(files,rpps);return}this.$(".vs-rpp-picker").hidden=true;
       const rpp=chosenRpp||rpps[0];this.tempoSource=rpp?"rpp":"editable";const projectSource=rpp?rpp.name:(this.currentProjectDir?baseName(this.currentProjectDir):(files[0].name||"Projeto Tom Certo")),projectRaw=baseName(projectSource).replace(/\.(rpp|zip|wav|mp3|flac|ogg|opus|m4a|aac)$/i,"");const km=projectRaw.match(/\(([A-G](?:#|b)?m?)\)\s*$/i),key=km?km[1]:"Não informado",project=projectRaw.replace(/\s*\([A-G](?:#|b)?m?\)\s*$/i,""),isOriginal=/(^|[\s_-])original([\s_-]|$)/i.test(project);
       let spec=[];if(rpp){const rppText=await rpp.text();spec=parseRpp(rppText,audios);this.tempo=parseRppTempo(rppText);this.rawSections=parseRppSections(rppText)}else{this.tempo={bpm:120,numerator:4,denominator:4,points:[{time:0,bpm:120}]};this.rawSections={markers:[],regions:[]}}if(!spec.length)spec=audios.map(a=>({name:baseName(a.name).replace(/\.[^.]+$/,"") ,volume:1,items:[{position:0,offset:0,length:null,file:a.name}]}));
       const byName=new Map(audios.map(a=>[norm(a.name),a])),missing=[],decodeFailed=[],decodedCache=new Map();let n=0;
@@ -392,7 +392,7 @@ this.installControlMappingHandlers()}
   applyClickSource(){const hasProjectClick=this.tracks.some(t=>this.isClickTrack(t)),native=this.clickSource==="native"||!hasProjectClick;this.clickSource=native?"native":"project";const select=this.$("[data-click-source]"),metro=this.$("[data-metro]");if(select)select.value=this.clickSource;if(metro)metro.checked=native;for(const t of this.tracks)if(this.isClickTrack(t))t.__clickProjectMuted=native;if(this.playing)this.restartMetro();this.updateGains()}
   updateGains(fadeSeconds=0){const trackSolo=this.tracks.some(t=>t.solo),groupSolo=[...(this.groupStates||new Map()).values()].some(s=>s.solo),muteGuide=this.loop||this.currentLoop,ctx=this.ctx,now=ctx?.currentTime||0,fade=Math.max(0,Number(fadeSeconds)||0);this.tracks.forEach(t=>{if(!t.gain)return;const isClick=this.isClickTrack(t),isGuide=this.isGuideTrack(t),special=this.isSpecialTrack(t),state=special?null:this.ensureGroupState(t.group||"VS");const soloKeepsProjectClick=this.soloClick&&isClick&&this.clickSource==="project";let muted=t.__clickProjectMuted||(this.soloClick&&!soloKeepsProjectClick)||t.mute||(muteGuide&&isGuide)||(trackSolo&&!t.solo);if(!trackSolo&&!special&&groupSolo&&!state.solo)muted=true;if(!trackSolo&&special&&this.vsSolo)muted=true;if(!special&&(this.vsMute||state.mute))muted=true;const gain=special?Number(t.volume||0):Number(t.volume||0)*Number(this.vsVolume??1)*Number(state.volume??1),target=muted?0:gain,param=t.gain.gain;if(fade>0&&ctx){try{if(typeof param.cancelAndHoldAtTime==="function")param.cancelAndHoldAtTime(now);else{const current=param.value;param.cancelScheduledValues(now);param.setValueAtTime(current,now)}param.linearRampToValueAtTime(target,now+fade)}catch{param.value=target}}else param.value=target})}
   updatePans(){for(const t of this.tracks){if(!t.panner)continue;const special=this.isSpecialTrack(t),group=special?0:this.ensureGroupState(t.group||"VS").pan||0,value=(t.pan||0)+(special?0:(this.vsPan||0)+group);t.panner.pan.value=Math.max(-1,Math.min(1,value))}if(this.metroPanner)this.metroPanner.pan.value=this.metroPan||0}
-  async play(internalResume=false){if(this.playing||!this.tracks.length)return;const ctx=this.audioContext();let freeClickWasActive=false,freeBpm=120,projectBpm=this.projectBpm();if(!internalResume){freeClickWasActive=this.standaloneClickActive||this.soloClick;freeBpm=Number(this.standaloneBpm)||120;projectBpm=this.restoreProjectTempo(freeClickWasActive&&this.tempoSource==="zlplay")}await ctx.resume();await this.setupPitchGraph();let launchAt=ctx.currentTime,smoothClickHandoff=false;if(!internalResume){smoothClickHandoff=freeClickWasActive&&this.offset<=.05&&Math.abs(freeBpm-projectBpm)<.02;if(this.currentLoop)this.toggleCurrentLoop(false);this.soloClick=false;this.host.querySelector("[data-solo-click]")?.classList.remove("on");this.updateRegionLoopFeedback();if(smoothClickHandoff){launchAt=this.nextStandaloneBarTime(.18);this.standaloneStopAt=launchAt;this.status("VS preparado: entrada no próximo tempo 1 sem interromper o click.")}else if(freeClickWasActive)this.stopStandaloneClick(false)}if(this.offset>=this.duration)this.offset=0;this.nodes=[];this.projectLaunchAt=launchAt>ctx.currentTime+.01?launchAt:0;this.started=launchAt-this.offset;for(const t of this.tracks){t.gain=ctx.createGain();t.panner=ctx.createStereoPanner();const group=this.pitchGroup(t),bus=this.pitchBuses.get(group.key);t.gain.connect(t.panner);t.panner.connect(bus.inputNode);for(const it of t.items){const local=this.offset-it.position,end=it.length||Math.max(0,it.buffer.duration-it.offset);if(local>=end)continue;const src=ctx.createBufferSource();src.buffer=it.buffer;src.connect(t.gain);const delay=Math.max(0,it.position-this.offset),sourceOffset=it.offset+Math.max(0,local),duration=Math.max(0,end-Math.max(0,local));if(duration>0){src.start(launchAt+delay,sourceOffset,duration);this.nodes.push(src)}}}this.updateGains();this.updatePans();this.playing=true;this.applyClickSource();this.ensureProjectPad(launchAt,!internalResume);this.tick()}
+  async play(internalResume=false){if(this.playing||!this.tracks.length)return;const ctx=this.audioContext();let freeClickWasActive=false,freeBpm=120,projectBpm=this.projectBpm();if(!internalResume){freeClickWasActive=this.standaloneClickActive||this.soloClick;freeBpm=Number(this.standaloneBpm)||120;projectBpm=this.restoreProjectTempo(freeClickWasActive&&this.tempoSource==="zlplay")}await ctx.resume();await this.setupPitchGraph();let launchAt=ctx.currentTime,smoothClickHandoff=false;if(!internalResume){smoothClickHandoff=freeClickWasActive&&this.offset<=.05&&Math.abs(freeBpm-projectBpm)<.02;if(this.currentLoop)this.toggleCurrentLoop(false);this.soloClick=false;this.host.querySelector("[data-solo-click]")?.classList.remove("on");this.updateRegionLoopFeedback();if(smoothClickHandoff){launchAt=this.nextStandaloneBarTime(.18);this.standaloneStopAt=launchAt;this.status("VS preparado: entrada no próximo tempo 1 sem interromper o click.")}else if(freeClickWasActive)this.stopStandaloneClick(false)}if(this.offset>=this.duration)this.offset=0;this.nodes=[];this.projectLaunchAt=launchAt>ctx.currentTime+.01?launchAt:0;this.started=launchAt-this.offset;for(const t of this.tracks){t.gain=ctx.createGain();t.panner=ctx.createStereoPanner();const group=this.pitchGroup(t),bus=this.pitchBuses.get(group.key);t.gain.connect(t.panner);t.panner.connect(bus.inputNode);for(const it of t.items){if(it.muted)continue;const local=this.offset-it.position,end=it.length||Math.max(0,it.buffer.duration-it.offset);if(local>=end)continue;const src=ctx.createBufferSource();src.buffer=it.buffer;src.connect(t.gain);const delay=Math.max(0,it.position-this.offset),sourceOffset=it.offset+Math.max(0,local),duration=Math.max(0,end-Math.max(0,local));if(duration>0){src.start(launchAt+delay,sourceOffset,duration);this.nodes.push(src)}}}this.updateGains();this.updatePans();this.playing=true;this.applyClickSource();this.ensureProjectPad(launchAt,!internalResume);this.tick()}
   position(){if(!this.playing)return this.offset;if(this.projectLaunchAt&&this.ctx.currentTime<this.projectLaunchAt)return this.offset;return Math.max(0,Math.min(this.duration,this.ctx.currentTime-this.started))}
   pause(){if(!this.playing)return;this.offset=this.position();this.halt();const current=this.sectionAt(this.offset);this.status(current?`Pausado em: ${current.name}.`:"Reprodução pausada.")}
   stop(){this.halt();this.pendingSection=null;this.host.querySelectorAll(".vs-segment").forEach(el=>el.classList.remove("pending"));this.offset=0;this.paint(0);if(this.tracks.length)this.status("Projeto pronto para reproduzir.")}
@@ -401,7 +401,7 @@ this.installControlMappingHandlers()}
   sectionAt(p){return this.sections.find(s=>p>=s.start&&p<s.end)||null}
   guideLeadFor(section){const bpm=this.tempoSegmentAt(section.start).point.bpm,pulses=this.tempo.numerator===6&&this.tempo.denominator===8?3:Math.max(1,this.tempo.numerator||4);return Math.min(4,Math.max(.75,pulses*60/bpm))}
   cancelPendingGuide(){for(const src of this.pendingGuideNodes||[])try{src.stop()}catch{}if(this.pendingGuideGain)try{this.pendingGuideGain.disconnect()}catch{}this.pendingGuideNodes=[];this.pendingGuideNode=null;this.pendingGuideGain=null;this.pendingGuidePanner=null;this.pendingGuideTrack=null;this.pendingGuideStartAt=null;this.pendingGuideMutedTracks=[];if(this.guideSuppressed){this.guideSuppressed=false;this.updateGains()}}
-  playPendingGuide(p){const pending=this.pendingSection;if(!pending||pending.guidePlayed||!this.ctx)return false;const target=pending.section,previous=this.sections.filter(s=>s.start<target.start-.001).reduce((best,s)=>!best||s.start>best.start?s:best,null),captureStart=Math.max(0,target.start-8,previous?.start??0),lead=target.start-captureStart,threshold=pending.boundary-lead;if(lead<=.03||p<threshold||p>=pending.boundary-.02)return false;const guide=this.tracks.find(t=>this.isGuideTrack(t)),solo=this.tracks.some(t=>t.solo);if(!guide||guide.mute||(solo&&!guide.solo)||!guide.gain||!guide.panner)return false;const late=Math.max(0,p-threshold),wantedStart=captureStart+late,wantedEnd=target.start,segments=[];for(const item of guide.items||[]){if(!item?.buffer)continue;const end=item.position+(item.length||Math.max(0,item.buffer.duration-item.offset)),from=Math.max(wantedStart,item.position),to=Math.min(wantedEnd,end);if(to-from>.03)segments.push({item,from,duration:to-from})}if(!segments.length)return false;const gain=this.ctx.createGain();gain.gain.value=Number(guide.volume??1);gain.connect(guide.panner);this.pendingGuideGain=gain;this.pendingGuideTrack=guide;this.pendingGuideNodes=[];guide.gain.gain.value=0;this.guideSuppressed=true;for(const seg of segments){const src=this.ctx.createBufferSource();src.buffer=seg.item.buffer;src.connect(gain);src.start(this.ctx.currentTime+Math.max(0,seg.from-wantedStart),seg.item.offset+(seg.from-seg.item.position),seg.duration);this.pendingGuideNodes.push(src);this.nodes.push(src)}this.pendingGuideNode=this.pendingGuideNodes[0]||null;pending.guidePlayed=true;return true}
+  playPendingGuide(p){const pending=this.pendingSection;if(!pending||pending.guidePlayed||!this.ctx)return false;const target=pending.section,previous=this.sections.filter(s=>s.start<target.start-.001).reduce((best,s)=>!best||s.start>best.start?s:best,null),captureStart=Math.max(0,target.start-8,previous?.start??0),lead=target.start-captureStart,threshold=pending.boundary-lead;if(lead<=.03||p<threshold||p>=pending.boundary-.02)return false;const guide=this.tracks.find(t=>this.isGuideTrack(t)),solo=this.tracks.some(t=>t.solo);if(!guide||guide.mute||(solo&&!guide.solo)||!guide.gain||!guide.panner)return false;const late=Math.max(0,p-threshold),wantedStart=captureStart+late,wantedEnd=target.start,segments=[];for(const item of guide.items||[]){if(!item?.buffer||item.muted)continue;const end=item.position+(item.length||Math.max(0,item.buffer.duration-item.offset)),from=Math.max(wantedStart,item.position),to=Math.min(wantedEnd,end);if(to-from>.03)segments.push({item,from,duration:to-from})}if(!segments.length)return false;const gain=this.ctx.createGain();gain.gain.value=Number(guide.volume??1);gain.connect(guide.panner);this.pendingGuideGain=gain;this.pendingGuideTrack=guide;this.pendingGuideNodes=[];guide.gain.gain.value=0;this.guideSuppressed=true;for(const seg of segments){const src=this.ctx.createBufferSource();src.buffer=seg.item.buffer;src.connect(gain);src.start(this.ctx.currentTime+Math.max(0,seg.from-wantedStart),seg.item.offset+(seg.from-seg.item.position),seg.duration);this.pendingGuideNodes.push(src);this.nodes.push(src)}this.pendingGuideNode=this.pendingGuideNodes[0]||null;pending.guidePlayed=true;return true}
   tick(){if(!this.playing)return;if(this.projectLaunchAt&&this.ctx.currentTime<this.projectLaunchAt){this.paint(this.offset);this.raf=requestAnimationFrame(()=>this.tick());return}if(this.projectLaunchAt&&this.ctx.currentTime>=this.projectLaunchAt)this.projectLaunchAt=0;let p=this.position();if(this.pendingSection)this.playPendingGuide(p);if(this.pendingSection&&p>=this.pendingSection.boundary-.005){const next=this.pendingSection;if(this.currentLoop)this.toggleCurrentLoop(false);if(this.loop){this.loop=false;const repeat=this.$("[data-loop]");if(repeat)repeat.checked=false}this.selectSection(next.index,false);this.lastStatusSectionIndex=-1;this.seek(next.section.start);return}if(this.currentLoop&&this.currentLoopSection&&p>=this.currentLoopSection.end){this.seek(this.currentLoopSection.start);return}if(this.loop&&this.loopSection&&p>=this.loopSection.end){this.seek(this.loopSection.start);return}if(p>=this.duration){this.stop();return}this.paint(p);this.raf=requestAnimationFrame(()=>this.tick())}
   paint(p){this.$("[data-progress]").value=p;this.$(".vs-time").textContent=`${fmt(p)} / ${fmt(this.duration)}`;const timeline=this.host.querySelector(".vs-timeline");if(timeline)timeline.style.setProperty("--played-pct",`${this.duration?Math.max(0,Math.min(100,p/this.duration*100)):0}%`);const playhead=this.host.querySelector(".vs-timeline-playhead");if(playhead)playhead.style.left=`${this.duration?Math.max(0,Math.min(100,p/this.duration*100)):0}%`;this.host.querySelectorAll(".vs-segment").forEach((el,i)=>{const s=this.sections[i];el.classList.toggle("current",!!s&&p>=s.start&&p<s.end)});if(this.playing&&!this.pendingSection){const index=this.sections.findIndex(s=>p>=s.start&&p<s.end);if(index>=0&&index!==this.lastStatusSectionIndex){this.lastStatusSectionIndex=index;this.status(`Tocando agora: ${this.sections[index].name}.`)}}if(this.mappingRegions)this.updateMapperPosition()}
   async ensureClickBuffer(){if(this.clickBuffer)return this.clickBuffer;const data=await fetch("./Meuclick.wav").then(r=>{if(!r.ok)throw Error("Click não encontrado");return r.arrayBuffer()});this.clickBuffer=await this.audioContext().decodeAudioData(data);return this.clickBuffer}
@@ -479,7 +479,7 @@ function mount(){
       if(zlIsProject(f))e.projects.push(f);
       if(zlIsAudio(f))e.audio.push(f);
     }
-    for(const file of nested){const song=byFolder.get(zlRelativeParts(file)[1]);if(song&&(song.projects.length||song.rpps.length))song.files.push(file);}
+    for(const file of nested){const song=byFolder.get(zlRelativeParts(file)[1]);if(song&&(song.projects.length||song.rpps.length||zlRelativeParts(file)[2]===".zlplay-guide"))song.files.push(file);}
     const songs=[...byFolder.values()].filter(x=>x.audio.length||x.rpps.length||x.projects.length);
     return {songs,rootProjects};
   }
@@ -515,28 +515,119 @@ function mount(){
     study.status?.("Escolha onde salvar o arquivo do repertório.");
     return true;
   }
+  function zlCaptureLibrarySong(scan){
+    const active=scan?.active;
+    if(!active||active.projectId!==study.projectId||!study.tracks.length)return;
+    const song=scan.songs.find(item=>item.name===active.name);
+    if(!song)return;
+    const data=study.projectPayload(),serialized=JSON.stringify(data);
+    if(serialized===active.baseline)return;
+    song.sessionProject=data;
+    song.sessionSource=active.source;
+    if(data.settings?.lastTonalKey)song.tonalKey=data.settings.lastTonalKey;
+    active.baseline=serialized;
+  }
+  function zlLibraryState(scan,order){
+    const payload=zlLibraryPayload(scan.songs,order);
+    return JSON.stringify({order:payload.order,songs:payload.songs});
+  }
+  async function zlSaveLibrary(scan,order){
+    zlCaptureLibrarySong(scan);
+    for(const song of scan.songs){
+      if(!order.includes(song.name)||!song.sessionProject)continue;
+      const source=song.files.find(file=>file.name===song.sessionSource)||song.files.find(file=>AUDIO_EXT.test(file.name));
+      const directory=study.dirName(source?.webkitRelativePath||source?.name||"");
+      const prefix=directory?directory+"/":"";
+      const available=new Set(song.files.map(file=>study.cleanPath(file.webkitRelativePath||file.name)));
+      if(!song.sessionProject.tracks?.every(track=>track.items?.every(item=>available.has(prefix+study.cleanPath(item.file))))){
+        study.status("Há áudios das edições do repertório fora da pasta da música.",true);
+        return false;
+      }
+    }
+    const payload=zlLibraryPayload(scan.songs,order);
+    let saved;
+    if(scan.desktopId){
+      try{
+        saved=await window.zlplayNative.setlists.save(scan.desktopId,payload);
+        if(saved)study.status?.(`Repertório salvo em ${saved}.`);
+      }catch(error){study.status(error.message,true);return false;}
+    }else saved=await zlDownloadJson(payload,"Repertório.zlset");
+    if(saved)scan.saved=zlLibraryState(scan,order);
+    return saved;
+  }
+  window.__ZL_LEAVE_LIBRARY__=async()=>{
+    const scan=window.__ZL_LIBRARY_SCAN__,order=window.__ZL_LIBRARY_ORDER__;
+    if(!scan||!order)return true;
+    zlCaptureLibrarySong(scan);
+    if(scan.saved===zlLibraryState(scan,order))return true;
+    const wrap=document.createElement("div");
+    wrap.className="zl-audio-modal";
+    wrap.style.zIndex=42000;
+    wrap.innerHTML='<section class="zl-audio-box"><h3>Salvar alterações no repertório?</h3><footer><button data-save>Salvar repertório</button><button data-discard>Descartar alterações</button><button data-cancel>Cancelar</button></footer></section>';
+    (document.fullscreenElement||document.body).append(wrap);
+    return new Promise(resolve=>{
+      const done=value=>{wrap.remove();resolve(value);};
+      wrap.querySelector("[data-save]").onclick=async()=>{if(await zlSaveLibrary(scan,order))done(true);};
+      wrap.querySelector("[data-discard]").onclick=()=>done(true);
+      wrap.querySelector("[data-cancel]").onclick=()=>done(false);
+    });
+  };
   function zlLibraryPayload(songs,order){
     return {type:"zlplay-library",version:ZL_LIBRARY_VERSION,createdAt:new Date().toISOString(),
-      order:[...order],songs:songs.map(s=>({id:s.name,name:s.name,folder:s.name,
+      order:[...order],songs:songs.filter(s=>order.includes(s.name)).map(s=>({sessionProject:s.sessionProject,sessionSource:s.sessionSource,id:s.name,name:s.name,folder:s.name,
         hasRpp:!!s.rpps.length,project:s.projects[0]?.name||null,originalKey:s.originalKey||null,tonalKey:s.tonalKey||null,source:s.selectedSource?.name||null,rpp:s.selectedRpp?.name||s.rpps[0]?.name||null}))};
   }
   function zlShowLibraryManager(scan,existing=null){
     for(const song of scan.songs){const saved=existing?.songs?.find(s=>(s.folder||s.name)===song.name)?.rpp;if(saved){const name=String(saved).replace(/\\/g,"/").split("/").pop();song.selectedRpp=song.rpps.find(f=>f.name===name)||song.rpps.find(f=>zlRelativeParts(f).at(-1)===name)||song.rpps[0];}else if(!song.selectedRpp||!song.rpps.includes(song.selectedRpp))song.selectedRpp=song.rpps[0];}
     for(const song of scan.songs){const saved=existing?.songs?.find(s=>(s.folder||s.name)===song.name);song.originalKey=saved?.originalKey||song.originalKey||null;song.tonalKey=saved?.tonalKey||song.tonalKey||null;const files=[...song.projects,...song.rpps];const name=String(saved?.source||saved?.rpp||"").replace(/\\/g,"/").split("/").pop();if(saved?.source||(!song.selectedSource&&name))song.selectedSource=files.find(f=>f.name===name)||files[0];song.selectedSource||=files[0];}
-    let order=(existing?.order||[]).filter(n=>scan.songs.some(s=>s.name===n));
-    for(const s of scan.songs)if(!order.includes(s.name))order.push(s.name);
+    for(const saved of existing?.songs||[]){
+      const song=scan.songs.find(s=>s.name===(saved.folder||saved.name));
+      if(song&&saved.sessionProject?.format==="tom-certo-project"){
+        song.sessionProject=saved.sessionProject;
+        song.sessionSource=saved.sessionSource;
+      }
+    }
+    zlCaptureLibrarySong(scan);
+    let order=Array.isArray(existing?.order)
+      ? existing.order.filter(n=>scan.songs.some(s=>s.name===n))
+      : scan.songs.map(s=>s.name);
+    const initializeSaved=scan.saved==null&&!!existing;
+    scan.saved??="";
     const wrap=document.createElement("div");wrap.className="zl-library-modal";
     const box=document.createElement("div");box.className="zl-library-box";
     box.innerHTML=`<div class="zl-library-head"><strong>Repertório ZLPlay</strong><button type="button" data-close>×</button></div>
       <p>${scan.songs.length} música(s) encontrada(s). Arraste para definir a ordem.</p>
       <div class="zl-library-list"></div>
-      <div class="zl-library-actions"><button type="button" data-save>Salvar repertório</button><button type="button" data-open>Abrir primeira música</button></div>`;
+      <div class="zl-library-actions"><button type="button" data-add-song-button>Adicionar música</button><button type="button" data-save>Salvar repertório</button><button type="button" data-open>Abrir primeira música</button></div>`;
     wrap.append(box);(document.fullscreenElement||document.body).append(wrap);
     const list=box.querySelector(".zl-library-list");
     let selected=window.__ZL_LIBRARY_CURRENT__&&order.includes(window.__ZL_LIBRARY_CURRENT__)?window.__ZL_LIBRARY_CURRENT__:order[0]||null;
-    const render=()=>{list.innerHTML="";order.forEach((name,i)=>{const row=document.createElement("div");row.className="zl-library-row"+(name===selected?" selected":"");row.draggable=true;row.dataset.name=name;
+    const addButton=box.querySelector("[data-add-song-button]");
+    addButton.hidden=!scan.desktopId;
+    addButton.onclick=async()=>{
+      addButton.disabled=true;
+      try{
+        const files=await window.__ZL_ADD_LIBRARY_SONG__(scan.desktopId);
+        if(!files||!wrap.isConnected)return;
+        const [song]=zlScanSelectedTree(files).songs;
+        if(!song)return study.status("Nenhuma pasta de música encontrada.",true);
+        if(order.includes(song.name))return;
+        if(!scan.songs.some(item=>item.name===song.name))scan.songs.push(song);
+        order.push(song.name);
+        window.__ZL_LIBRARY_ORDER__=[...order];
+        selected=song.name;
+        render();
+      }catch(error){study.status(error.message,true);}
+      finally{addButton.disabled=false;}
+    };
+    const render=()=>{
+      const decorations=[];
+      const savedSongs=new Map((scan.saved?JSON.parse(scan.saved).songs:[]).map(song=>[song.name,song]));
+      box.querySelector("p").textContent=`${order.length} música(s) encontrada(s). Arraste para definir a ordem.`;
+      list.innerHTML="";order.forEach((name,i)=>{const row=document.createElement("div");row.className="zl-library-row"+(name===selected?" selected":"");row.draggable=true;row.dataset.name=name;
       const song=scan.songs.find(s=>s.name===name);
-      row.innerHTML=`<span class="zl-grip">☰</span><b>${i+1}.</b><span class="zl-song-name" title="${name.replace(/"/g,"&quot;")}">${name}</span><small>${song?.selectedSource?/\.zlplay$/i.test(song.selectedSource.name)?".zlplay":"RPP":"áudios"}</small>`;
+      row.innerHTML=`<span class="zl-grip">☰</span><b>${i+1}.</b><span class="zl-song-name"></span><small>${song?.selectedSource?/\.zlplay$/i.test(song.selectedSource.name)?".zlplay":"RPP":"áudios"}</small>`;
+      const labelName=row.querySelector(".zl-song-name");labelName.title=labelName.textContent=name;
       if(song.projects.length+song.rpps.length>1){
         const label=document.createElement("label");label.className="zl-library-rpp";label.textContent="Projeto de origem";
         const select=document.createElement("select");select.className="vs-select";select.setAttribute("aria-label","Arquivo de projeto de "+name);
@@ -545,18 +636,38 @@ function mount(){
         for(const event of ["click","dblclick","mousedown","dragstart"])select.addEventListener(event,e=>e.stopPropagation());
         label.append(select);row.append(label);
       }
+      const remove=document.createElement("button");
+      remove.type="button";
+      remove.dataset.removeSong="";
+      remove.textContent="Remover";
+      remove.onclick=e=>{
+        e.stopPropagation();
+        order=order.filter(item=>item!==name);
+        window.__ZL_LIBRARY_ORDER__=[...order];
+        if(selected===name)selected=order[Math.min(i,order.length-1)]||null;
+        render();
+      };
+      row.append(remove);
+      if(song.sessionProject&&JSON.stringify(savedSongs.get(name)?.sessionProject)!==JSON.stringify(song.sessionProject)){
+        const pending=document.createElement("span");pending.className="zl-song-pending";pending.textContent="●";pending.title=window.__ZL_I18N__?.t("Alterações pendentes")||"Alterações pendentes";row.insertBefore(pending,remove);
+      }
       row.ondragstart=e=>e.dataTransfer.setData("text/plain",name);
       row.ondragover=e=>e.preventDefault();
-      row.ondrop=e=>{e.preventDefault();const from=e.dataTransfer.getData("text/plain"),to=name;if(from===to)return;const a=order.indexOf(from),b=order.indexOf(to);order.splice(a,1);order.splice(b,0,from);window.__ZL_LIBRARY_ORDER__=[...order];render()};
+      row.ondrop=e=>{e.preventDefault();const from=e.dataTransfer.getData("text/plain"),to=name;if(from===to||!order.includes(from))return;const a=order.indexOf(from),b=order.indexOf(to);order.splice(a,1);order.splice(b,0,from);window.__ZL_LIBRARY_ORDER__=[...order];render()};
       row.onclick=e=>{if(e.target.closest("button,select,input,label,.zl-library-keys"))return;selected=name;render()};
-      row.ondblclick=()=>{selected=name;wrap.remove();window.__ZL_LIBRARY_OPEN_SONG__?.(name)};
-      list.append(row);window.__ZL_DECORATE_SONG__?.(row,song)})};
-    render();
+      row.ondblclick=e=>{if(e.target.closest("button,select,input,label"))return;selected=name;wrap.remove();window.__ZL_LIBRARY_OPEN_SONG__?.(name)};
+      list.append(row);decorations.push(window.__ZL_DECORATE_SONG__?.(row,song))});
+      return Promise.all(decorations);
+    };
+    const ready=render().then(()=>{
+      if(initializeSaved&&!scan.saved)scan.saved=zlLibraryState(scan,order);
+    });
     box.querySelector("[data-close]").onclick=()=>wrap.remove();
-    box.querySelector("[data-save]").onclick=async()=>{const ok=await zlDownloadJson(zlLibraryPayload(scan.songs,order),"Repertório.zlset");if(ok)window.__ZL_LIBRARY_ORDER__=[...order]};
+    box.querySelector("[data-save]").onclick=async()=>{if(await zlSaveLibrary(scan,order))render();};
     box.querySelector("[data-open]").textContent="Abrir música";
     box.querySelector("[data-open]").onclick=()=>{if(selected){wrap.remove();window.__ZL_LIBRARY_OPEN_SONG__?.(selected)}};
     window.__ZL_LIBRARY_ORDER__=[...order];
+    return {wrap,ready};
   }
   study.afterProjectSaved=async(handle,text)=>{
     const scan=window.__ZL_LIBRARY_SCAN__,song=scan?.songs.find(s=>s.name===window.__ZL_LIBRARY_CURRENT__);
@@ -565,15 +676,16 @@ function mount(){
     Object.defineProperty(file,"webkitRelativePath",{value:prefix+"/"+file.name});
     const previous=song.selectedSource||song.projects[0]||song.rpps[0],same=previous?.name===file.name;
     song.files=song.files.filter(f=>f.name!==file.name);song.projects=song.projects.filter(f=>f.name!==file.name);song.files.push(file);song.projects.push(file);song.selectedSource=file;
-    if(!same&&confirm("Projeto salvo. Deseja salvar o repertório usando esta nova versão .zlplay?"))await zlDownloadJson(zlLibraryPayload(scan.songs,window.__ZL_LIBRARY_ORDER__||scan.songs.map(s=>s.name)),"Repertório.zlset");
+    if(!same&&confirm("Projeto salvo. Deseja salvar o repertório usando esta nova versão .zlplay?"))await zlSaveLibrary(scan,window.__ZL_LIBRARY_ORDER__||scan.songs.map(s=>s.name));
   };
   async function zlReadProjectFile(file){try{return JSON.parse(await file.text())}catch{return null}}
 
-  async function zlProcessLibraryFolder(files,{askCreate=true}={}){
+  async function zlProcessLibraryFolder(files,{askCreate=true,desktopId,createNew=false,openFirst=false}={}){
     const scan=zlScanSelectedTree(files);
     if(scan.songs.length<1){study.status?.("Nenhuma pasta de música encontrada.");return false}
-    window.__ZL_LIBRARY_SCAN__=scan;
-    const existingFile=scan.rootProjects.find(f=>/^repertório\.zlplaylibrary$/i.test(f.name||""))||scan.rootProjects.find(zlIsLibrary);
+    scan.root=zlRelativeParts(files[0])[0];
+    scan.desktopId=desktopId;
+    const existingFile=createNew?null:scan.rootProjects.find(f=>/^repertório\.zlplaylibrary$/i.test(f.name||""))||scan.rootProjects.find(zlIsLibrary);
     const existing=existingFile?await zlReadProjectFile(existingFile):null;
     if(existingFile&&existing?.type!=="zlplay-library"){
       study.status?.("Arquivo .zlplaylibrary inválido.");return false;
@@ -582,19 +694,23 @@ function mount(){
       const known=new Set((existing.songs||[]).map(s=>s.folder||s.name));
       const added=scan.songs.filter(s=>!known.has(s.name));
       if(added.length)study.status?.(`${added.length} nova(s) música(s) encontrada(s) no repertório.`);
-      zlShowLibraryManager(scan,existing);
+      window.__ZL_LIBRARY_CURRENT__=null;window.__ZL_LIBRARY_SCAN__=scan;
+      const {wrap,ready}=zlShowLibraryManager(scan,existing);
+      await ready;
+      const first=window.__ZL_LIBRARY_ORDER__[0];
+      if(openFirst&&first&&await window.__ZL_LIBRARY_OPEN_SONG__?.(first))wrap.remove();
       return true;
     }
     if(scan.songs.length>=2||(!askCreate&&scan.songs.length>=1)){
       const ok=!askCreate||confirm(`${scan.songs.length} pastas de músicas foram encontradas.\n\nCriar um repertório ZLPlay para esta pasta principal?`);
-      if(ok){zlShowLibraryManager(scan,null);return true}
+      if(ok){window.__ZL_LIBRARY_CURRENT__=null;window.__ZL_LIBRARY_SCAN__=scan;zlShowLibraryManager(scan,null);return true}
     }else{
       study.status?.("Esta pasta contém apenas uma música. Use Abrir pasta / projeto.");
     }
     return false;
   }
   window.__ZL_PARSE_RPP__=parseRpp;window.__ZL_PARSE_RPP_TEMPO__=parseRppTempo;window.__ZL_PARSE_RPP_SECTIONS__=parseRppSections;window.__ZL_REGION_PRESETS__=REGION_PRESETS;window.__ZL_PROCESS_LIBRARY_FILES__=zlProcessLibraryFolder;
-  window.__ZL_SAVE_LIBRARY__=async()=>{const scan=window.__ZL_LIBRARY_SCAN__;if(!scan?.songs?.length)return false;return zlDownloadJson(zlLibraryPayload(scan.songs,window.__ZL_LIBRARY_ORDER__||scan.songs.map(s=>s.name)),"Repertório.zlset");};
+  window.__ZL_SAVE_LIBRARY__=async()=>{const scan=window.__ZL_LIBRARY_SCAN__;if(!scan?.songs?.length)return false;return zlSaveLibrary(scan,window.__ZL_LIBRARY_ORDER__||scan.songs.map(s=>s.name));};
   function zlChooseFolderOpenMode(){
     return new Promise(resolve=>{
       const wrap=document.createElement("div");wrap.className="zl-openmode-modal";
@@ -632,19 +748,37 @@ function mount(){
     },true);
 
     // Isolamento: ao abrir música do repertório, só os File objects daquela subpasta são enviados ao importador existente.
-    window.__ZL_LIBRARY_OPEN_SONG__=name=>{
+    window.__ZL_LIBRARY_OPEN_SONG__=async name=>{
       const scan=window.__ZL_LIBRARY_SCAN__,song=scan?.songs.find(s=>s.name===name);if(!song)return;
+      zlCaptureLibrarySong(scan);
+      const previousName=window.__ZL_LIBRARY_CURRENT__,previousFiles=study.currentProjectFiles;
       window.__ZL_LIBRARY_CURRENT__=name;
-      if(song.selectedSource||song.projects.length||song.rpps.length){
-        const chosen=song.selectedSource||song.projects[0]||song.rpps[0];
-        const files=song.files.map(f=>study.wrap(f,f.webkitRelativePath||f.name)),source=files[song.files.indexOf(chosen)];
-        if(/\.zlplay$/i.test(chosen.name))return study.loadTomCerto(files,source);
-        return study.load(files.filter(f=>!/\.zlplay$/i.test(f.name)),source);
+      const chosen=song.selectedSource||song.projects[0]||song.rpps[0];
+      const files=song.files.map(file=>study.wrap(file,file.webkitRelativePath||file.name));
+      const source=files[song.files.indexOf(chosen)];
+      const projectDir=study.dirName(source?.name||files.find(file=>AUDIO_EXT.test(file.name))?.name||"");
+      const prefix=projectDir?projectDir+"/":"";
+      const available=new Set(files.map(file=>study.cleanPath(file.name)));
+      const snapshot=song.sessionSource===(chosen?.name||null)?song.sessionProject:null;
+      try{
+        let result;
+        if(snapshot){
+          const complete=snapshot.tracks?.length&&snapshot.tracks.every(track=>Array.isArray(track.items)&&track.items.every(item=>available.has(prefix+study.cleanPath(item.file))));
+          if(!complete)throw Error("Há áudios das edições do repertório fora da pasta da música.");
+          result=await study.loadProjectManifest(files,snapshot,source||{name:song.name},projectDir);
+        }else if(/\.zlplay$/i.test(chosen?.name))await study.loadTomCerto(files,source);
+        else result=await study.load(files.filter(file=>!/\.zlplay$/i.test(file.name)&&!file.name.split("/").includes(".zlplay-guide")),source);
+        if(result?.cancelled||previousFiles===study.currentProjectFiles||!study.tracks.length){
+          window.__ZL_LIBRARY_CURRENT__=previousName;
+          return false;
+        }
+        scan.active={name,source:chosen?.name||null,projectId:study.projectId,baseline:JSON.stringify(study.projectPayload())};
+        return true;
+      }catch(error){
+        window.__ZL_LIBRARY_CURRENT__=previousName;
+        study.status(error.message,true);
+        return false;
       }
-      // Projetos ZLPlay e áudio seguem pelo importador individual.
-      const dt=new DataTransfer();song.files.forEach(f=>dt.items.add(f));
-      folderInput.files=dt.files;
-      folderInput.dispatchEvent(new Event("change",{bubbles:true}));
     };
   }
   setTimeout(zlInstallLibraryFlow,0);

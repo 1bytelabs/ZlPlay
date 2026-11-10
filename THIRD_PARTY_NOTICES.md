@@ -20,3 +20,7 @@ Os arquivos de áudio dos usuários e os Pads não estão incluídos nem licenci
 ## QR pairing / Pareamento QR / Vinculación QR
 
 The shared local-network remote uses node-qrcode 1.5.4 under MIT (Copyright (c) 2012 Ryan Day). Original notice: `docs/licenses/QRCode-MIT.txt`; included in macOS `Contents/Resources/licenses/QRCode-MIT.txt`. Runtime dependencies and exact versions are recorded in `package-lock.json`; their bundled license notices remain in the package. This does not add ASIO to macOS.
+
+## Guias de voz integradas
+
+Os clipes MP3 em `app/guide-banks/` foram sintetizados para o ZLPlay. Os modelos foram usados na geração e não são dependências do aplicativo. Consulte a [origem dos clipes](app/guide-banks/NOTICE.md).
