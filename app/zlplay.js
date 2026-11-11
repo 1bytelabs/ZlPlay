@@ -168,8 +168,8 @@ if(Object.values(this.controlMappings).some(binding=>binding.type!=="key"))void 
   wrap(f,name){return{name,size:f.size,arrayBuffer:()=>f.arrayBuffer(),text:()=>f.text()}}
   status(msg,error=false,progress=null){const e=this.$(".vs-status");this.$("[data-status-text]").textContent=msg;const ts=this.$("[data-transport-status]");if(ts)ts.textContent=msg;e.classList.toggle("error",error);e.classList.toggle("done",progress===null);if(progress!==null)this.$("[data-status-progress]").style.width=`${Math.max(0,Math.min(100,progress))}%`}
   panLabel(value){return Math.abs(value)<.01?"C":value<0?`L${Math.round(Math.abs(value)*100)}`:`R${Math.round(value*100)}`}
-  isClickTrack(t){return /(^|\b)(click|claqueta|metronom)(\b|$)/i.test(t?.name||"")}
-  isGuideTrack(t){return /(^|\b)(guia|guide)(\b|$)/i.test(t?.name||"")}
+  isClickTrack(t){return /(?:^|[\W_])(?:click|claqueta|metr[oóô]nom[eo]?)(?=$|[\W_])/i.test(String(t?.name??"").normalize("NFC"))}
+  isGuideTrack(t){return /(?:^|[\W_])(?:guia|guide|reg[eê]ncia)(?=$|[\W_])/i.test(String(t?.name??"").normalize("NFC"))}
   isSpecialTrack(t){return this.isClickTrack(t)||this.isGuideTrack(t)}
   ensureGroupState(name){name=(name||"VS").trim()||"VS";if(!(this.groupStates instanceof Map))this.groupStates=new Map();if(!this.groupStates.has(name)){const legacy=this.groupPans instanceof Map?Number(this.groupPans.get(name)||0):0;this.groupStates.set(name,{volume:1,pan:legacy,mute:false,solo:false})}const st=this.groupStates.get(name);st.volume=Number.isFinite(Number(st.volume))?Number(st.volume):1;st.pan=Number.isFinite(Number(st.pan))?Number(st.pan):0;st.mute=!!st.mute;st.solo=!!st.solo;return st}
   musicalOrder(name){const n=this.normalizeTrackLabel(name).replace(/[_-]+/g," ");const exact=(...a)=>a.includes(n);const has=re=>re.test(n);
