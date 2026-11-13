@@ -1,6 +1,6 @@
 import {rppKey} from './tonal-versions.js';
 import {flatNote} from './note-display.mjs';
-import { MIDI_CC_MODES, midiFaderValue, readMidiControl } from './midi-fader.mjs';
+import { MIDI_CC_MODES, midiFaderValue, readMidiControl, sameControlBinding } from './midi-fader.mjs';
 import { shortestSemitoneDelta } from './tonal-distance.mjs';
 import { installNativeAudio } from './native-audio.js';
 const AUDIO_EXT=/\.(wav|mp3|flac|ogg|opus|m4a|aac)$/i;
@@ -137,6 +137,18 @@ this.controlMapTarget=null;
 this.controlMapMidiAccess=null;
 this.controlMapCcState=new Map();
 this.controlMapMidiRequest=null;
+this.controlMidiEnabledPorts=new Set();
+try{
+  const saved=JSON.parse(localStorage.getItem("zosma-zlplay:midi-control-ports")||"[]");
+  if(Array.isArray(saved))this.controlMidiEnabledPorts=new Set(saved.filter(id=>typeof id==="string"&&id));
+}catch{}
+this.controlMidiChannels=new Map();
+try{
+  const saved=JSON.parse(localStorage.getItem("zosma-zlplay:midi-control-channels")||"{}");
+  for(const [id,channel] of Object.entries(saved)){
+    if(id&&Number.isInteger(channel)&&channel>=0&&channel<16)this.controlMidiChannels.set(id,channel);
+  }
+}catch{}
 this.controlMappings={};
 try{this.controlMappings=this.sanitizeControlMappings(JSON.parse(localStorage.getItem("zosma-zlplay:control-mappings")||"{}"))}catch{}
 this.render();
@@ -238,7 +250,7 @@ if(Object.values(this.controlMappings).some(binding=>binding.type!=="key"))void 
   saveSelectedRegionName(){const i=this.selectedRegionIndex;if(i<0||!this.regionMarks[i])return;const input=this.$("[data-selected-region-input]"),name=input.value.trim();if(!name)return;this.regionMarks[i].name=name;this.commitRegionMarks();this.status(`Região renomeada para ${name}.`)}
   deleteSelectedRegion(){const i=this.selectedRegionIndex;if(i<0||!this.regionMarks[i])return;const name=this.regionMarks[i].name;this.regionMarks.splice(i,1);this.selectedRegionIndex=-1;this.commitRegionMarks();this.renderRegionEditor();this.status(`${name} excluída.`)}
   markProjectTempoSaved(){this.savedProjectTempo=JSON.parse(JSON.stringify(this.projectTempo||this.tempo));if(this.tempoSource!=="rpp")this.tempoSource="zlplay";this.freeTempoOverride=false}
-  projectPayload(){return{format:"tom-certo-project",formatVersion:1,appVersion:"2.8.2",song:{title:this.currentProjectName||"Projeto Tom Certo",bpm:this.projectBpm(),timeSignature:{numerator:this.tempo?.numerator||4,denominator:this.tempo?.denominator||4},key:this.projectKey||"Não informado",duration:this.duration},tracks:this.tracks.map(t=>({name:t.name,group:t.group||"VS",volume:t.volume,originalVolume:t.originalVolume,mute:t.mute,solo:t.solo,originalMute:t.originalMute,originalSolo:t.originalSolo,pan:t.pan||0,output:t.output||null,pitchEnabled:typeof t.pitchEnabled==="boolean"?t.pitchEnabled:undefined,items:(t.items||[]).map(it=>({file:it.projectFile||this.relativeToProject(it.file),position:it.position||0,offset:it.offset||0,length:it.length,muted:it.muted||undefined,effects:it.effects,displayName:it.displayName,pitch:it.pitch||0}))})),regions:this.sections.map(s=>({name:s.name,start:s.start,end:s.end,color:s.color||""})),mixer:{vsPan:this.vsPan||0,vsVolume:Number(this.vsVolume??1),vsMute:!!this.vsMute,vsSolo:!!this.vsSolo,groupPans:[...this.allGroupNames().map(name=>[name,this.ensureGroupState(name).pan])],groupStates:[...this.groupStates.entries()].map(([name,state])=>[name,{volume:Number(state.volume??1),pan:Number(state.pan??0),mute:!!state.mute,solo:!!state.solo,output:state.output||null}])},settings:{metroPan:this.metroPan||0,timelineZoom:this.timelineZoom||1,snapEnabled:this.snapEnabled!==false}}}
+  projectPayload(){return{format:"tom-certo-project",formatVersion:1,appVersion:"2.8.3",song:{title:this.currentProjectName||"Projeto Tom Certo",bpm:this.projectBpm(),timeSignature:{numerator:this.tempo?.numerator||4,denominator:this.tempo?.denominator||4},key:this.projectKey||"Não informado",duration:this.duration},tracks:this.tracks.map(t=>({name:t.name,group:t.group||"VS",volume:t.volume,originalVolume:t.originalVolume,mute:t.mute,solo:t.solo,originalMute:t.originalMute,originalSolo:t.originalSolo,pan:t.pan||0,output:t.output||null,pitchEnabled:typeof t.pitchEnabled==="boolean"?t.pitchEnabled:undefined,items:(t.items||[]).map(it=>({file:it.projectFile||this.relativeToProject(it.file),position:it.position||0,offset:it.offset||0,length:it.length,muted:it.muted||undefined,effects:it.effects,displayName:it.displayName,pitch:it.pitch||0}))})),regions:this.sections.map(s=>({name:s.name,start:s.start,end:s.end,color:s.color||""})),mixer:{vsPan:this.vsPan||0,vsVolume:Number(this.vsVolume??1),vsMute:!!this.vsMute,vsSolo:!!this.vsSolo,groupPans:[...this.allGroupNames().map(name=>[name,this.ensureGroupState(name).pan])],groupStates:[...this.groupStates.entries()].map(([name,state])=>[name,{volume:Number(state.volume??1),pan:Number(state.pan??0),mute:!!state.mute,solo:!!state.solo,output:state.output||null}])},settings:{metroPan:this.metroPan||0,timelineZoom:this.timelineZoom||1,snapEnabled:this.snapEnabled!==false}}}
   async saveProjectFile(){if(!this.tracks.length)return;if(this.tempoSource!=="rpp"&&!this.freeTempoOverride){const input=this.$("[data-bpm-input]"),bpm=Math.max(20,Math.min(400,Number(input?.value)||Number(this.tempo?.bpm)||120));this.standaloneBpm=bpm;this.tempo={...this.tempo,bpm,points:[{time:0,bpm}]};this.projectTempo=JSON.parse(JSON.stringify(this.tempo));if(input)input.value=String(Math.round(bpm*100)/100);this.updateTapTempoUi()}const text=JSON.stringify(this.projectPayload(),null,2),safe=(this.currentProjectName||"projeto").replace(/[\\/:*?"<>|]+/g,"-").trim()||"projeto",name=`${safe}.zlplay`;try{if(window.showSaveFilePicker){const handle=await window.showSaveFilePicker({suggestedName:name,types:[{description:"Projeto Tom Certo",accept:{"application/json":[".zlplay"]}}]});const writable=await handle.createWritable();await writable.write(text);await writable.close();this.markProjectTempoSaved();await this.afterProjectSaved?.(handle,text);this.status(`Projeto salvo como ${name}. Mantenha-o na mesma pasta dos stems.`);return}}catch(e){if(e?.name==="AbortError")return}const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:"application/json"}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);this.markProjectTempoSaved();this.status(`Projeto ${name} gerado. Coloque-o na mesma pasta dos stems.`)}
   chooseRpp(files,rpps){const box=this.$(".vs-rpp-picker");box.hidden=false;box.innerHTML=`<h3>Qual RPP representa o Original?</h3><p>Escolha o arquivo que representa o tom original dos áudios.</p><div class="vs-rpp-row"><select class="vs-select">${rpps.map((r,i)=>`<option value="${i}">${esc(baseName(r.name))} — ${esc(flatNote(rppKey(r.name)||"Não informado"))}</option>`).join("")}</select><button class="vs-btn">Abrir projeto</button></div>`;box.querySelector("button").onclick=()=>{const rpp=rpps[+box.querySelector("select").value];box.hidden=true;this.load(files,rpp,true)};this.status("Escolha o tom/projeto que deseja estudar.")}
   async load(files,chosenRpp=null){
@@ -277,6 +289,10 @@ if(Object.values(this.controlMappings).some(binding=>binding.type!=="key"))void 
         if(meta.kind==="fader"&&MIDI_CC_MODES.some(([mode])=>mode===b.mode))clean[id].mode=b.mode;
       }
       if(b.type==="midi-pitch-bend"&&meta.kind==="fader")clean[id]={type:b.type,channel};
+      if(clean[id]&&typeof b.portId==="string"&&b.portId.trim()){
+        clean[id].portId=b.portId;
+        if(typeof b.portName==="string")clean[id].portName=b.portName;
+      }
     }
     return clean;
   }
@@ -333,7 +349,46 @@ if(Object.values(this.controlMappings).some(binding=>binding.type!=="key"))void 
     this.status(info.kind==="fader"?"Mova um fader ou knob MIDI. Delete remove o mapeamento.":"Acione um controle MIDI ou pressione uma tecla no modo Automático. Delete remove o mapeamento.");
   }
 
-  sameControlBinding(a,b){return a&&b&&a.type===b.type&&(a.type==="key"?a.code===b.code:a.type==="midi-note"?a.note===b.note&&a.channel===b.channel:a.channel===b.channel&&(a.type==="midi-pitch-bend"||a.cc===b.cc))}
+  sameControlBinding(a,b){return sameControlBinding(a,b)}
+
+  setControlMidiPortEnabled(id,enabled){
+    const input=this.controlMapMidiAccess?.inputs.get(id);
+    if(!input||input.state==="disconnected")return;
+    if(enabled)this.controlMidiEnabledPorts.add(id);
+    else this.controlMidiEnabledPorts.delete(id);
+    this.controlMapCcState.clear();
+    try{localStorage.setItem("zosma-zlplay:midi-control-ports",JSON.stringify([...this.controlMidiEnabledPorts]))}catch{}
+    this.bindControlMidiInputs();
+  }
+
+  setControlMidiChannel(id,channel){
+    if(!this.controlMapMidiAccess?.inputs.has(id))return;
+    if(channel===null)this.controlMidiChannels.delete(id);
+    else if(Number.isInteger(channel)&&channel>=0&&channel<16)this.controlMidiChannels.set(id,channel);
+    else return;
+    this.controlMapCcState.clear();
+    try{localStorage.setItem("zosma-zlplay:midi-control-channels",JSON.stringify(Object.fromEntries(this.controlMidiChannels)))}catch{}
+  }
+
+  acceptsControlMidiChannel(id,channel){
+    const filter=this.controlMidiChannels.get(id);
+    return filter===undefined||filter===channel;
+  }
+
+  associateLegacyControlMidi(portId){
+    const input=this.controlMapMidiAccess?.inputs.get(portId);
+    if(!input?.id||input.state==="disconnected"||!this.controlMidiEnabledPorts.has(input.id))return;
+    for(const [id,binding] of Object.entries(this.controlMappings)){
+      if(binding.type==="key"||binding.portId||!this.acceptsControlMidiChannel(portId,binding.channel))continue;
+      const scoped={...binding,portId:input.id,portName:input.name||""};
+      if(Object.values(this.controlMappings).some(other=>this.sameControlBinding(other,scoped)))continue;
+      this.controlMappings[id]=scoped;
+    }
+    this.controlMapCcState.clear();
+    this.saveControlMappings();
+    this.refreshControlMappingVisuals();
+    this.status("Os mapeamentos antigos compatíveis foram vinculados à entrada MIDI.");
+  }
 
   assignControlMapping(id,binding){for(const [other,b] of Object.entries(this.controlMappings||{}))if(other!==id&&this.sameControlBinding(b,binding))delete this.controlMappings[other];this.controlMappings[id]=binding;this.controlMapCcState.clear();this.saveControlMappings();const meta=this.controlTargetMeta(id);this.status(`${meta?.label||id} mapeado para ${this.bindingLabel(binding)}.`);this.controlMapTarget=null;this.refreshControlMappingVisuals()}
 
@@ -358,8 +413,18 @@ if(Object.values(this.controlMappings).some(binding=>binding.type!=="key"))void 
       this.controlMapMidiRequest??=navigator.requestMIDIAccess({sysex:false});
       this.controlMapMidiAccess=await this.controlMapMidiRequest;
       this.bindControlMidiInputs();
-      this.controlMapMidiAccess.onstatechange=()=>this.bindControlMidiInputs();
-      if(this.controlMapMode&&!this.controlMapTarget)this.status(`Mapeamento ativo. MIDI detectado: ${this.controlMapMidiAccess.inputs.size} entrada(s). Clique em um controle para mapear.`);
+      this.controlMapMidiAccess.onstatechange=({port})=>{
+        if(port.type!=="input")return;
+        if(port.state==="disconnected"){
+          for(const [id,binding] of Object.entries(this.controlMappings)){
+            if(binding.portId===port.id)this.controlMapCcState.delete(id);
+          }
+        }
+        this.bindControlMidiInputs();
+      };
+      if(this.controlMapMode&&!this.controlMapTarget&&![...this.controlMapMidiAccess.inputs.values()].some(input=>input.state!=="disconnected"&&this.controlMidiEnabledPorts.has(input.id))){
+        this.status("Para mapear MIDI, habilite uma entrada em Configurações → Controles.");
+      }
     }catch(e){
       console.warn("[ZLPlay MIDI]",e);
       if(this.controlMapMode)this.status("Mapeamento ativo. Acesso MIDI não autorizado; teclado continua disponível.");
@@ -368,12 +433,27 @@ if(Object.values(this.controlMappings).some(binding=>binding.type!=="key"))void 
     }
   }
 
-  bindControlMidiInputs(){if(!this.controlMapMidiAccess)return;for(const input of this.controlMapMidiAccess.inputs.values())input.onmidimessage=e=>this.handleControlMidiMessage(e)}
+  bindControlMidiInputs(){
+    if(!this.controlMapMidiAccess)return;
+    for(const input of this.controlMapMidiAccess.inputs.values()){
+      if(input.state!=="disconnected"&&this.controlMidiEnabledPorts.has(input.id)){
+        input.onmidimessage??=e=>this.handleControlMidiMessage(e,input);
+      }else if(input.onmidimessage){
+        input.onmidimessage=null;
+        if(input.state!=="disconnected")void input.close().catch(()=>{});
+      }
+    }
+    this.host.dispatchEvent(new Event("zl-midi-inputs-change"));
+  }
 
-  handleControlMidiMessage(e){
+  handleControlMidiMessage(e,input){
+    if(!input?.id||input.state==="disconnected"||!this.controlMidiEnabledPorts.has(input.id))return;
     const message=readMidiControl(e.data);
     if(!message)return;
     const {binding,value}=message;
+    if(!this.acceptsControlMidiChannel(input.id,binding.channel))return;
+    binding.portId=input.id;
+    binding.portName=input.name||"";
     if(this.controlMapMode){
       const target=this.controlMapTarget;
       if(!target||(binding.type==="midi-pitch-bend"&&target.kind!=="fader"))return;
@@ -463,9 +543,9 @@ if(Object.values(this.controlMappings).some(binding=>binding.type!=="key"))void 
   projectHasNativePitch(){return this.tracks.some(track=>track.items.some(item=>(Number(item.pitch)||0)!==0))}
   normalizeTrackLabel(name){return String(name||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().replace(/\s+/g," ").toLowerCase()}
   defaultPitchEligible(t){if(this.isSpecialTrack(t))return false;const n=this.normalizeTrackLabel(t.name);if(n==="loop")return false;const words=n.replace(/[_-]+/g," ").split(/\s+/).filter(Boolean);const blocked=new Set(["drum","drums","bateria","percussao","percussion","perc","shaker","tambourine","pandeiro","cajon","clap","snare","kick","hihat","hi-hat","cymbal","cymbals","prato","pratos","toms","tom"]);return !words.some(w=>blocked.has(w))}
-  pitchEligible(t){if(this.isSpecialTrack(t))return false;if(typeof t.pitchEnabled==="boolean")return t.pitchEnabled;if(this.projectHasNativePitch())return (Number(t.items?.[0]?.pitch)||0)!==0;return this.defaultPitchEligible(t)}
+  pitchEligible(t){if(this.isSpecialTrack(t))return false;if(typeof t.pitchEnabled==="boolean")return t.pitchEnabled;return this.defaultPitchEligible(t)}
   async setTrackPitchEnabled(t,enabled){if(this.isSpecialTrack(t))return;const at=this.position(),was=this.playing;t.pitchEnabled=!!enabled;this.save();this.drawTracks();this.status(`${t.name}: alteração de tom ${t.pitchEnabled?"ativada":"desativada"}.`);if(was){this.halt();this.offset=at;await this.play()}}
-  pitchGroup(t){const base=Number(t.items[0]?.pitch)||0,eligible=this.pitchEligible(t);return{key:`${base}:${eligible?1:0}`,base,eligible}}
+  pitchGroup(t){const base=this.isSpecialTrack(t)?0:(Number(t.items[0]?.pitch)||0),eligible=this.pitchEligible(t);return{key:`${base}:${eligible?1:0}`,base,eligible}}
   trackMenuHtml(t){const groups=this.allGroupNames(),current=(t.group||"VS");const options=[`<option value="" selected disabled>Selecionar grupo...</option>`,...(current!=="VS"?[`<option value="VS">Bus VS</option>`]:[]),...groups.filter(g=>g!==current).map(g=>`<option value="${esc(g)}">${esc(g)}</option>`)];const manualPitch=!this.isSpecialTrack(t),pitch=manualPitch?`<label class="vs-pitch-option"><input type="checkbox" data-pitch-enabled ${this.pitchEligible(t)?"checked":""}> Alterar tom</label>`:"";return `<details class="vs-channel-menu"><summary title="Opções da track">⋮</summary><div class="vs-channel-menu-pop">${pitch}<label>Mover para grupo<select data-move-group>${options.join("")}</select></label><button type="button" data-replace>Substituir áudio</button><button type="button" class="danger" data-delete>Excluir track</button></div></details>`}
   makePadStrip(){const strip=document.createElement("div");strip.className="vs-channel-strip is-pad";const vol=Number(this.padVolume??1),pan=Number(this.padPan||0);strip.innerHTML=`<div class="vs-channel-top"></div><div class="vs-channel-pan"><span>Pan</span><input data-pan type="range" min="-1" max="1" step="0.01" value="${pan}"><b>${this.panLabel(pan)}</b></div><div class="vs-channel-fader-wrap"><input class="vs-channel-fader" data-volume data-map-control="volume-pad" type="range" min="0" max="1.5" step="0.01" value="${vol}"></div><div class="vs-channel-value">${Math.round(vol*100)}%</div><div class="vs-channel-ms"></div><div class="vs-channel-name">Pad</div><div class="vs-channel-group">PAD</div>`;strip.querySelector("[data-volume]").oninput=e=>{this.padVolume=+e.target.value;strip.querySelector(".vs-channel-value").textContent=`${Math.round(this.padVolume*100)}%`;this.updatePadMix();this.savePadMix()};strip.querySelector("[data-pan]").oninput=e=>{this.padPan=+e.target.value;strip.querySelector(".vs-channel-pan b").textContent=this.panLabel(this.padPan);this.updatePadMix();this.savePadMix()};return strip}
   makeNativeClickStrip(){const strip=document.createElement("div");strip.className="vs-channel-strip is-click is-native-click";const vol=Number(this.$("[data-metro-volume]")?.value||1),pan=Number(this.metroPan||0);strip.innerHTML=`<div class="vs-channel-top"></div><div class="vs-channel-pan"><span>Pan</span><input data-pan type="range" min="-1" max="1" step="0.01" value="${pan}"><b>${this.panLabel(pan)}</b></div><div class="vs-channel-fader-wrap"><input class="vs-channel-fader" data-volume data-map-control="volume-click" type="range" min="0" max="1.5" step="0.01" value="${vol}"></div><div class="vs-channel-value">${Math.round(vol*100)}%</div><div class="vs-channel-ms"><button class="vs-toggle" data-m>M</button><button class="vs-toggle" data-s>S</button></div><div class="vs-channel-name">Click ZLPlay</div><div class="vs-channel-group">CLICK</div>`;strip.querySelector("[data-volume]").oninput=e=>{const v=+e.target.value,m=this.$("[data-metro-volume]");if(m)m.value=v;strip.querySelector(".vs-channel-value").textContent=`${Math.round(v*100)}%`};strip.querySelector("[data-pan]").oninput=e=>{this.metroPan=+e.target.value;strip.querySelector(".vs-channel-pan b").textContent=this.panLabel(this.metroPan);this.updatePans()};strip.querySelector("[data-m]").onclick=e=>{const m=this.$("[data-metro]");if(m){m.checked=!m.checked;e.target.classList.toggle("on",!m.checked);if(this.playing)this.restartMetro()}};strip.querySelector("[data-s]").onclick=()=>this.toggleSoloClick();return strip}

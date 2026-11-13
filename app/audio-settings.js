@@ -1,10 +1,20 @@
-import { outputChannels, trackOutput } from './audio-routing.mjs';
+import { MAIN_AUDIO_ROUTES, mainAudioRoute, outputChannels, trackOutput } from './audio-routing.mjs';
 const NOTES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function installAudioSettings(Player,bridge) {
   const p=Player.prototype;
   const original=Object.fromEntries(Object.getOwnPropertyNames(p).filter(k=>typeof p[k]==='function').map(k=>[k,p[k]]));
   const request=data=>bridge.command(data);
+  const sharedRoutingKey='zlplay:shared-audio-routing';
+  try{p.sharedAudioRouting=JSON.parse(localStorage.getItem(sharedRoutingKey)||'null');}catch{}
+  function saveSharedRouting(player,routing){
+    player.sharedAudioRouting=routing;
+    try{localStorage.setItem(sharedRoutingKey,JSON.stringify(routing));}catch{}
+  }
+  const currentMainRoutes=player=>Object.fromEntries(Object.keys(MAIN_AUDIO_ROUTES).map(key=>[key,mainAudioRoute(player,key)]));
+  function setMainRoute(player,key,value){
+    saveSharedRouting(player,{...currentMainRoutes(player),[key]:value});
+  }
   let deviceState=null,ready=null;
   function remember(state){deviceState=state;return state;}
   function startup(){if(!ready)ready=(async()=>{let saved;try{saved=JSON.parse(localStorage.getItem('zlplay:audio-device')||'null')}catch{}if(saved){try{return remember(await request({op:'configureDevice',...saved}))}catch{}}return remember(await request({op:'devices'}));})();return ready;}
@@ -17,20 +27,26 @@ export function installAudioSettings(Player,bridge) {
     return options.map(([id,label])=>`<option value="${id}" ${id===(value||'')?'selected':''}>${escape(label)}</option>`).join('');
   };
   p.routeSelect=function(value,set,inherit=true){const label=document.createElement('label');label.textContent='Saída de áudio';const select=document.createElement('select');select.dataset.audioOutput='';select.innerHTML=this.routeOptions(value,inherit);select.onchange=()=>{set(select.value||null);this.save();this.nativeSync();this.syncNativeAux().catch(e=>this.status(e.message,true));};label.append(select);return label;};
-  p.nativeMix=function(){const mix=original.nativeMix.call(this);const master=outputChannels(this.masterOutput||'stereo:0');mix.masterLeft=master[0];mix.masterRight=master[1];mix.mix.forEach((t,i)=>{const out=outputChannels(trackOutput(this,this.tracks[i]));t.outputLeft=out[0];t.outputRight=out[1];});[mix.clickLeft,mix.clickRight]=outputChannels(this.clickOutput||'master');return mix;};
-  p.makeTrackStrip=function(track){const strip=original.makeTrackStrip.call(this,track);const click=this.isClickTrack(track),guide=this.isGuideTrack(track);strip.querySelector('.vs-channel-menu-pop').prepend(this.routeSelect(click?this.clickOutput:guide?this.guideOutput:track.output,value=>{if(click){this.clickOutput=value;for(const t of this.tracks)if(this.isClickTrack(t))t.output=value;}else if(guide){this.guideOutput=value;for(const t of this.tracks)if(this.isGuideTrack(t))t.output=value;}else track.output=value;},!this.isSpecialTrack(track)));if(click)strip.querySelector('.vs-channel-name').textContent='Click';if(guide)strip.querySelector('.vs-channel-name').textContent='Guia';return strip;};
+  p.nativeMix=function(){const mix=original.nativeMix.call(this);const master=outputChannels(mainAudioRoute(this,'master'));mix.masterLeft=master[0];mix.masterRight=master[1];mix.mix.forEach((t,i)=>{const out=outputChannels(trackOutput(this,this.tracks[i]));t.outputLeft=out[0];t.outputRight=out[1];});[mix.clickLeft,mix.clickRight]=outputChannels(mainAudioRoute(this,'click'));return mix;};
+  p.makeTrackStrip=function(track){const strip=original.makeTrackStrip.call(this,track);const key=this.isClickTrack(track)?'click':this.isGuideTrack(track)?'guide':null;strip.querySelector('.vs-channel-menu-pop').prepend(this.routeSelect(key?mainAudioRoute(this,key):track.output,value=>{if(key)setMainRoute(this,key,value);else track.output=value;},!this.isSpecialTrack(track)));if(key)strip.querySelector('.vs-channel-name').textContent=key==='click'?'Click':'Guia';return strip;};
   function addMenu(player,strip,value,set,inherit){const details=document.createElement('details');details.className='vs-channel-menu';details.innerHTML='<summary title="Opções e saída de áudio" aria-label="Opções e saída de áudio">⋮</summary><div class="vs-channel-menu-pop"></div>';details.querySelector('div').append(player.routeSelect(value,set,inherit));strip.querySelector('.vs-channel-top').append(details);return strip;}
-  p.makeBusStrip=function(name,state,type){const strip=original.makeBusStrip.call(this,name,state,type);return addMenu(this,strip,type==='vs'?this.vsOutput:state.output,value=>{if(type==='vs')this.vsOutput=value;else state.output=value;},type!=='vs');};
-  p.makeNativeClickStrip=function(){const strip=addMenu(this,original.makeNativeClickStrip.call(this),this.clickOutput||'master',v=>this.clickOutput=v,false);strip.querySelector('.vs-channel-name').textContent='Click';return strip;};
-  p.makePadStrip=function(){return addMenu(this,original.makePadStrip.call(this),this.padOutput||'master',v=>this.padOutput=v,false);};
+  p.makeBusStrip=function(name,state,type){const strip=original.makeBusStrip.call(this,name,state,type);return addMenu(this,strip,type==='vs'?mainAudioRoute(this,'vs'):state.output,value=>{if(type==='vs')setMainRoute(this,'vs',value);else state.output=value;},type!=='vs');};
+  p.makeNativeClickStrip=function(){const strip=addMenu(this,original.makeNativeClickStrip.call(this),mainAudioRoute(this,'click'),v=>setMainRoute(this,'click',v),false);strip.querySelector('.vs-channel-name').textContent='Click';return strip;};
+  p.makePadStrip=function(){return addMenu(this,original.makePadStrip.call(this),mainAudioRoute(this,'pad'),v=>setMainRoute(this,'pad',v),false);};
   p.projectPayload=function(){const data=original.projectPayload.call(this);data.settings.audioRouting={master:this.masterOutput||'stereo:0',vs:this.vsOutput||'master',guide:this.guideOutput||'master',click:this.clickOutput||'master',pad:this.padOutput||'master'};return data;};
   p.save=function(){original.save.call(this);try{localStorage.setItem('zlplay:routing:'+this.projectId,JSON.stringify({master:this.masterOutput,vs:this.vsOutput,guide:this.guideOutput||'master',click:this.clickOutput,pad:this.padOutput}))}catch{}};
   p.restore=function(){original.restore.call(this);let routing;try{routing=JSON.parse(localStorage.getItem('zlplay:routing:'+this.projectId)||'null')}catch{}this.restoreAudioRouting(routing);};
   p.restoreAudioRouting=function(routing){this.masterOutput=routing?.master||'stereo:0';this.vsOutput=routing?.vs||'master';this.clickOutput=routing?.click||this.tracks.find(t=>this.isClickTrack(t))?.output||'master';this.guideOutput=routing?.guide||this.tracks.find(t=>this.isGuideTrack(t))?.output||'master';this.padOutput=routing?.pad||'master';};
   p.loadProjectManifest=async function(files,manifest,...args){this._routingManifest=manifest.settings?.audioRouting||{};try{return await original.loadProjectManifest.call(this,files,manifest,...args)}finally{this._routingManifest=null}};
-  p.finishLoadedProject=function(...args){if(this._routingManifest)this.restoreAudioRouting(this._routingManifest);const result=original.finishLoadedProject.apply(this,args);startup().then(()=>this.drawTracks()).catch(e=>this.status(e.message,true));return result;};
+  p.finishLoadedProject=function(...args){
+    if(this._routingManifest)this.restoreAudioRouting(this._routingManifest);
+    if(!this.sharedAudioRouting&&!this._levelPreview)saveSharedRouting(this,currentMainRoutes(this));
+    const result=original.finishLoadedProject.apply(this,args);
+    startup().then(()=>this.drawTracks()).catch(e=>this.status(e.message,true));
+    return result;
+  };
   p.prepareNative=async function(){await startup();return original.prepareNative.call(this);};
-  p.syncNativeAux=async function(extra={}){await startup();const pad=outputChannels(this.padOutput||'master'),click=outputChannels(this.clickOutput||'master');const master=outputChannels(this.masterOutput||'stereo:0');await request({op:'aux',channelEffects:this.channelEffects||{},masterLeft:master[0],masterRight:master[1],master:Number(this.$('[data-master]')?.value??1),padGain:Number(this.padVolume??1),padPan:Number(this.padPan||0),padLeft:pad[0],padRight:pad[1],soloGain:this.metroGain(),soloPan:Number(this.metroPan||0),soloLeft:click[0],soloRight:click[1],soloBpm:Number(this.standaloneBpm)||120,soloMeter:Number(this.$('[data-meter]').value)===6?3:Number(this.$('[data-meter]').value)||4,soloAccent:!!this.$('[data-accent]').checked,soloAccentPosition:this.$('[data-accent-position]').value==='last'?(Number(this.$('[data-meter]').value)===6?3:Number(this.$('[data-meter]').value))-1:0,...extra});};
+  p.syncNativeAux=async function(extra={}){await startup();const pad=outputChannels(mainAudioRoute(this,'pad')),click=outputChannels(mainAudioRoute(this,'click'));const master=outputChannels(mainAudioRoute(this,'master'));await request({op:'aux',channelEffects:this.channelEffects||{},masterLeft:master[0],masterRight:master[1],master:Number(this.$('[data-master]')?.value??1),padGain:Number(this.padVolume??1),padPan:Number(this.padPan||0),padLeft:pad[0],padRight:pad[1],soloGain:this.metroGain(),soloPan:Number(this.metroPan||0),soloLeft:click[0],soloRight:click[1],soloBpm:Number(this.standaloneBpm)||120,soloMeter:Number(this.$('[data-meter]').value)===6?3:Number(this.$('[data-meter]').value)||4,soloAccent:!!this.$('[data-accent]').checked,soloAccentPosition:this.$('[data-accent-position]').value==='last'?(Number(this.$('[data-meter]').value)===6?3:Number(this.$('[data-meter]').value))-1:0,...extra});};
   p.preloadPad=function(){};
   p.playPadNote=async function(note,manual=false){if(!NOTES.includes(note))return;if(manual)this.padManualOverride=true;const id=++this.padRequestId;try{const folder=await bridge.padFolder('status');if(!folder.folder){if(manual)this.status('Escolha sua pasta de pads em Config.',true);return;}await startup();if(id!==this.padRequestId)return;await this.syncNativeAux({padEnabled:true,note:NOTES.indexOf(note)});if(id!==this.padRequestId)return;this.padPlaying=true;this.padNote=note;this.updatePadUi();}catch(e){this.status(e.message,true)}};
   p.stopPad=function(){this.padRequestId++;this.padPlaying=false;request({op:'aux',padEnabled:false}).catch(()=>{});this.updatePadUi();};
@@ -41,41 +57,206 @@ export function installAudioSettings(Player,bridge) {
   p.updatePans=function(...args){const result=original.updatePans.apply(this,args);this.syncNativeAux().catch(()=>{});return result;};
   p.openAudioSettings=async function(){
     if(document.querySelector('.zl-audio-modal'))return;
-    const wrap=document.createElement('div');wrap.className='zl-audio-modal';wrap.innerHTML='<section class="zl-audio-box"><header><strong>ZLPlay · Configurações</strong><button data-close>×</button></header><nav class="zl-settings-tabs"><button data-settings-audio>Áudio e saídas</button><button data-settings-controls>Controles</button></nav><div data-controls hidden></div><p data-audio-message>Procurando dispositivos…</p><div data-audio-fields></div></section>';(document.fullscreenElement||document.body).append(wrap);wrap.querySelector('[data-close]').onclick=()=>{wrap.remove();this.drawTracks();};
+    const wrap=document.createElement('div');wrap.className='zl-audio-modal';wrap.innerHTML='<section class="zl-audio-box"><header><strong>ZLPlay · Configurações</strong><button data-close>×</button></header><nav class="zl-settings-tabs"><button data-settings-audio>Geral</button><button data-settings-controls>Controles</button></nav><div data-controls hidden></div><div data-settings-general><p data-audio-message role="status">Procurando dispositivos…</p><div data-audio-fields></div></div></section>';(document.fullscreenElement||document.body).append(wrap);
     const message=wrap.querySelector('[data-audio-message]');const fields=wrap.querySelector('[data-audio-fields]');let state;
+    const general=wrap.querySelector('[data-settings-general]');
     const controls=wrap.querySelector('[data-controls]');
-    const renderControls=()=>{controls.innerHTML='<h3>Controles mapeados</h3><p>Associações criadas pelo botão Mapear.</p>';for(const [id,binding] of Object.entries(this.controlMappings||{})){const row=document.createElement('div');row.className='zl-control-row';row.innerHTML='<span></span><code></code><button>Editar</button><button>Remover</button>';row.querySelector('span').textContent=this.controlTargetMeta(id)?.label||id;row.querySelector('code').textContent=this.bindingLabel(binding);const buttons=row.querySelectorAll('button');buttons[0].onclick=async()=>{wrap.remove();await this.toggleControlMapping(true);this.selectControlMappingTarget({id,...this.controlTargetMeta(id)});};buttons[1].onclick=()=>{delete this.controlMappings[id];this.saveControlMappings();this.refreshControlMappingVisuals();renderControls();};controls.append(row);}if(!Object.keys(this.controlMappings||{}).length)controls.insertAdjacentHTML('beforeend','<p>Nenhum controle mapeado.</p>');};
-    const showTab=which=>{for(const key of ['audio','controls'])wrap.querySelector('[data-settings-'+key+']').setAttribute('aria-selected',String(key===which));};showTab('audio');wrap.querySelector('[data-settings-controls]').onclick=()=>{showTab('controls');fields.hidden=true;message.hidden=true;controls.hidden=false;renderControls();};
-    wrap.querySelector('[data-settings-audio]').onclick=()=>{showTab('audio');fields.hidden=false;message.hidden=false;controls.hidden=true;};
+    controls.innerHTML=`<section class="zl-midi-settings">
+      <h3>Entradas MIDI</h3>
+      <p>Habilite os dispositivos que você quer usar no modo Mapear.</p>
+      <div class="zl-midi-table"><table><thead><tr><th scope="col">Dispositivo</th><th scope="col">Status</th><th scope="col">Usar para controle</th><th scope="col">Canal MIDI</th><th scope="col" data-midi-legacy hidden>Mapas antigos</th></tr></thead><tbody data-midi-rows></tbody></table></div>
+      <p data-midi-message role="status"></p>
+    </section><section data-control-bindings></section>`;
+    const midiRows=controls.querySelector('[data-midi-rows]');
+    const midiMessage=controls.querySelector('[data-midi-message]');
+    const mappings=controls.querySelector('[data-control-bindings]');
+    const renderMidi=()=>{
+      const focusedId=document.activeElement?.dataset.midiToggle;
+      const focusedChannel=document.activeElement?.dataset.midiChannel;
+      const inputs=[...(this.controlMapMidiAccess?.inputs.values()||[])].filter(input=>input.id);
+      const legacy=Object.values(this.controlMappings).some(binding=>binding.type!=='key'&&!binding.portId);
+      controls.querySelector('[data-midi-legacy]').hidden=!legacy;
+      midiRows.replaceChildren();
+      for(const input of inputs){
+        const row=midiRows.insertRow();
+        const name=input.name||input.id;
+        const connected=input.state!=='disconnected';
+        const enabled=this.controlMidiEnabledPorts.has(input.id);
+        const deviceName=row.insertCell();
+        deviceName.dataset.noI18n='';
+        deviceName.textContent=name;
+        const status=document.createElement('span');
+        status.className='zl-midi-status';
+        status.classList.toggle('is-connected',connected);
+        status.textContent=connected?'Conectado':'Desconectado';
+        row.insertCell().append(status);
+        const toggle=document.createElement('input');
+        toggle.type='checkbox';
+        toggle.dataset.midiToggle=input.id;
+        toggle.setAttribute('aria-label','Usar para controle');
+        toggle.title=name;
+        toggle.checked=enabled;
+        toggle.disabled=!connected;
+        toggle.onchange=()=>this.setControlMidiPortEnabled(input.id,toggle.checked);
+        row.insertCell().append(toggle);
+        if(focusedId===input.id&&!toggle.disabled)toggle.focus({preventScroll:true});
+        const channel=document.createElement('select');
+        channel.dataset.midiChannel=input.id;
+        channel.setAttribute('aria-label','Canal MIDI');
+        channel.title=name;
+        channel.append(new Option('Todos os canais',''));
+        for(let i=0;i<16;i++)channel.append(new Option(String(i+1),String(i)));
+        channel.value=String(this.controlMidiChannels.get(input.id)??'');
+        channel.disabled=!connected;
+        channel.onchange=()=>this.setControlMidiChannel(input.id,channel.value===''?null:Number(channel.value));
+        row.insertCell().append(channel);
+        if(focusedChannel===input.id&&!channel.disabled)channel.focus({preventScroll:true});
+        if(legacy){
+          const link=document.createElement('button');
+          link.type='button';
+          link.textContent='Vincular mapas antigos';
+          link.title='Mapeamentos MIDI antigos ficam inativos até vincular uma entrada ou mapear de novo.';
+          link.disabled=!connected||!enabled;
+          link.onclick=()=>{
+            this.associateLegacyControlMidi(input.id);
+            renderControls();
+            midiMessage.textContent='Os mapeamentos antigos compatíveis foram vinculados à entrada MIDI.';
+            midiMessage.hidden=false;
+          };
+          row.insertCell().append(link);
+        }
+      }
+      controls.querySelector('.zl-midi-table').hidden=!inputs.length;
+      midiMessage.textContent=inputs.length?'':this.controlMapMidiAccess?'Nenhuma entrada MIDI detectada.':'Acesso MIDI indisponível.';
+      midiMessage.hidden=!midiMessage.textContent;
+    };
+    const renderControls=()=>{
+      renderMidi();
+      mappings.innerHTML='<h3>Controles mapeados</h3><p>Associações criadas pelo botão Mapear.</p>';
+      for(const [id,binding] of Object.entries(this.controlMappings)){
+        const row=document.createElement('div');
+        row.className='zl-control-row';
+        row.innerHTML='<div class="zl-control-info"><strong></strong><small></small></div><div class="zl-control-actions"><button>Editar</button><button>Remover</button></div>';
+        row.querySelector('strong').textContent=this.controlTargetMeta(id)?.label||id;
+        const description=row.querySelector('small');
+        description.textContent=this.bindingLabel(binding);
+        if(binding.portName){
+          const port=document.createElement('span');
+          port.dataset.noI18n='';
+          port.textContent=binding.portName;
+          description.append(' · ',port);
+        }
+        if(binding.type!=='key'){
+          const channel=document.createElement('span');
+          channel.textContent='Canal MIDI';
+          description.append(' · ',channel,' '+(binding.channel+1));
+        }
+        const [edit,remove]=row.querySelectorAll('button');
+        edit.onclick=async()=>{closeSettings();await this.toggleControlMapping(true);this.selectControlMappingTarget({id,...this.controlTargetMeta(id)});};
+        remove.onclick=()=>{
+          delete this.controlMappings[id];
+          this.controlMapCcState.delete(id);
+          this.saveControlMappings();
+          this.refreshControlMappingVisuals();
+          renderControls();
+        };
+        mappings.append(row);
+      }
+      if(!Object.keys(this.controlMappings).length)mappings.insertAdjacentHTML('beforeend','<p>Nenhum controle mapeado.</p>');
+    };
+    const onMidiChange=()=>{if(!controls.hidden)renderMidi();};
+    const closeSettings=()=>{
+      this.host.removeEventListener('zl-midi-inputs-change',onMidiChange);
+      wrap.remove();
+      this.drawTracks();
+    };
+    wrap.querySelector('[data-close]').onclick=closeSettings;
+    this.host.addEventListener('zl-midi-inputs-change',onMidiChange);
+    const showTab=which=>{for(const key of ['audio','controls'])wrap.querySelector('[data-settings-'+key+']').setAttribute('aria-selected',String(key===which));};showTab('audio');
+    wrap.querySelector('[data-settings-controls]').onclick=async()=>{
+      showTab('controls');general.hidden=true;controls.hidden=false;
+      renderControls();
+      if(this.controlMapMidiAccess)return;
+      midiMessage.hidden=false;
+      midiMessage.textContent='Procurando dispositivos…';
+      await this.initControlMidi();
+      if(wrap.isConnected&&!controls.hidden)renderMidi();
+    };
+    wrap.querySelector('[data-settings-audio]').onclick=()=>{showTab('audio');general.hidden=false;controls.hidden=true;};
     try{await startup();state=remember(await request({op:'devices'}));}catch(e){message.textContent=e.message;return;}
     const render=()=>{
       const existingPads=fields.querySelector('.zl-pad-folder'),existingClick=fields.querySelector('.zl-click-settings');
-      message.textContent='Escolha o driver e o dispositivo. Saídas diretas não passam pelo Master.';
-      fields.innerHTML=`<div class="zl-settings-grid"><div class="zl-settings-left"><aside class="zl-settings-device"><h3>Dispositivo de áudio</h3><label>Driver<select data-driver>${state.types.map(t=>`<option ${t.name===state.type?'selected':''}>${escape(t.name)}</option>`).join('')}</select></label><label>Dispositivo<select data-device></select></label><div class="zl-audio-pair"><label>Taxa de amostragem<select data-rate>${[...new Set([...state.sampleRates,state.sampleRate].filter(v=>v>0))].sort((a,b)=>a-b).map(r=>`<option value="${r}" ${r===state.sampleRate?'selected':''}>${r} Hz</option>`).join('')}</select></label><label>Buffer<select data-buffer>${[...new Set([...state.bufferSizes,state.bufferSize].filter(v=>v>0))].sort((a,b)=>a-b).map(b=>`<option ${b===state.bufferSize?'selected':''}>${b}</option>`).join('')}</select></label></div><div class="zl-audio-buttons"><button data-apply>Aplicar dispositivo</button><button data-panel ${state.controlPanel?'':'disabled'}>Painel do driver</button><button data-refresh>Atualizar dispositivos</button></div><p class="zl-audio-device-info"></p><p>Saída direta substitui o envio ao Master.</p></aside></div><section class="zl-audio-routing"><h3>Roteamento de saída</h3><p>Track segue o grupo; grupo segue o Bus VS. Selecione Master para usar seu fader, ou uma saída direta para ignorá-lo.</p><div data-routes></div></section></div>`;
-      if(existingPads)fields.querySelector(".zl-settings-left").append(existingPads);if(existingClick)fields.querySelector(".zl-settings-left").append(existingClick);
-      const driver=fields.querySelector('[data-driver]'),device=fields.querySelector('[data-device]');const fill=()=>{const type=state.types.find(t=>t.name===driver.value);device.innerHTML=(type?.devices||[]).map(n=>`<option ${n===state.device?'selected':''}>${escape(n)}</option>`).join('');};fill();const pendingDevice=()=>{const changed=driver.value!==state.type||device.value!==state.device;for(const key of ['rate','buffer']){const select=fields.querySelector('[data-'+key+']');select.disabled=changed;if(changed)select.innerHTML='<option value="0">Consultar após aplicar dispositivo</option>';else{const values=key==='rate'?[...state.sampleRates,state.sampleRate]:[...state.bufferSizes,state.bufferSize];const current=key==='rate'?state.sampleRate:state.bufferSize;select.innerHTML=[...new Set(values.filter(v=>v>0))].sort((a,b)=>a-b).map(v=>'<option value="'+v+'" '+(v===current?'selected':'')+'>'+v+(key==='rate'?' Hz':'')+'</option>').join('');}}message.textContent=changed?'Aplique o dispositivo para consultar as taxas e buffers que ele aceita.':'Escolha o driver e o dispositivo. Saídas diretas não passam pelo Master.';};driver.onchange=()=>{fill();pendingDevice();};device.onchange=pendingDevice;
+      const showLocalRoutes=fields.querySelector('.zl-local-routes')?.open??false;
+      message.textContent='';
+      fields.innerHTML=`<div class="zl-settings-grid"><div class="zl-settings-left"><aside class="zl-settings-device"><h3>Dispositivo de áudio</h3><label>Driver<select data-driver>${state.types.map(t=>`<option ${t.name===state.type?'selected':''}>${escape(t.name)}</option>`).join('')}</select></label><label>Dispositivo<select data-device></select></label><div class="zl-audio-pair"><label>Taxa de amostragem<select data-rate>${[...new Set([...state.sampleRates,state.sampleRate].filter(v=>v>0))].sort((a,b)=>a-b).map(r=>`<option value="${r}" ${r===state.sampleRate?'selected':''}>${r} Hz</option>`).join('')}</select></label><label>Buffer<select data-buffer>${[...new Set([...state.bufferSizes,state.bufferSize].filter(v=>v>0))].sort((a,b)=>a-b).map(b=>`<option ${b===state.bufferSize?'selected':''}>${b}</option>`).join('')}</select></label></div><div class="zl-audio-buttons"><button data-apply>Aplicar dispositivo</button><button data-panel ${state.controlPanel?'':'disabled'}>Painel do driver</button><button data-refresh>Atualizar dispositivos</button></div><p class="zl-audio-device-info"></p><p>Saída direta substitui o envio ao Master.</p></aside></div><section class="zl-audio-routing"><h3>Roteamento de saída</h3><div data-routes></div></section></div>`;
+      if(existingPads)fields.append(existingPads);
+      if(existingClick)fields.querySelector('.zl-settings-left').append(existingClick);
+      const driver=fields.querySelector('[data-driver]'),device=fields.querySelector('[data-device]');const fill=()=>{const type=state.types.find(t=>t.name===driver.value);device.innerHTML=(type?.devices||[]).map(n=>`<option ${n===state.device?'selected':''}>${escape(n)}</option>`).join('');};fill();const pendingDevice=()=>{const changed=driver.value!==state.type||device.value!==state.device;for(const key of ['rate','buffer']){const select=fields.querySelector('[data-'+key+']');select.disabled=changed;if(changed)select.innerHTML='<option value="0">Consultar após aplicar dispositivo</option>';else{const values=key==='rate'?[...state.sampleRates,state.sampleRate]:[...state.bufferSizes,state.bufferSize];const current=key==='rate'?state.sampleRate:state.bufferSize;select.innerHTML=[...new Set(values.filter(v=>v>0))].sort((a,b)=>a-b).map(v=>'<option value="'+v+'" '+(v===current?'selected':'')+'>'+v+(key==='rate'?' Hz':'')+'</option>').join('');}}message.textContent=changed?'Aplique o dispositivo para consultar as taxas e buffers que ele aceita.':'';};driver.onchange=()=>{fill();pendingDevice();};device.onchange=pendingDevice;
       fields.querySelector('.zl-audio-device-info').textContent=`Ativo: ${state.device} · ${state.outputs.length} saída(s) · ${state.sampleRate} Hz · buffer ${state.bufferSize}`;
-      const routes=fields.querySelector('[data-routes]');const row=(name,value,set,inherit=false)=>{const r=document.createElement('div');r.className='zl-audio-route';const title=document.createElement('span');title.textContent=name;r.append(title,this.routeSelect(value,set,inherit));routes.append(r);};
-      row('Master',this.masterOutput||'stereo:0',v=>this.masterOutput=v,false);const masterSelect=routes.querySelector('select');masterSelect.querySelector('[value="master"]')?.remove();if(!masterSelect.querySelector('[value="none"]')){const none=new Option('Nenhuma','none');masterSelect.prepend(none);}
-      row('Click',this.clickOutput||'master',v=>{this.clickOutput=v;for(const t of this.tracks)if(this.isClickTrack(t))t.output=v;});
-      row('Guia',this.guideOutput||'master',v=>{this.guideOutput=v;for(const t of this.tracks)if(this.isGuideTrack(t))t.output=v;});
-      row('Pad',this.padOutput||'master',v=>this.padOutput=v);row('Bus VS',this.vsOutput||'master',v=>this.vsOutput=v);
-      const label=document.createElement('p');label.textContent='Click: a saída é compartilhada entre o nativo e a track do projeto.';routes.append(label);
-      if(this.allGroupNames().length)routes.insertAdjacentHTML('beforeend','<h4 class="zl-route-heading">Grupos</h4>');
-      for(const name of this.allGroupNames()){
-        const details=document.createElement('details');details.className='zl-route-group';const summary=document.createElement('summary');summary.textContent='';details.append(summary);routes.append(details);
-        row(name,this.ensureGroupState(name).output,v=>this.ensureGroupState(name).output=v,true);summary.append(routes.lastElementChild);
-        for(const t of this.tracks.filter(t=>!this.isSpecialTrack(t)&&(t.group||'VS')===name)){row(t.name,t.output,v=>t.output=v,true);details.append(routes.lastElementChild);}
+      const routes=fields.querySelector('[data-routes]');
+      const inheritedRoutes=[];
+      const row=(name,value,set,group=null)=>{
+        const route=document.createElement('div');
+        route.className='zl-audio-route';
+        const title=document.createElement('span');
+        title.textContent=name;
+        const label=this.routeSelect(value,set,group!==null);
+        label.firstChild.remove();
+        const select=label.querySelector('select');
+        select.setAttribute('aria-label',name);
+        if(group!==null)inheritedRoutes.push({select,group});
+        route.append(title,label);
+        return route;
+      };
+
+      routes.insertAdjacentHTML('beforeend','<p>Estas cinco saídas são compartilhadas por todas as músicas e repertórios neste computador.</p>');
+      for(const [key,label] of [['master','Master'],['click','Click'],['guide','Guia'],['pad','Pad'],['vs','Bus VS']]){
+        routes.append(row(label,mainAudioRoute(this,key),value=>setMainRoute(this,key,value)));
       }
-      routes.insertAdjacentHTML('beforeend','<h4 class="zl-route-heading">Tracks avulsas</h4>');
-      for(const t of this.tracks.filter(t=>!this.isSpecialTrack(t)&&(t.group||'VS')==='VS'))row(t.name,t.output,v=>t.output=v,true);
-      for(const select of routes.querySelectorAll('select')){const option=select.querySelector('[value=""]');if(option){const name=select.closest('.zl-audio-route').querySelector('span').textContent;const track=this.tracks.find(t=>t.name===name);const group=track?(track.group||'VS'):'VS';const route=track?trackOutput(this,track):this.vsOutput||'master';const pair=outputChannels(route);option.textContent='Seguir '+(group==='VS'?'BUS VS':group)+' · '+(pair[0]===64?'Master':pair[0]+1+(pair[1]>=0?'/'+(pair[1]+1):''));}}
+      const masterSelect=routes.querySelector('select');masterSelect.querySelector('[value="master"]')?.remove();if(!masterSelect.querySelector('[value="none"]')){const none=new Option('Nenhuma','none');masterSelect.prepend(none);}
+      const label=document.createElement('p');label.textContent='Click: a saída é compartilhada entre o nativo e a track do projeto.';routes.append(label);
+      const groups=this.allGroupNames();
+      const tracks=this.tracks.filter(t=>!this.isSpecialTrack(t));
+      const looseTracks=tracks.filter(t=>(t.group||'VS')==='VS');
+      if(groups.length||looseTracks.length){
+        const local=document.createElement('details');
+        local.className='zl-local-routes';
+        local.open=showLocalRoutes;
+        local.innerHTML='<summary>Grupos e faixas</summary><p>Track segue o grupo; grupo segue o Bus VS. Selecione Master para usar seu fader, ou uma saída direta para ignorá-lo.</p>';
+        if(groups.length)local.insertAdjacentHTML('beforeend','<h4 class="zl-route-heading">Grupos</h4>');
+        for(const name of groups){
+          const details=document.createElement('details');
+          details.className='zl-route-group';
+          const summary=document.createElement('summary');
+          summary.append(row(name,this.ensureGroupState(name).output,v=>this.ensureGroupState(name).output=v,'VS'));
+          details.append(summary);
+          for(const track of tracks.filter(t=>t.group===name)){
+            details.append(row(track.name,track.output,v=>track.output=v,name));
+          }
+          local.append(details);
+        }
+        if(looseTracks.length)local.insertAdjacentHTML('beforeend','<h4 class="zl-route-heading">Tracks avulsas</h4>');
+        for(const track of looseTracks)local.append(row(track.name,track.output,v=>track.output=v,'VS'));
+        routes.append(local);
+      }
+      const refreshInheritedRoutes=()=>{
+        for(const {select,group} of inheritedRoutes){
+          const option=select.querySelector('[value=""]');
+          if(!option)continue;
+          const route=(group==='VS'?null:this.ensureGroupState(group).output)||mainAudioRoute(this,'vs');
+          const [left,right]=outputChannels(route);
+          const destination=left===64?'Master':left<0?'Nenhuma':left+1+(right>=0?'/'+(right+1):'');
+          option.textContent='Seguir '+(group==='VS'?'BUS VS':group)+' · '+destination;
+        }
+      };
+      refreshInheritedRoutes();
+      routes.addEventListener('change',refreshInheritedRoutes);
       fields.querySelector('[data-apply]').onclick=async()=>{if(this.playing||this._nativeStarting||this._nativeConfiguring){message.textContent='Pause a música e aguarde o carregamento antes de trocar o dispositivo.';return;}const button=fields.querySelector('[data-apply]');button.disabled=true;try{this.stopPad();this.stopStandaloneClick(false);const config={type:driver.value,device:device.value,sampleRate:Number(fields.querySelector('[data-rate]').value),bufferSize:Number(fields.querySelector('[data-buffer]').value)};state=remember(await request({op:'configureDevice',...config}));localStorage.setItem('zlplay:audio-device',JSON.stringify({type:state.type,device:state.device,sampleRate:state.sampleRate,bufferSize:state.bufferSize}));this._nativeState=null;this.drawTracks();render();message.textContent=config.bufferSize>0&&config.bufferSize!==state.bufferSize?'O driver ajustou o buffer de '+config.bufferSize+' para '+state.bufferSize+' amostras. Este é o valor ativo.':'Dispositivo aplicado. Buffer ativo: '+state.bufferSize+' amostras.';}catch(e){message.textContent=e.message;button.disabled=false;}};
       fields.querySelector('[data-panel]').onclick=async()=>{if(this.playing){message.textContent='Pause a música antes de abrir o painel do driver.';return;}try{this.stopPad();this.stopStandaloneClick(false);state=remember(await request({op:'controlPanel'}));render();}catch(e){message.textContent=e.message;}};
       fields.querySelector('[data-refresh]').onclick=async()=>{try{state=remember(await request({op:'devices'}));this.drawTracks();render();}catch(e){message.textContent=e.message;}};
     };render();
     const card=document.createElement('section');card.className='zl-pad-folder';card.innerHTML='<h3>Pasta de pads <button data-pad-help aria-label="Como importar pads" title="Como importar pads">?</button></h3><p data-pad-path></p><button data-pad-choose>Escolher pasta</button><p data-pad-status role="status"></p><div data-pad-instructions hidden><p>Coloque seus arquivos WAV diretamente em uma pasta e clique em Escolher pasta. A escolha fica salva neste computador.</p><p>Nomes: C.wav, C#.wav, D.wav, D#.wav, E.wav, F.wav, F#.wav, G.wav, G#.wav, A.wav, A#.wav e B.wav. Para sustenidos, também aceitamos Cs.wav, Ds.wav, Fs.wav, Gs.wav e As.wav.</p><p>Use arquivos de até 60 segundos. Não é necessário copiar os arquivos para o programa. Mantenha a pasta no mesmo lugar: se ela ou algum arquivo for removido, o ZLPlay avisa. Você pode usar uma pasta incompleta; apenas os pads disponíveis poderão tocar.</p></div>';
-    fields.querySelector(".zl-settings-left").append(card);
+    fields.append(card);
     const refreshPads=async()=>{try{const info=await bridge.padFolder('status');card.querySelector('[data-pad-path]').textContent=info.folder||'Nenhuma pasta selecionada. A reprodução das músicas funciona sem pads.';card.querySelector('[data-pad-status]').textContent=info.warning||(info.folder?'12 pads disponíveis.':'');}catch(e){card.querySelector('[data-pad-status]').textContent=e.message;}};
     card.querySelector('[data-pad-help]').onclick=()=>{const help=card.querySelector('[data-pad-instructions]');help.hidden=!help.hidden;};
     card.querySelector('[data-pad-choose]').onclick=async()=>{try{await bridge.padFolder('choose');this.stopPad();await refreshPads();}catch(e){card.querySelector('[data-pad-status]').textContent=e.message;}};

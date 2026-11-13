@@ -1,4 +1,16 @@
 const copy=x=>JSON.parse(JSON.stringify(x));
+export function nativePitchProfile(track) {
+ const profile = track.pitchProfile || 'instrument';
+ if (profile === 'general') return 'instrument';
+ if (profile !== 'instrument') return profile;
+ const words = String(track.name || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().split(/[^a-z]+/);
+ if (words.some(word => /^(?:bass|(?:contra)?baixo|(?:contra)?bajo)$/.test(word))) return 'bass';
+ if (words.some(word => /^(?:strings?|cordas?|cuerdas?|pads?)$/.test(word))) return 'instrument';
+ if (words.some(word => /^pianos?$/.test(word))) return 'piano';
+ if (words.some(word => /^(?:keyboards?|keys?|teclados?|teclas?)$/.test(word))) return 'keys';
+ return profile;
+}
+
 export function installExecutionTempo(Player){
  const p=Player.prototype,old={};for(const name of ['stop','pause','saveProjectFile','finishLoadedProject','loadProjectManifest','projectPayload','nativeMix','applyManualBpm','restoreProjectTempo'])old[name]=p[name];
  for(const name of ['stop','pause'])p[name]=function(...args){const result=old[name].apply(this,args);this.refreshExecutionBpm();return result;};
@@ -38,7 +50,7 @@ export function installExecutionTempo(Player){
  p.refreshExecutionBpm=function(){const input=this.$('[data-bpm-input]');if(input)input.value=String(Math.round(this.playing?this.projectBpm():this.standaloneBpm||this.projectBpm()));this.updateTapTempoUi();};
  p.applyManualBpm=function(value){this.standaloneBpm=Math.max(20,Math.min(400,Math.round(Number(value)||120)));this.$('[data-bpm-input]').value=this.standaloneBpm;this.updateTapTempoUi();if(this.tracks.length&&this._tempoDefinitionEditable&&(this.executionFactor||1)===1){const bpm=this.standaloneBpm;this.tempo={...this.tempo,bpm,points:[{time:0,bpm}]};this.projectTempo=copy(this.tempo);this.savedProjectTempo=copy(this.tempo);this._executionBase={duration:this.duration*(this.executionFactor||1),tempo:copy(this.tempo)};this.nativeSync();this.drawSections();this.save();}else if(this.playing)return this.status('Clique em Aplicar para alterar o andamento da música.');if(this.standaloneClickActive)this.restartStandaloneClick();};
  p.restoreProjectTempo=function(){if(this._executionBase){this.tempo=copy(this.projectTempo);this.$('[data-bpm-input]').value=String(Math.round(this.tempo.bpm));return this.tempo.bpm;}return old.restoreProjectTempo.apply(this,arguments);};
- p.nativeMix=function(){const data=old.nativeMix.call(this),factor=this.executionFactor||1;data.channelEffects=this.channelEffects||{};data.mix.forEach((t,i)=>{t.pitch-=12*Math.log2(factor);t.pitchProfile=this.tracks[i].pitchProfile||'instrument';t.bus=this.isSpecialTrack(this.tracks[i])?'':this.tracks[i].group||'VS';t.special=this.isClickTrack(this.tracks[i])?'click':this.isGuideTrack(this.tracks[i])?'guide':'';t.effectId='track:'+this.tracks[i].name;});return data;};
+ p.nativeMix=function(){const data=old.nativeMix.call(this),factor=this.executionFactor||1;data.channelEffects=this.channelEffects||{};data.mix.forEach((t,i)=>{t.pitch-=12*Math.log2(factor);t.pitchProfile=nativePitchProfile(this.tracks[i]);t.bus=this.isSpecialTrack(this.tracks[i])?'':this.tracks[i].group||'VS';t.special=this.isClickTrack(this.tracks[i])?'click':this.isGuideTrack(this.tracks[i])?'guide':'';t.effectId='track:'+this.tracks[i].name;});return data;};
  p.projectPayload=function(){const data=old.projectPayload.call(this),factor=this.executionFactor||1;data.settings.tempoDefinitionEditable=!!this._tempoDefinitionEditable;data.settings.channelEffects=copy(this.channelEffects||{});data.settings.executionFactor=factor;data.settings.originalTempo=copy(this._executionBase?.tempo||this.projectTempo||this.tempo);data.song.bpm=data.settings.originalTempo.bpm;data.song.duration*=factor;
   data.tracks.forEach((t,i)=>{t.pitchProfile=this.tracks[i].pitchProfile||'instrument';t.items.forEach((it,j)=>{it.position*=factor;if(it.length!=null)it.length*=factor;it.playbackRate=(this.tracks[i].items[j].playbackRate||1)/factor;});});
   data.regions.forEach(r=>{r.start*=factor;r.end*=factor;});for(const r of data.arrangement?.rules||[])for(const ref of [r.from,r.to]){ref.start*=factor;ref.end*=factor;}return data;
