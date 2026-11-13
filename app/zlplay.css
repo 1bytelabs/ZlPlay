@@ -1393,49 +1393,37 @@ Play | Pause | Stop | Solo Click | Loop | Início | Ferradura | Status | ... | -
 }
 
 
-/* ZLPlay 1.7.8.28 — backup dos mapeamentos */
 .vs-map-actions{
   display:none;
   align-items:center;
-  gap:6px;
-  flex-wrap:wrap;
+  gap:4px;
+  max-width:100%;
+  padding:3px;
+  border:1px solid #344057;
+  border-radius:8px;
+  background:#101824;
 }
 .vs-control-mapping .vs-map-actions{
   display:inline-flex;
 }
 .vs-map-actions .vs-map-input{
-  width:auto;
-  min-height:34px;
-  padding:6px 9px;
-  font:inherit;
+  width:clamp(132px,15vw,205px);
+  min-height:32px;
+  padding:4px 8px;
+  font-size:.76rem;
+  color-scheme:dark;
 }
-.vs-map-actions [data-map-import],
-.vs-map-actions [data-map-export]{
-  border-color:#6c86b7;
-  background:#172137;
-  color:#dce9ff;
+.vs-map-actions .vs-mode{
+  min-height:32px;
+  white-space:nowrap;
 }
-.vs-map-actions [data-map-clear]{
-  border-color:#7e5d69;
-  background:#291b23;
-  color:#f2dce5;
+.vs-map-actions [data-map-clear]:hover{
+  border-color:#a36378;
+  color:#ffd6e0;
 }
 @media(max-width:650px){
   .vs-control-mapping .vs-map-actions{
-    width:100%;
-    justify-content:flex-end;
-  }
-  .vs-map-actions .vs-mode{
-    min-height:30px;
-  }
-}
-@media(max-width:420px){
-  .vs-map-actions{
-    gap:5px;
-  }
-  .vs-map-actions .vs-mode{
-    padding:5px 7px!important;
-    font-size:.68rem;
+    flex-wrap:wrap;
   }
 }
 
@@ -1549,6 +1537,12 @@ Play | Pause | Stop | Solo Click | Loop | Início | Ferradura | Status | ... | -
 .zl-route-group summary .zl-audio-route{border:0}
 .zl-route-group>.zl-audio-route{margin-left:18px}
 .zl-control-row{display:grid;grid-template-columns:1fr 1fr auto auto;align-items:center;gap:12px;border-bottom:1px solid #ffffff15;padding:10px 0;font-size:.8rem}
+.zl-midi-settings{margin:14px 0;padding:12px 14px;border:1px solid #ffffff18;border-radius:9px}
+.zl-midi-settings table{width:100%;border-collapse:collapse;font-size:.8rem}
+.zl-midi-settings th,.zl-midi-settings td{padding:9px 8px;text-align:left;border-bottom:1px solid #ffffff15}
+.zl-midi-settings th:first-child{width:46%}
+.zl-midi-settings th:nth-child(3),.zl-midi-settings td:nth-child(3){text-align:center}
+.zl-midi-settings input[type=checkbox]{accent-color:#8b5cf6}
 .zl-audio-box [hidden]{display:none!important}
 .zl-arrangement-options{display:flex;align-items:center;gap:20px}
 .zl-arrangement-options label{display:flex;align-items:center;gap:8px}

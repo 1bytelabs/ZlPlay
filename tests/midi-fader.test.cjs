@@ -2,6 +2,20 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const midi = import('../app/midi-fader.mjs');
 
+test('identical MIDI messages from different inputs never match the same mapping', async () => {
+  const { readMidiControl, sameControlBinding } = await midi;
+  for (const status of [0x90, 0xb0, 0xe0]) {
+    const { binding } = readMidiControl(Uint8Array.of(status, 60, 100));
+    const controller = { ...binding, portId: 'controller' };
+    assert.equal(sameControlBinding(controller, { ...controller, portName: 'Renamed' }), true);
+    assert.equal(sameControlBinding(controller, { ...binding, portId: 'keyboard' }), false);
+    assert.equal(sameControlBinding(controller, { ...controller, channel: 1 }), false);
+    assert.equal(sameControlBinding(binding, controller), false);
+    assert.equal(sameControlBinding(binding, binding), false);
+  }
+  assert.equal(sameControlBinding({ type: 'key', code: 'KeyP' }, { type: 'key', code: 'KeyP' }), true);
+});
+
 test('MIDI Note learns from note-on and ignores both forms of note-off', async () => {
   const { readMidiControl, midiFaderValue } = await midi;
   const message = readMidiControl(Uint8Array.of(0x92, 60, 64));
