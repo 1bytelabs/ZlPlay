@@ -71,6 +71,7 @@ struct Track { std::vector<std::unique_ptr<Clip>> clips; double gain=1; float pa
 struct Group {
     double pitch=0; std::string bus,profile; bool special=false; ChannelDsp fx,vsFx; int left=maxOutputs,right=maxOutputs+1; signalsmith::stretch::SignalsmithStretch<float> stretch;
     AudioBuffer<float> input{2,blockSize}, output{2,blockSize};
+    int pitchLatency=0;
     std::vector<float> delayL,delayR; size_t delayIndex=0;
 };
 struct BusMeter { AudioBuffer<float> sum{2,blockSize};LevelMeter meter; };
@@ -218,17 +219,36 @@ public:
     }
     void makeGroups() {
         groups.clear();busMeters.clear(); std::map<std::tuple<double,int,int,std::string,std::string>,int> lookup;
-        bool shifted=false; for(auto& t:tracks) if(std::abs(t->pitch)>.001)shifted=true;
         latency=0;
         for(auto& t:tracks) {
             auto key=std::make_tuple(t->pitch,t->left,t->right,t->bus,t->profile);auto found=lookup.find(key);
             if(found!=lookup.end()){t->group=found->second;continue;}
             auto g=std::make_unique<Group>();g->pitch=t->pitch;g->left=t->left;g->right=t->right;g->bus=t->bus;if(!g->bus.empty()&&!busMeters.count(g->bus))busMeters[g->bus]=std::make_unique<BusMeter>();g->profile=t->profile;g->special=!t->special.empty();g->fx.configure(effectSettings["group:"+g->bus],sampleRate);g->vsFx.configure(effectSettings["vs"],sampleRate);
-            if(std::abs(g->pitch)>.001){g->stretch.configure(2,int(sampleRate*(g->profile=="voice"?.14:.12)),int(sampleRate*.02));g->stretch.setTransposeSemitones(g->pitch);if(g->profile=="voice"){g->stretch.setFormantFactor(1,true);g->stretch.setFormantBase(200/sampleRate);}latency=std::max(latency,g->stretch.inputLatency()+g->stretch.outputLatency());}
+            if(std::abs(g->pitch)>.001){
+                const bool bass=g->profile=="bass";
+                const bool voice=g->profile=="voice";
+                const bool keys=g->profile=="keys";
+                // Separate the closely spaced low harmonics during pitch analysis.
+                const bool piano=g->profile=="piano";
+                const double window=bass ? .24 : piano ? .18 : voice ? .14 : keys ? .09 : .12;
+                const double interval=bass ? .05 : piano ? .03 : keys ? .015 : .02;
+                g->stretch.configure(2,int(sampleRate*window),int(sampleRate*interval));
+                g->stretch.setTransposeSemitones(g->pitch);
+                if(voice){
+                    g->stretch.setFormantFactor(1,true);
+                    g->stretch.setFormantBase(200/sampleRate);
+                }
+                g->pitchLatency=g->stretch.inputLatency()+g->stretch.outputLatency();
+                latency=std::max(latency,g->pitchLatency);
+            }
             t->group=int(groups.size());lookup[key]=t->group;groups.push_back(std::move(g));
         }
         if(lookup.find(std::make_tuple(0.0,clickLeft,clickRight,std::string(),std::string("click")))==lookup.end()){auto g=std::make_unique<Group>();g->left=clickLeft;g->right=clickRight;g->special=true;g->profile="click";g->fx.configure(effectSettings["click"],sampleRate);groups.push_back(std::move(g));}
-        if(shifted) for(auto& g:groups)if(std::abs(g->pitch)<.001){g->delayL.assign(latency,0);g->delayR.assign(latency,0);}
+        for(auto& g:groups){
+            const auto compensation=latency-g->pitchLatency;
+            g->delayL.assign(compensation,0);
+            g->delayR.assign(compensation,0);
+        }
     }
     var load(const var& request) {
         playing=false;
@@ -395,17 +415,20 @@ public:
         }}
         for(int ch=0;ch<renderOutputs;ch++)std::fill(outputs[ch],outputs[ch]+n,0);
         for(auto& g:groups){
-            if(std::abs(g->pitch)>.001)g->stretch.process(g->input.getArrayOfReadPointers(),n,g->output.getArrayOfWritePointers(),n);
-            else for(int i=0;i<n;i++)for(int ch=0;ch<2;ch++){
-                auto& delay=ch==0?g->delayL:g->delayR;float value=g->input.getSample(ch,i);
-                if(!delay.empty()){float previous=delay[(g->delayIndex+i)%delay.size()];delay[(g->delayIndex+i)%delay.size()]=value;value=previous;}
-                g->output.setSample(ch,i,value);
-            }
-            if(!g->delayL.empty())g->delayIndex=(g->delayIndex+n)%g->delayL.size();
+            const bool transposed=std::abs(g->pitch)>.001;
+            if(transposed)g->stretch.process(g->input.getArrayOfReadPointers(),n,g->output.getArrayOfWritePointers(),n);
+            const auto& processed=transposed ? g->output : g->input;
+            const auto delaySize=g->delayL.size();
             for(int i=0;i<n;i++){
-                float l=g->output.getSample(0,i),r=g->output.getSample(1,i);if(g->profile=="click")g->fx.process(l,r);else if(!g->special){if(g->bus!="VS")g->fx.process(l,r);g->vsFx.process(l,r);vsSum.addSample(0,i,l);vsSum.addSample(1,i,r);if(auto it=busMeters.find(g->bus);it!=busMeters.end()){it->second->sum.addSample(0,i,l);it->second->sum.addSample(1,i,r);}}g->output.setSample(0,i,l);g->output.setSample(1,i,r);
-                if(g->left>=0&&g->left<renderOutputs)outputs[g->left][i]+=g->right<0?.5f*(g->output.getSample(0,i)+g->output.getSample(1,i)):g->output.getSample(0,i);
-                if(g->right>=0&&g->right<renderOutputs)outputs[g->right][i]+=g->output.getSample(1,i);
+                float l=processed.getSample(0,i),r=processed.getSample(1,i);
+                if(delaySize){
+                    std::swap(l,g->delayL[g->delayIndex]);
+                    std::swap(r,g->delayR[g->delayIndex]);
+                    if(++g->delayIndex==delaySize)g->delayIndex=0;
+                }
+                if(g->profile=="click")g->fx.process(l,r);else if(!g->special){if(g->bus!="VS")g->fx.process(l,r);g->vsFx.process(l,r);vsSum.addSample(0,i,l);vsSum.addSample(1,i,r);if(auto it=busMeters.find(g->bus);it!=busMeters.end()){it->second->sum.addSample(0,i,l);it->second->sum.addSample(1,i,r);}}
+                if(g->left>=0&&g->left<renderOutputs)outputs[g->left][i]+=g->right<0?.5f*(l+r):l;
+                if(g->right>=0&&g->right<renderOutputs)outputs[g->right][i]+=r;
             }
         }
         for(int i=0;i<n;i++){vsMeter.add(vsSum.getSample(0,i),vsSum.getSample(1,i));for(auto& bus:busMeters)bus.second->meter.add(bus.second->sum.getSample(0,i),bus.second->sum.getSample(1,i));}

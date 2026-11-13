@@ -1,4 +1,4 @@
-import { MIDI_CC_MODES, midiFaderValue, readMidiControl } from './midi-fader.mjs';
+import { MIDI_CC_MODES, midiFaderValue, readMidiControl, sameControlBinding } from './midi-fader.mjs';
 import { shortestSemitoneDelta } from './tonal-distance.mjs';
 import { installNativeAudio } from './native-audio.js';
 const AUDIO_EXT=/\.(wav|mp3|flac|ogg|opus|m4a|aac)$/i;
@@ -135,6 +135,18 @@ this.controlMapTarget=null;
 this.controlMapMidiAccess=null;
 this.controlMapCcState=new Map();
 this.controlMapMidiRequest=null;
+this.controlMidiEnabledPorts=new Set();
+try{
+  const saved=JSON.parse(localStorage.getItem("zosma-zlplay:midi-control-ports")||"[]");
+  if(Array.isArray(saved))this.controlMidiEnabledPorts=new Set(saved.filter(id=>typeof id==="string"&&id));
+}catch{}
+this.controlMidiChannels=new Map();
+try{
+  const saved=JSON.parse(localStorage.getItem("zosma-zlplay:midi-control-channels")||"{}");
+  for(const [id,channel] of Object.entries(saved)){
+    if(id&&Number.isInteger(channel)&&channel>=0&&channel<16)this.controlMidiChannels.set(id,channel);
+  }
+}catch{}
 this.controlMappings={};
 try{this.controlMappings=this.sanitizeControlMappings(JSON.parse(localStorage.getItem("zosma-zlplay:control-mappings")||"{}"))}catch{}
 this.render();
@@ -275,6 +287,10 @@ if(Object.values(this.controlMappings).some(binding=>binding.type!=="key"))void 
         if(meta.kind==="fader"&&MIDI_CC_MODES.some(([mode])=>mode===b.mode))clean[id].mode=b.mode;
       }
       if(b.type==="midi-pitch-bend"&&meta.kind==="fader")clean[id]={type:b.type,channel};
+      if(clean[id]&&typeof b.portId==="string"&&b.portId.trim()){
+        clean[id].portId=b.portId;
+        if(typeof b.portName==="string")clean[id].portName=b.portName;
+      }
     }
     return clean;
   }
@@ -331,7 +347,46 @@ if(Object.values(this.controlMappings).some(binding=>binding.type!=="key"))void 
     this.status(info.kind==="fader"?"Mova um fader ou knob MIDI. Delete remove o mapeamento.":"Acione um controle MIDI ou pressione uma tecla no modo Automático. Delete remove o mapeamento.");
   }
 
-  sameControlBinding(a,b){return a&&b&&a.type===b.type&&(a.type==="key"?a.code===b.code:a.type==="midi-note"?a.note===b.note&&a.channel===b.channel:a.channel===b.channel&&(a.type==="midi-pitch-bend"||a.cc===b.cc))}
+  sameControlBinding(a,b){return sameControlBinding(a,b)}
+
+  setControlMidiPortEnabled(id,enabled){
+    const input=this.controlMapMidiAccess?.inputs.get(id);
+    if(!input||input.state==="disconnected")return;
+    if(enabled)this.controlMidiEnabledPorts.add(id);
+    else this.controlMidiEnabledPorts.delete(id);
+    this.controlMapCcState.clear();
+    try{localStorage.setItem("zosma-zlplay:midi-control-ports",JSON.stringify([...this.controlMidiEnabledPorts]))}catch{}
+    this.bindControlMidiInputs();
+  }
+
+  setControlMidiChannel(id,channel){
+    if(!this.controlMapMidiAccess?.inputs.has(id))return;
+    if(channel===null)this.controlMidiChannels.delete(id);
+    else if(Number.isInteger(channel)&&channel>=0&&channel<16)this.controlMidiChannels.set(id,channel);
+    else return;
+    this.controlMapCcState.clear();
+    try{localStorage.setItem("zosma-zlplay:midi-control-channels",JSON.stringify(Object.fromEntries(this.controlMidiChannels)))}catch{}
+  }
+
+  acceptsControlMidiChannel(id,channel){
+    const filter=this.controlMidiChannels.get(id);
+    return filter===undefined||filter===channel;
+  }
+
+  associateLegacyControlMidi(portId){
+    const input=this.controlMapMidiAccess?.inputs.get(portId);
+    if(!input?.id||input.state==="disconnected"||!this.controlMidiEnabledPorts.has(input.id))return;
+    for(const [id,binding] of Object.entries(this.controlMappings)){
+      if(binding.type==="key"||binding.portId||!this.acceptsControlMidiChannel(portId,binding.channel))continue;
+      const scoped={...binding,portId:input.id,portName:input.name||""};
+      if(Object.values(this.controlMappings).some(other=>this.sameControlBinding(other,scoped)))continue;
+      this.controlMappings[id]=scoped;
+    }
+    this.controlMapCcState.clear();
+    this.saveControlMappings();
+    this.refreshControlMappingVisuals();
+    this.status("Os mapeamentos antigos compatíveis foram vinculados à entrada MIDI.");
+  }
 
   assignControlMapping(id,binding){for(const [other,b] of Object.entries(this.controlMappings||{}))if(other!==id&&this.sameControlBinding(b,binding))delete this.controlMappings[other];this.controlMappings[id]=binding;this.controlMapCcState.clear();this.saveControlMappings();const meta=this.controlTargetMeta(id);this.status(`${meta?.label||id} mapeado para ${this.bindingLabel(binding)}.`);this.controlMapTarget=null;this.refreshControlMappingVisuals()}
 
@@ -356,8 +411,18 @@ if(Object.values(this.controlMappings).some(binding=>binding.type!=="key"))void 
       this.controlMapMidiRequest??=navigator.requestMIDIAccess({sysex:false});
       this.controlMapMidiAccess=await this.controlMapMidiRequest;
       this.bindControlMidiInputs();
-      this.controlMapMidiAccess.onstatechange=()=>this.bindControlMidiInputs();
-      if(this.controlMapMode&&!this.controlMapTarget)this.status(`Mapeamento ativo. MIDI detectado: ${this.controlMapMidiAccess.inputs.size} entrada(s). Clique em um controle para mapear.`);
+      this.controlMapMidiAccess.onstatechange=({port})=>{
+        if(port.type!=="input")return;
+        if(port.state==="disconnected"){
+          for(const [id,binding] of Object.entries(this.controlMappings)){
+            if(binding.portId===port.id)this.controlMapCcState.delete(id);
+          }
+        }
+        this.bindControlMidiInputs();
+      };
+      if(this.controlMapMode&&!this.controlMapTarget&&![...this.controlMapMidiAccess.inputs.values()].some(input=>input.state!=="disconnected"&&this.controlMidiEnabledPorts.has(input.id))){
+        this.status("Para mapear MIDI, habilite uma entrada em Configurações → Controles.");
+      }
     }catch(e){
       console.warn("[ZLPlay MIDI]",e);
       if(this.controlMapMode)this.status("Mapeamento ativo. Acesso MIDI não autorizado; teclado continua disponível.");
@@ -366,12 +431,27 @@ if(Object.values(this.controlMappings).some(binding=>binding.type!=="key"))void 
     }
   }
 
-  bindControlMidiInputs(){if(!this.controlMapMidiAccess)return;for(const input of this.controlMapMidiAccess.inputs.values())input.onmidimessage=e=>this.handleControlMidiMessage(e)}
+  bindControlMidiInputs(){
+    if(!this.controlMapMidiAccess)return;
+    for(const input of this.controlMapMidiAccess.inputs.values()){
+      if(input.state!=="disconnected"&&this.controlMidiEnabledPorts.has(input.id)){
+        input.onmidimessage??=e=>this.handleControlMidiMessage(e,input);
+      }else if(input.onmidimessage){
+        input.onmidimessage=null;
+        if(input.state!=="disconnected")void input.close().catch(()=>{});
+      }
+    }
+    this.host.dispatchEvent(new Event("zl-midi-inputs-change"));
+  }
 
-  handleControlMidiMessage(e){
+  handleControlMidiMessage(e,input){
+    if(!input?.id||input.state==="disconnected"||!this.controlMidiEnabledPorts.has(input.id))return;
     const message=readMidiControl(e.data);
     if(!message)return;
     const {binding,value}=message;
+    if(!this.acceptsControlMidiChannel(input.id,binding.channel))return;
+    binding.portId=input.id;
+    binding.portName=input.name||"";
     if(this.controlMapMode){
       const target=this.controlMapTarget;
       if(!target||(binding.type==="midi-pitch-bend"&&target.kind!=="fader"))return;

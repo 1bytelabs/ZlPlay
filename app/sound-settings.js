@@ -1,6 +1,97 @@
-export function installSoundSettings(s){const bridge=window.zlplayNative,open=s.openAudioSettings.bind(s);s.openAudioSettings=async function(...args){await open(...args);const card=document.querySelector('.zl-pad-folder');if(!card||card.dataset.soundBank)return;card.dataset.soundBank='';card.innerHTML='<h3>Personalizar sons</h3><p>Os arquivos importados são copiados para a pasta de dados do ZLPlay.</p><section><strong>Pads</strong><p>Selecione 12 arquivos, um por nota, de até 60 segundos. Use os nomes C, Db, D, Eb, E, F, Gb, G, Ab, A, Bb e B. Sustenidos também são aceitos nos arquivos.</p><button data-import="pads">Importar Pads</button><div data-pad-summary data-no-i18n></div></section><section><strong>Click ZLPlay</strong><p>Use sons de clique de até 10 segundos.</p><div class="zl-sound-row"><button data-import="normal">Importar clique normal</button><button data-preview="normal">Ouvir clique normal</button><small data-normal data-no-i18n></small></div><div class="zl-sound-row"><button data-import="accent">Importar acentuação</button><button data-preview="accent">Ouvir acentuação</button><small data-accent data-no-i18n></small></div><button data-reset-click>Restaurar sons padrão do clique</button></section><button data-open-sounds>Abrir pasta dos sons</button><p data-sound-message role="status"></p>';
- const t=text=>window.__ZL_I18N__?.t(text)||text,message=text=>card.querySelector('[data-sound-message]').textContent=text;
- async function refresh(){const info=await bridge.sounds({action:'status'}),pads=await bridge.padFolder('status');card.querySelector('[data-pad-summary]').textContent=info.pads.length?info.pads.map(p=>p.note+' · '+p.name).join('\n'):pads.folder?t('Pasta de Pads configurada anteriormente.') :t('Nenhum Pad importado.');card.querySelector('[data-normal]').textContent=info.normal||t('Padrão');card.querySelector('[data-accent]').textContent=info.accent||t('Padrão');}
- for(const button of card.querySelectorAll('[data-import]'))button.onclick=async()=>{button.disabled=true;try{if(s.playing||s.standaloneClickActive)return message(t('Pause a reprodução antes de importar sons.'));await bridge.sounds({action:button.dataset.import,language:window.__ZL_I18N__?.language||'en'});if(button.dataset.import==='pads')s.stopPad();await refresh();message('');}catch(e){message(e.message);}finally{button.disabled=false;}};
- for(const button of card.querySelectorAll('[data-preview]'))button.onclick=async()=>{try{if(s.playing||s.standaloneClickActive)return message(t('Pause a reprodução antes de ouvir o som.'));await bridge.sounds({action:'preview',accent:button.dataset.preview==='accent'});}catch(e){message(e.message);}};
- card.querySelector('[data-reset-click]').onclick=async()=>{try{if(s.playing||s.standaloneClickActive)return message(t('Pause a reprodução antes de importar sons.'));await bridge.sounds({action:'reset'});await refresh();}catch(e){message(e.message);}};card.querySelector('[data-open-sounds]').onclick=()=>bridge.sounds({action:'open'}).catch(e=>message(e.message));const languageChanged=()=>{if(card.isConnected)refresh().catch(e=>message(e.message));else document.removeEventListener('zl-language',languageChanged);};document.addEventListener('zl-language',languageChanged);await refresh();};}
+const PAD_NOTES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+export function installSoundSettings(player) {
+  const bridge = window.zlplayNative;
+  const open = player.openAudioSettings.bind(player);
+  player.openAudioSettings = async function (...args) {
+    await open(...args);
+    const card = document.querySelector('.zl-pad-folder');
+    if (!card || card.hasAttribute('data-sound-bank')) return;
+    card.dataset.soundBank = '';
+    card.innerHTML = `
+      <header><h3>Personalizar sons</h3><button data-open-sounds>Abrir pasta dos sons</button></header>
+      <div class="zl-sound-grid">
+        <section>
+          <h4>Pads</h4>
+          <p>Selecione 12 arquivos, um por nota, de até 60 segundos. Use os nomes das notas nos arquivos. Sustenidos também são aceitos.</p>
+          <button data-import="pads">Importar Pads</button>
+          <ul class="zl-pad-notes" data-pad-notes></ul>
+          <p data-pad-summary></p>
+        </section>
+        <section>
+          <h4>Click ZLPlay</h4>
+          <p>Use sons de clique de até 10 segundos.</p>
+          <div class="zl-sound-row">
+            <div><strong>Normal</strong><small data-normal></small></div>
+            <button data-import="normal" aria-label="Importar clique normal">Importar</button>
+            <button data-preview="normal" aria-label="Ouvir clique normal">Ouvir</button>
+          </div>
+          <div class="zl-sound-row">
+            <div><strong>Acentuação</strong><small data-accent></small></div>
+            <button data-import="accent" aria-label="Importar acentuação">Importar</button>
+            <button data-preview="accent" aria-label="Ouvir acentuação">Ouvir</button>
+          </div>
+          <button data-reset-click>Restaurar sons padrão do clique</button>
+        </section>
+      </div>
+      <p data-sound-message role="status"></p>`;
+
+    const message = text => card.querySelector('[data-sound-message]').textContent = text;
+    const busy = () => player.playing || player.standaloneClickActive;
+    async function refresh() {
+      const [info, pads] = await Promise.all([bridge.sounds({action: 'status'}), bridge.padFolder('status')]);
+      const available = new Set(pads.available);
+      const notes = PAD_NOTES.map((note, index) => {
+        const item = document.createElement('li');
+        const ready = available.has(index);
+        const name = info.pads.find(pad => pad.note === note)?.name;
+        item.classList.toggle('is-available', ready);
+        item.textContent = note;
+        item.title = ready ? name || 'Pad disponível' : 'Pad indisponível';
+        const status = document.createElement('span');
+        status.className = 'zl-visually-hidden';
+        status.textContent = ready ? 'Pad disponível' : 'Pad indisponível';
+        item.append(status);
+        if (ready) {
+          const check = document.createElement('span');
+          check.setAttribute('aria-hidden', 'true');
+          check.textContent = '✓';
+          item.append(check);
+        }
+        return item;
+      });
+      card.querySelector('[data-pad-notes]').replaceChildren(...notes);
+      card.querySelector('[data-pad-summary]').textContent = available.size === 1 ? '1 pad disponível.' : available.size + ' pads disponíveis.';
+      for (const kind of ['normal', 'accent']) {
+        const status = card.querySelector('[data-' + kind + ']');
+        status.toggleAttribute('data-no-i18n', Boolean(info[kind]));
+        status.textContent = info[kind] || 'Padrão';
+      }
+    }
+
+    for (const button of card.querySelectorAll('[data-import], [data-preview], [data-reset-click]')) {
+      button.onclick = async () => {
+        const preview = button.dataset.preview;
+        if (busy()) return message(preview ? 'Pause a reprodução antes de ouvir o som.' : 'Pause a reprodução antes de importar sons.');
+        button.disabled = true;
+        try {
+          if (preview) {
+            await bridge.sounds({action: 'preview', accent: preview === 'accent'});
+          } else {
+            const action = button.dataset.import || 'reset';
+            await bridge.sounds({action, language: window.__ZL_I18N__?.language || 'en'});
+            if (action === 'pads') player.stopPad();
+            await refresh();
+          }
+          message('');
+        } catch (error) {
+          message(error.message);
+        } finally {
+          button.disabled = false;
+        }
+      };
+    }
+    card.querySelector('[data-open-sounds]').onclick = () => bridge.sounds({action: 'open'}).catch(error => message(error.message));
+    await refresh().catch(error => message(error.message));
+  };
+}

@@ -1,4 +1,25 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const path=require('node:path');const fs=require('node:fs/promises');const {NativeAudio}=require('../desktop/native-audio.cjs');
+test('shared main routes survive song changes while track and group routes stay local', async () => {
+  const {mainAudioRoute, trackOutput} = await import('../app/audio-routing.mjs');
+  const player = {
+    sharedAudioRouting: {master:'stereo:0', click:'mono:2', guide:'mono:3', pad:'mono:4', vs:'stereo:6'},
+    isClickTrack: track => track.kind === 'click',
+    isGuideTrack: track => track.kind === 'guide',
+    isSpecialTrack: () => false,
+    ensureGroupState: () => group,
+  };
+  let group = {output:'mono:5'};
+  Object.assign(player, {masterOutput:'mono:0', clickOutput:'mono:0', guideOutput:'mono:0', padOutput:'mono:0', vsOutput:'mono:0'});
+  for (const [key, route] of Object.entries(player.sharedAudioRouting)) assert.equal(mainAudioRoute(player,key),route);
+  assert.equal(trackOutput(player,{kind:'click',output:'mono:1'}),'mono:2');
+  assert.equal(trackOutput(player,{kind:'guide',output:'mono:1'}),'mono:3');
+  assert.equal(trackOutput(player,{output:'mono:1'}),'mono:1');
+  assert.equal(trackOutput(player,{}),'mono:5');
+  group = {};
+  assert.equal(trackOutput(player,{}),'stereo:6');
+  player._levelAuditionTarget = 'vs';
+  assert.equal(trackOutput(player,{}),'mono:0');
+});
 test('saídas mono/estéreo e herança por track, grupo e Bus VS',async()=>{const {outputChannels,trackOutput}=await import('../app/audio-routing.mjs');assert.deepEqual(outputChannels('mono:3'),[3,-1]);assert.deepEqual(outputChannels('stereo:2'),[2,3]);assert.deepEqual(outputChannels('master'),[64,65]);assert.deepEqual(outputChannels('none'),[-1,-1]);const state={output:'stereo:2'};const player={vsOutput:'stereo:0',isSpecialTrack:t=>t.special,ensureGroupState:()=>state};const t={};assert.equal(trackOutput(player,t),'stereo:2');t.output='mono:3';assert.equal(trackOutput(player,t),'mono:3');t.output='master';assert.equal(trackOutput(player,t),'master');t.output=null;state.output=null;assert.equal(trackOutput(player,t),'stereo:0');t.special=true;assert.equal(trackOutput(player,t),'master');});
 test('motor: saídas diretas isoladas, sem duplicar Master, e controle independente de volume',{timeout:30000},async()=>{
 await fs.mkdir('tools/native-tests',{recursive:true});const file=path.resolve('tools/native-tests/routing-tone.wav');const frames=44100,b=Buffer.alloc(44+frames*4);b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(2,22);b.writeUInt32LE(44100,24);b.writeUInt32LE(176400,28);b.writeUInt16LE(4,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(frames*4,40);for(let i=0;i<frames;i++){const v=Math.round(5000*Math.sin(2*Math.PI*440*i/44100));b.writeInt16LE(v,44+i*4);b.writeInt16LE(v,46+i*4);}await fs.writeFile(file,b);

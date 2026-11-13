@@ -50,3 +50,69 @@ test('motor nativo: referência local, mix, cortes, loop e tom sem PCM integral'
     await assert.rejects(engine.request({ op: 'probe', files: [{ path: path.resolve('missing.wav') }] }));
   } finally { engine.close(); }
 });
+
+test('transposição de baixo preserva harmônicos graves e mantém os outros grupos alinhados', { timeout: 60000 }, async () => {
+  const { nativePitchProfile } = await import('../app/execution-tempo.js');
+  assert.equal(nativePitchProfile({ name: 'Bass_1' }), 'bass');
+  assert.equal(nativePitchProfile({ name: 'Baixo', pitchProfile: 'instrument' }), 'bass');
+  assert.equal(nativePitchProfile({ name: 'Bass Vocal', pitchProfile: 'voice' }), 'voice');
+  for (const name of ['Piano B-St', 'Electric Piano', 'Piano FX']) {
+    assert.equal(nativePitchProfile({ name }), 'piano');
+  }
+  for (const name of ['Keys_2', 'Key 1', 'Teclado', 'Teclas', 'Keys FX']) {
+    assert.equal(nativePitchProfile({ name }), 'keys');
+  }
+  assert.equal(nativePitchProfile({ name: 'Guitarra' }), 'instrument');
+  assert.equal(nativePitchProfile({ name: 'FX' }), 'instrument');
+  assert.equal(nativePitchProfile({ name: 'Keys Strings' }), 'instrument');
+  assert.equal(nativePitchProfile({ name: 'Keys', pitchProfile: 'general' }), 'instrument');
+  assert.equal(nativePitchProfile({ name: 'FX', pitchProfile: 'keys' }), 'keys');
+  assert.equal(nativePitchProfile({ name: 'Synth Bass Keys' }), 'bass');
+
+  const directory = path.resolve('tools/native-tests');
+  await fs.mkdir(directory, { recursive: true });
+  const bass = path.join(directory, 'bass-harmonics.wav');
+  const marker = path.join(directory, 'pitch-alignment-marker.wav');
+  const source = 55 / 2 ** (3 / 12);
+  await fs.writeFile(bass, wav(3, i => {
+    const phase = 2 * Math.PI * source * i / 44100;
+    return .36 * Math.sin(phase) + .18 * Math.sin(2 * phase) + .08 * Math.sin(3 * phase);
+  }));
+  await fs.writeFile(marker, wav(3, i => i === 44100 ? .5 : 0));
+  const engine = new NativeAudio(executable);
+  const track = (file, mix) => ({
+    gain: 1, pan: 0, items: [{ path: file, position: 0, offset: 0, length: 3 }], ...mix
+  });
+  const load = tracks => engine.request({ op: 'load', offline: true, duration: 3, sampleRate: 44100, tracks });
+  const render = (position, frames) => engine.request({ op: 'renderTest', position, frames, capture: true });
+  const bassTrack = track(bass, { pitch: 3, pitchProfile: 'bass', outputLeft: 1, outputRight: -1 });
+  try {
+    await load([bassTrack]);
+    const shifted = (await render(.75, 65536)).samples.map((value, index, samples) => index % 2 ? value : samples[index + 1]);
+    for (const harmonic of [55, 110, 165]) {
+      const expected = power(shifted, harmonic);
+      assert.ok(expected > 8 * Math.max(power(shifted, harmonic - 5), power(shifted, harmonic + 5)), String(harmonic));
+    }
+
+    const dryMarker = track(marker, { pitch: 0, outputLeft: 0, outputRight: -1 });
+    await load([bassTrack, dryMarker]);
+    const dry = (await render(.9, 16384)).samples.filter((_, index) => index % 2 === 0);
+    assert.equal(dry.findIndex(value => value > .49), 4410);
+
+    const references = [];
+    for (const pitchProfile of ['instrument', 'keys', 'piano']) {
+      const shiftedMarker = { ...dryMarker, pitch: 3, pitchProfile };
+      await load([shiftedMarker]);
+      const reference = (await render(.9, 16384)).samples.filter((_, index) => index % 2 === 0);
+      await load([bassTrack, shiftedMarker]);
+      const aligned = (await render(.9, 16384)).samples.filter((_, index) => index % 2 === 0);
+      assert.ok(reference.some(value => Math.abs(value) > .01));
+      assert.ok(aligned.every((value, index) => Math.abs(value - reference[index]) < .002), pitchProfile);
+      references.push(reference);
+    }
+    assert.ok(references[0].some((value, index) => Math.abs(value - references[1][index]) > .002));
+    assert.ok(references[0].some((value, index) => Math.abs(value - references[2][index]) > .002));
+  } finally {
+    engine.close();
+  }
+});

@@ -18,7 +18,23 @@ export function installUpgradeUi(Player,bridge){
  p.drawSections=function(...args){this.sections.forEach((r,i)=>{if(!/^#[0-9a-f]{3,8}$/i.test(r.color||''))r.color=regionColor(r.name);});return old.drawSections.apply(this,args);};
  function meter(strip,id){if(!strip||strip.querySelector('.zl-meter'))return strip;const m=document.createElement('div');m.className='zl-meter';m.dataset.meterId=id;m.innerHTML='<i></i><i></i>';m.title='Sinal esquerdo / direito';strip.querySelector('.vs-channel-fader-wrap,.vs-master-fader-wrap')?.append(m);return strip;}
  function fx(player,strip,id){const button=document.createElement('button');button.type='button';button.className='zl-fx-button';button.textContent='EQ';button.title='Ganho e equalizador';button.onclick=()=>player.openChannelEffects(id);const menu=strip.querySelector('.vs-channel-menu-pop');(menu||strip.querySelector('.vs-channel-top')||strip).append(button);return strip;}
- p.makeTrackStrip=function(t){const strip=fx(this,meter(old.makeTrackStrip.call(this,t),'track:'+t.name),'track:'+t.name);if(!this.isSpecialTrack(t)){const label=document.createElement('label');label.textContent='Tratamento do tom';const select=document.createElement('select');select.innerHTML='<option value="instrument">Instrumento</option><option value="voice">Voz · preservar formantes</option>';select.value=t.pitchProfile||'instrument';select.onchange=()=>{t.pitchProfile=select.value;this.nativeSync();};label.append(select);strip.querySelector('.vs-channel-menu-pop').append(label);}return strip;};
+ p.makeTrackStrip=function(t){
+  const strip=fx(this,meter(old.makeTrackStrip.call(this,t),'track:'+t.name),'track:'+t.name);
+  if(this.isSpecialTrack(t))return strip;
+  const label=document.createElement('label');
+  label.textContent='Tratamento do tom';
+  const select=document.createElement('select');
+  select.add(new Option('Automático','instrument'));
+  select.add(new Option('Instrumento','general'));
+  select.add(new Option('Piano','piano'));
+  select.add(new Option('Teclados · preservar ataques','keys'));
+  select.add(new Option('Voz · preservar formantes','voice'));
+  select.value=t.pitchProfile||'instrument';
+  select.onchange=()=>{t.pitchProfile=select.value;this.nativeSync();};
+  label.append(select);
+  strip.querySelector('.vs-channel-menu-pop').append(label);
+  return strip;
+ };
  p.makeBusStrip=function(name,state,type){const id=type==='vs'?'vs':'group:'+name;return fx(this,meter(old.makeBusStrip.call(this,name,state,type),id),id);};
  p.makePadStrip=function(){return fx(this,meter(old.makePadStrip.call(this),'pad'),'pad');};
  p.makeNativeClickStrip=function(){return fx(this,meter(old.makeNativeClickStrip.call(this),'click'),'click');};

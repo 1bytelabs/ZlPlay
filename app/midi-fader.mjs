@@ -4,6 +4,14 @@ export const MIDI_CC_MODES = [
   ['sign-magnitude', 'MIDI CC relativo (1 / 65)']
 ];
 
+export function sameControlBinding(a, b) {
+  if (!a || !b || a.type !== b.type) return false;
+  if (a.type === 'key') return a.code === b.code;
+  if (!a.portId || a.portId !== b.portId || a.channel !== b.channel) return false;
+  if (a.type === 'midi-note') return a.note === b.note;
+  return a.type === 'midi-pitch-bend' || a.cc === b.cc;
+}
+
 export function readMidiControl(data) {
   if (data?.length !== 3) return null;
   const [status, number, value] = data;
