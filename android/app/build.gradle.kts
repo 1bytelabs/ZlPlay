@@ -14,8 +14,8 @@ android {
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         targetSdk = 36
         testInstrumentationRunner = "com.onebytelabs.zlplay.PadSmokeTest"
-        versionCode = 26
-        versionName = "0.11.3"
+        versionCode = 27
+        versionName = "2.8.3"
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     signingConfigs {
@@ -55,6 +55,13 @@ val prepareAudioAssets by tasks.registering(Copy::class) {
 }
 android.sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/audioAssets").get().asFile)
 tasks.named("preBuild") { dependsOn(prepareAudioAssets) }
+
+val prepareGuideAssets by tasks.registering(Copy::class) {
+    from(rootProject.file("../app/guide-banks"))
+    into(layout.buildDirectory.dir("generated/guideAssets/guide-banks"))
+}
+android.sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/guideAssets").get().asFile)
+tasks.named("preBuild") { dependsOn(prepareGuideAssets) }
 
 val jlayerSources by configurations.creating { isCanBeConsumed = false; isTransitive = false }
 dependencies { implementation("javazoom:jlayer:1.0.1"); implementation("com.google.zxing:core:3.5.3"); jlayerSources("javazoom:jlayer:1.0.1:sources") }

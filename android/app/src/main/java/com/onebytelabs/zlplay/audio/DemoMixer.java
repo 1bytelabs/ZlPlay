@@ -28,7 +28,52 @@ public final class DemoMixer {
     private volatile boolean preferProjectClick=false,accentEnabled=false;
     public synchronized void setAccent(boolean value){accentEnabled=value;}
     public boolean isAccent(){return accentEnabled;}
+    public synchronized void setProjectMeter(int numerator, int denominator) {
+        if (project != null) {
+            project.numerator = numerator;
+            project.denominator = denominator;
+        }
+    }
+    public synchronized void updateProjectRegions(ProjectSpec edited) {
+        if (project == null) return;
+        project.regions.clear();
+        project.regions.addAll(edited.regions);
+        project.padMarkers.clear();
+        project.padMarkers.addAll(edited.padMarkers);markerIndex=-1;markerCursor=-1;
+        project.jumps.clear();
+        project.jumps.addAll(edited.jumps);
+        edited.automationEnabled = automationEnabled();
+        edited.automationRehearsal = automationRehearsal();
+        arrangement = new ProjectArrangement(edited);
+        arrangement.seek(cursor);
+        pendingRegion = -1;
+        manualBoundary = -1;
+        armedAutomationTarget = -1;
+        loop = false;
+    }
     public synchronized void prepareProjectChange(boolean keepPad){playing=false;click=false;loop=false;if(!keepPad)pad=false;}
+    private double padFactor=1;
+    private int markerIndex=-1;private long markerCursor=-1;
+    private ClipEq[] trackEq=new ClipEq[32];private final ClipEq[] busEq=new ClipEq[5];
+    private final double[] eqTrim=new double[32],busEqTrim={1,1,1,1,1};
+    public synchronized void configureEffects(ProjectSpec spec){
+        java.util.Arrays.fill(eqTrim,1);java.util.Arrays.fill(trackEq,null);
+        for(int i=0;i<spec.tracks.size();i++){
+            ProjectSpec.Track t=spec.tracks.get(i);trackEq[i]=t.eq==null?null:new ClipEq(t.eq);eqTrim[i]=t.eqTrim;
+        }
+        for(int i=0;i<5;i++){busEq[i]=spec.busEq[i]==null?null:new ClipEq(spec.busEq[i]);busEqTrim[i]=spec.busTrim[i];}
+    }
+    private void resolvePadMarker(){
+        if(project==null||project.padMarkers.isEmpty())return;
+        if(cursor<markerCursor){markerIndex=-1;}
+        int before=markerIndex;
+        while(markerIndex+1<project.padMarkers.size()&&Math.round(project.padMarkers.get(markerIndex+1).time*RATE)<=cursor)markerIndex++;
+        if(markerIndex!=before||markerCursor<0||cursor<markerCursor){
+            int note=markerIndex>=0?project.padMarkers.get(markerIndex).note:com.onebytelabs.zlplay.project.MusicalKey.parse(project.originalKey);
+            if(note>=0)setPadNote((note+transpose+120)%12);
+        }
+        markerCursor=cursor;
+    }
     private volatile int bpm = 120,transpose,padNote;
     private int[] roles=new int[3];private boolean[] pitchEnabled={true,true,false};
     private float vsLevel=1,clickLevel=1,guideLevel=1,masterLevel=1,soloMix=1;
@@ -38,7 +83,7 @@ public final class DemoMixer {
     private PcmTrack guidePreview;private int guideIndex=-1;private long previewStart=-1,previewEnd,previewSource;private boolean previewReady;
     private float[] pan=new float[3];private int[] trackRoutes={-1,-1,-1};
     public synchronized int trackRoute(int index){return trackRoutes[index];}
-    public synchronized void setTrackRoute(int index,int route){if(route< -1||route>115||route>=16&&route<100)throw new IllegalArgumentException("Track route");trackRoutes[index]=route;}
+    public synchronized void setTrackRoute(int index,int route){if(route< -1||route>115||route>=16&&route<100)throw new IllegalArgumentException("Track route");trackRoutes[index]=roles[index]==0?route:-1;}
     private volatile long durationFrames=DURATION;
     private float[] target = { .55f, .55f, .4f }, gain = new float[3];
     public double duration(){return durationFrames/(double)RATE;}
@@ -48,9 +93,10 @@ public final class DemoMixer {
     public synchronized void load(PcmTrack[] tracks){
         if(tracks.length==0||tracks.length>32)throw new IllegalArgumentException("Invalid track count");
         PcmTrack[] sources=tracks.clone();double duration=0;for(PcmTrack t:sources)duration=Math.max(duration,t.duration());
+        java.util.Arrays.fill(trackEq,null);java.util.Arrays.fill(eqTrim,1);java.util.Arrays.fill(busEq,null);java.util.Arrays.fill(busEqTrim,1);markerIndex=-1;markerCursor=-1;
         closeImported();project=null;arrangement=null;armedAutomationTarget=-1;manualBoundary=-1;pendingRegion=-1;pan=new float[tracks.length];trackRoutes=new int[tracks.length];java.util.Arrays.fill(trackRoutes,-1);muted=new boolean[tracks.length];soloed=new boolean[tracks.length];trackMeters=new float[tracks.length];imported=sources;target=new float[tracks.length];java.util.Arrays.fill(target,.7f);gain=new float[tracks.length];durationFrames=(long)Math.ceil(duration*RATE);cursor=0;playing=false;loop=false;loopFrom=0;loopTo=durationFrames;transpose=0;roles=new int[tracks.length];pitchEnabled=new boolean[tracks.length];for(int i=0;i<tracks.length;i++){roles[i]=ProjectSpec.isClickName(tracks[i].name)?2:ProjectSpec.isGuideName(tracks[i].name)?1:0;pitchEnabled[i]=ProjectSpec.defaultPitch(tracks[i].name);}
     }
-    public synchronized void configureProject(ProjectSpec spec){java.util.Arrays.fill(busMute,false);java.util.Arrays.fill(busSolo,false);java.util.Arrays.fill(busPan,0);project=spec;arrangement=new ProjectArrangement(spec);durationFrames=Math.max(durationFrames,Math.round(spec.duration*RATE));bpm=(int)Math.round(spec.bpm);for(int i=0;i<roles.length&&i<spec.tracks.size();i++){ProjectSpec.Track t=spec.tracks.get(i);muted[i]=t.mute;soloed[i]=t.solo;roles[i]=t.isClick()?2:t.isGuide()?1:0;pitchEnabled[i]=roles[i]!=2&&(t.pitchEnabled!=null?t.pitchEnabled:ProjectSpec.defaultPitch(t.name));}}
+    public synchronized void configureProject(ProjectSpec spec){java.util.Arrays.fill(busMute,false);java.util.Arrays.fill(busSolo,false);java.util.Arrays.fill(busPan,0);project=spec;configureEffects(spec);markerIndex=-1;markerCursor=-1;arrangement=new ProjectArrangement(spec);durationFrames=Math.max(durationFrames,Math.round(spec.duration*RATE));bpm=(int)Math.round(spec.bpm);for(int i=0;i<roles.length&&i<spec.tracks.size();i++){ProjectSpec.Track t=spec.tracks.get(i);muted[i]=t.mute;soloed[i]=t.solo;roles[i]=t.isClick()?2:t.isGuide()?1:0;if(roles[i]!=0)trackRoutes[i]=-1;pitchEnabled[i]=roles[i]!=2&&(t.pitchEnabled!=null?t.pitchEnabled:ProjectSpec.defaultPitch(t.name));}}
     public synchronized void configureGuidePreview(PcmTrack source,int index){guidePreview=source;guideIndex=index;}
     private void updatePreview(){previewStart=-1;previewReady=false;if(guidePreview==null||guideIndex<0||loop||!playing||project==null)return;long boundary=manualBoundary>=0?manualBoundary:arrangement==null?-1:arrangement.previewBoundary(cursor),target=manualBoundary>=0?manualTarget:arrangement==null?-1:arrangement.hint();if(boundary<0||target<=0)return;long previous=0;for(int i=0;i<project.regions.size();i++){long start=Math.round(project.regions.get(i).start*RATE);if(start<target&&start>previous)previous=start;}long source=Math.max(Math.max(0,target-8L*RATE),previous),lead=target-source;if(lead<=RATE*.03)return;previewStart=boundary-lead;previewEnd=boundary;previewSource=source;guidePreview.hint(source);if(cursor<previewEnd&&cursor>=previewStart)previewReady=guidePreview.prepare(source+cursor-previewStart,512);}
     public synchronized void setPan(int track,float value){pan[track]=Math.max(-1,Math.min(1,value));}
@@ -64,7 +110,7 @@ public final class DemoMixer {
     public boolean isBuffering(){return buffering;}
     public boolean sourceFailed(){PcmTrack[] sources=imported;if(sources!=null)for(PcmTrack track:sources)if(track.failed())return true;return false;}
     private final float[][] sourceBlocks=new float[32][1024];private final float[] previewBlock=new float[1024];private long preparedCursor;
-    private boolean prepareSources(int frames){boolean ready=true;preparedCursor=cursor;if(imported!=null)for(int i=0;i<imported.length;i++){boolean needed=!click||soloMix>1e-4||roles[i]==2;if(needed){boolean available=imported[i].prepare(cursor,frames);ready=available&&ready;if(available)imported[i].readStereo(cursor,frames,sourceBlocks[i],0);}}if(previewReady&&guidePreview!=null)guidePreview.readStereo(previewSource+cursor-previewStart,frames,previewBlock,0);return ready;}
+    private boolean prepareSources(int frames){boolean ready=true;preparedCursor=cursor;if(imported!=null)for(int i=0;i<imported.length;i++){boolean needed=!click||soloMix>1e-4||roles[i]==2;if(needed){boolean available=imported[i].prepare(cursor,frames);ready=available&&ready;if(available){imported[i].readStereo(cursor,frames,sourceBlocks[i],0);if(trackEq[i]!=null)trackEq[i].process(sourceBlocks[i],cursor,frames);if(eqTrim[i]!=0&&eqTrim[i]!=1)for(int n=0;n<frames*2;n++)sourceBlocks[i][n]*=eqTrim[i];}}}if(previewReady&&guidePreview!=null)guidePreview.readStereo(previewSource+cursor-previewStart,frames,previewBlock,0);return ready;}
     private float clickGain, padGain, padLevel=.7f;
     public synchronized void play() { if(!playing){click=false;} if(cursor>=durationFrames){cursor=0;if(arrangement!=null)arrangement.restart();} playing=true; }
     public synchronized void pause() { playing=false; }
@@ -77,7 +123,7 @@ public final class DemoMixer {
         hintSources(cursor);
         updatePreview();
     }
-    public synchronized void seek(double seconds) { armedAutomationTarget=-1;cursor=Math.max(0,Math.min(durationFrames,(long)(seconds*RATE)));manualBoundary=-1;pendingRegion=-1;loop=false;if(arrangement!=null)arrangement.seek(cursor);hintSources(cursor); }
+    public synchronized void seek(double seconds) { armedAutomationTarget=-1;cursor=Math.max(0,Math.min(durationFrames,(long)(seconds*RATE)));manualBoundary=-1;pendingRegion=-1;loop=false;if(arrangement!=null)arrangement.seek(cursor);hintSources(cursor);resolvePadMarker();for(ClipEq eq:busEq)if(eq!=null)eq.reset(); }
     public synchronized void setLoop(boolean value) {if(value&&project!=null&&regionAt(cursor)==null){loop=false;return;}loop=value;if(value){ProjectSpec.Region r=regionAt(cursor);loopFrom=r==null?0:Math.round(r.start*RATE);loopTo=r==null?durationFrames:Math.round(r.end*RATE);hintSources(loopFrom);}}
     public double loopStart(){return loopFrom/(double)RATE;}
     public double loopEnd(){return loopTo/(double)RATE;}
@@ -87,7 +133,7 @@ public final class DemoMixer {
     public boolean hasPads(){return padBank!=null;}
     public synchronized boolean hasPad(int note){return note>=0&&note<12&&padBank!=null&&padBank[note]!=null;}
     public int getPadNote(){return padNote;}
-    public synchronized void setPadNote(int note){if(note<0||note>11)throw new IllegalArgumentException("Pad note");if(note!=padNote){previousPad=padNote;padNote=note;noteFade=0;if(padBank!=null)padBank[note].hint(padFrame);}}
+    public synchronized void setPadNote(int note){if(note<0||note>11)throw new IllegalArgumentException("Pad note");if(note!=padNote){previousPad=padNote;padNote=note;padFactor=Math.pow(2,note/12.0);noteFade=0;if(padBank!=null)padBank[note].hint(padFrame);}}
     public synchronized void setVsLevel(float level){vsLevel=Math.max(0,Math.min(2,level));}
     public synchronized float getVsLevel(){return vsLevel;}
     public synchronized void setClickLevel(float level){clickLevel=Math.max(0,Math.min(2,level));}
@@ -99,10 +145,10 @@ public final class DemoMixer {
     public synchronized int role(int i){return roles[i];}
     public synchronized boolean pitchEnabled(int i){return pitchEnabled[i];}
     public int getTranspose(){return transpose;}
-    public synchronized void setTranspose(int steps){if(Math.abs(steps)>12)throw new IllegalArgumentException("Transpose range");for(int i=0;i<target.length;i++)if(imported!=null)imported[i].setPitch(pitchEnabled[i]?steps:0);if(guidePreview!=null&&guideIndex>=0)guidePreview.setPitch(pitchEnabled[guideIndex]?steps:0);transpose=steps;}
+    public synchronized void setTranspose(int steps){if(Math.abs(steps)>12)throw new IllegalArgumentException("Transpose range");for(int i=0;i<target.length;i++)if(imported!=null)imported[i].setPitch(pitchEnabled[i]?steps:0);if(guidePreview!=null&&guideIndex>=0)guidePreview.setPitch(pitchEnabled[guideIndex]?steps:0);transpose=steps;markerIndex=-1;markerCursor=-1;resolvePadMarker();}
     public synchronized void setPitchEnabled(int i,boolean enabled){if(roles[i]==2)enabled=false;pitchEnabled[i]=enabled;if(imported!=null)imported[i].setPitch(enabled?transpose:0);if(guidePreview!=null&&i==guideIndex)guidePreview.setPitch(enabled?transpose:0);}
     public synchronized boolean hasProjectClick(){return projectClick();}
-    public synchronized boolean usesProjectClick(){return preferProjectClick&&projectClick();}
+    public synchronized boolean usesProjectClick(){return preferProjectClick;}
     public int automationExecutedCount(){ProjectArrangement current=arrangement;return current==null?0:current.executedCount();}
     public synchronized boolean automationEnabled(){return arrangement!=null&&arrangement.isEnabled();}
     public synchronized boolean automationRehearsal(){return arrangement==null||arrangement.isRehearsal();}
@@ -117,9 +163,16 @@ public final class DemoMixer {
         if(arrangement.isRehearsal()!=rehearsal){arrangement.setRehearsal(rehearsal);arrangement.seek(cursor);armedAutomationTarget=-1;}
         updatePreview();
     }
-    public synchronized void useProjectClick(boolean enabled){preferProjectClick=enabled&&projectClick();}
+    public synchronized void useProjectClick(boolean enabled){preferProjectClick=enabled;}
     public synchronized boolean audibleProjectClick(){for(int i=0;i<roles.length;i++)if(roles[i]==2&&!muted[i]&&target[i]>0)return true;return false;}
-    private boolean projectClick(){for(int i=0;i<roles.length;i++)if(roles[i]==2&&(project==null||project.missingAudio.isEmpty()||!project.tracks.get(i).clips.isEmpty()))return true;return false;}
+    private boolean recordedClick(int index){
+        if(project==null)return true;
+        ProjectSpec.Track track=project.tracks.get(index);
+        if(track.clips.isEmpty())return project.missingAudio.isEmpty();
+        for(int i=0;i<track.clips.size();i++)if(!track.clips.get(i).nativeClick)return true;
+        return false;
+    }
+    private boolean projectClick(){for(int i=0;i<roles.length;i++)if(roles[i]==2&&recordedClick(i))return true;return false;}
     public synchronized void setPadLevel(float value) { padLevel=Math.max(0,Math.min(2,value)); }
     public synchronized float getPadLevel() { return padLevel; }
     public synchronized void setBpm(int value) { bpm=Math.max(20,Math.min(400,value)); }
@@ -139,7 +192,7 @@ public final class DemoMixer {
     public synchronized void renderRoutedInto(float[] stereo,int frameOffset,int frames,int channels) {
         if(frames<0||channels<1||channels>16||frameOffset<0||stereo.length<(frameOffset+frames)*channels)throw new IllegalArgumentException("Invalid frame count");
         boolean anySolo=false,anyBusSolo=false;for(boolean value:soloed)anySolo|=value;for(int b=0;b<5;b++)anyBusSolo|=busSolo[b];for(int j=0;j<trackMeters.length;j++)trackMeters[j]*=.75f;for(int b=0;b<5;b++)busMeters[b]*=.75f;
-        final double beat=RATE*60.0/bpm*(project==null?1:4.0/project.denominator);final double padFactor=Math.pow(2,padNote/12.0);final boolean hasProjectClick=projectClick();for(int track=0;track<target.length;track++){int roleBus=roles[track]==2?1:roles[track]==1?2:4;renderBus[track]=roleBus;boolean allow=(!anyBusSolo||busSolo[roleBus]||(busSolo[0]&&trackRoutes[track]<0&&routes[roleBus]<0))&&!muted[track]&&(!anySolo||soloed[track]);double level=roles[track]==2?(preferProjectClick?clickLevel:0):roles[track]==1?((loop||click)?0:guideLevel):(trackRoutes[track]<0?vsLevel:1);renderL[track]=allow?level*panLeft(pan[track]):0;renderR[track]=allow?level*panRight(pan[track]):0;}
+        final double beat=RATE*60.0/bpm*(project==null?1:4.0/project.denominator);for(int track=0;track<target.length;track++){int roleBus=roles[track]==2?1:roles[track]==1?2:4;renderBus[track]=roleBus;boolean allow=(!anyBusSolo||busSolo[roleBus]||(busSolo[0]&&trackRoutes[track]<0&&routes[roleBus]<0))&&!muted[track]&&(!anySolo||soloed[track]);double level=roles[track]==2?(preferProjectClick&&recordedClick(track)?clickLevel:0):roles[track]==1?((loop||click)?0:guideLevel):(trackRoutes[track]<0?vsLevel:1);renderL[track]=allow?level*panLeft(pan[track]):0;renderR[track]=allow?level*panRight(pan[track]):0;}
         if(sourceFailed()){playing=false;buffering=false;}
         if(playing&&!loop)hintSources(manualBoundary>=0?manualTarget:arrangement==null?-1:arrangement.hint());
         updatePreview();
@@ -151,8 +204,11 @@ public final class DemoMixer {
             if(i>0&&i%512==0&&playing){updatePreview();ready=prepareSources((int)Math.min(Math.min(frames-i,512),Math.max(1,durationFrames-cursor)));buffering=!ready;}
             if(loop&&cursor>=loopTo){cursor=loopFrom;ready=prepareSources((int)Math.min(512,loopTo-cursor));buffering=playing&&!ready;}
             if(cursor>=durationFrames) { if(loop){cursor=loopFrom;ready=prepareSources((int)Math.min(Math.min(frames-i,512),durationFrames));buffering=playing&&!ready;}else{playing=false;buffering=false;} }
+            int oldPadNote=padNote;
+            if(playing)resolvePadMarker();
+            if(oldPadNote!=padNote&&padBank!=null&&renderPad){padsReady=padBank[padNote].prepare(padFrame,Math.min(512,frames-i));previousReady=previousPad>=0&&padBank[previousPad].prepare(padFrame,Math.min(512,frames-i));}
             for(int j=0;j<target.length;j++)gain[j]+=(target[j]-gain[j])*.002f;
-            boolean useNative=(click||playing&&project!=null&&!project.tracks.isEmpty())&&(!playing||!preferProjectClick||!hasProjectClick);clickGain+=((useNative?clickLevel:0)-clickGain)*.004f;soloMix=Math.max(0,Math.min(1,soloMix+(click&&playing?-1:1)/(1.5f*RATE)));
+            boolean useNative=(click||playing&&project!=null&&!project.tracks.isEmpty())&&(!playing||!preferProjectClick);clickGain+=((useNative?clickLevel:0)-clickGain)*.004f;soloMix=Math.max(0,Math.min(1,soloMix+(click&&playing?-1:1)/(1.5f*RATE)));
             padGain+=((pad?padLevel:0)-padGain)*.00005f;
             int base=(frameOffset+i)*channels;for(int c=0;c<channels;c++)stereo[base+c]=0;double left=0,right=0;for(int b=0;b<5;b++){busL[b]=0;busR[b]=0;}
             if(playing&&ready) {
@@ -172,8 +228,8 @@ public final class DemoMixer {
             if(padBank!=null&&renderPad){long padLength=Math.max(1,Math.round(padBank[padNote].duration()*RATE));if(padFrame>=padLength){padFrame=Math.min(1920,padLength/4);padsReady=padBank[padNote].prepare(padFrame,Math.min(512,frames-i));}if(i%512==0){padsReady=padBank[padNote].prepare(padFrame,Math.min(512,frames-i));if(previousPad>=0)previousReady=padBank[previousPad].prepare(padFrame,Math.min(512,frames-i));}if(padsReady){noteFade=Math.min(1,noteFade+1f/(RATE*.35f));padLeft=padGain*padSample(padBank[padNote],padFrame,0)*noteFade;padRight=padGain*padSample(padBank[padNote],padFrame,1)*noteFade;if(previousPad>=0&&noteFade<1){padLeft+=padGain*padSample(padBank[previousPad],padFrame,0)*(1-noteFade);padRight+=padGain*padSample(padBank[previousPad],padFrame,1)*(1-noteFade);}else previousPad=-1;padFrame++;}else if(previousPad>=0&&previousReady){padLeft=padGain*padBank[previousPad].sample(padFrame,0);padRight=padGain*padBank[previousPad].sample(padFrame,1);padFrame++;}else{padLeft=padRight=0;}padBank[padNote].hint((padFrame+8192)%padLength);}
 
             busL[4]+=left;busR[4]+=right;busL[1]+=clickLeft;busR[1]+=clickRight;busL[3]+=padLeft;busR[3]+=padRight;
-            for(int b=1;b<5;b++){double bl=busL[b]*panLeft(busPan[b]),br=busR[b]*panRight(busPan[b]);if(busMute[b]||(anyBusSolo&&!busSolo[b]&&!(busSolo[0]&&routes[b]<0))||(anySolo&&(b==3||b==1)&&!busSolo[b]&&!(b==1&&specialSolo(-2))))bl=br=0;busMeters[b]=Math.max(busMeters[b],(float)Math.max(Math.abs(bl),Math.abs(br)));if(routes[b]<0){busL[0]+=bl;busR[0]+=br;}else output(stereo,base,channels,routes[b],bl,br);}
-            double ml=busL[0]*masterLevel*panLeft(busPan[0]),mr=busR[0]*masterLevel*panRight(busPan[0]);if(busMute[0])ml=mr=0;busMeters[0]=Math.max(busMeters[0],(float)Math.max(Math.abs(ml),Math.abs(mr)));output(stereo,base,channels,routes[0],ml,mr);for(int c=0;c<channels;c++)stereo[base+c]=(float)Math.max(-.9,Math.min(.9,stereo[base+c]));
+            for(int b=1;b<5;b++){double bl=busL[b]*panLeft(busPan[b])*busEqTrim[b],br=busR[b]*panRight(busPan[b])*busEqTrim[b];if(busEq[b]!=null){bl=busEq[b].sample(bl,0);br=busEq[b].sample(br,1);}if(busMute[b]||(anyBusSolo&&!busSolo[b]&&!(busSolo[0]&&routes[b]<0))||(anySolo&&(b==3||b==1)&&!busSolo[b]&&!(b==1&&specialSolo(-2))))bl=br=0;busMeters[b]=Math.max(busMeters[b],(float)Math.max(Math.abs(bl),Math.abs(br)));if(routes[b]<0){busL[0]+=bl;busR[0]+=br;}else output(stereo,base,channels,routes[b],bl,br);}
+            double ml=busL[0]*masterLevel*panLeft(busPan[0]),mr=busR[0]*masterLevel*panRight(busPan[0]);ml*=busEqTrim[0];mr*=busEqTrim[0];if(busEq[0]!=null){ml=busEq[0].sample(ml,0);mr=busEq[0].sample(mr,1);}if(busMute[0])ml=mr=0;busMeters[0]=Math.max(busMeters[0],(float)Math.max(Math.abs(ml),Math.abs(mr)));output(stereo,base,channels,routes[0],ml,mr);for(int c=0;c<channels;c++)stereo[base+c]=(float)Math.max(-.9,Math.min(.9,stereo[base+c]));
         }
         armedAutomationTarget=playing&&!loop&&manualBoundary<0&&arrangement!=null?arrangement.armedTarget():-1;
     }

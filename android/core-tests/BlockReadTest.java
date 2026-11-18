@@ -20,6 +20,19 @@ public final class BlockReadTest {
         }
         PcmTrack mono=new PcmTrack("mono",48000,1,new float[]{.1f,.2f,.3f});float[] out=new float[10];
         mono.readStereo(0,5,out,0);for(int i=0;i<5;i++){equal(mono.sample(i,0),out[i*2]);equal(out[i*2],out[i*2+1]);}
+        float[] constant=new float[9600];
+        for(int i=0;i<constant.length;i+=2)constant[i]=0.25f;
+        PcmTrack dry=new PcmTrack("DC",48000,2,constant);
+        TimelineTrack filtered=new TimelineTrack("Filtered",new TimelineTrack.Clip[]{
+            new TimelineTrack.Clip(dry,0,0,.1,1,0,new double[][]{ClipEq.coefficients("highpass",1000,0,.707)})
+        },.1);
+        float[] result=new float[9600];
+        filtered.readStereo(0,4800,result,0);
+        if(Math.abs(result[0])<.05f)throw new AssertionError("Initial high-pass transient missing");
+        for(int i=4000;i<4800;i++){equal(0,result[i*2]);equal(0,result[i*2+1]);}
+        filtered.readStereo(1000,1,result,0);
+        if(Math.abs(result[0])<.05f)throw new AssertionError("EQ state was not reset after seek");
+        equal(0,result[1]);
         System.out.println("PASS: block PCM matches scalar samples for resampling, stereo/mono, offsets, overlaps, quantum boundaries and EOF");
     }
 }

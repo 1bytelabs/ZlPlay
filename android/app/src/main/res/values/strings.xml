@@ -53,7 +53,7 @@
     <string name="project_missing">Some audio files are missing or have ambiguous names. Put the project and all audio files in the selected folder.</string>
     <string name="project_ready">Project opened · tap a region to select or queue it</string>
     <string name="project_limits_title">Playback compatibility</string>
-    <string name="project_limits">This prototype reads WAV/MP3 clips, basic levels, regions and ZLPlay arrangement jumps. REAPER effects, fades, tempo maps, custom routing and project click/pad settings are not reproduced. Use rendered audio when those settings are needed.</string>
+    <string name="project_limits">Project playback supports WAV/MP3 clips, clip gain and EQ, regions and arrangement jumps. REAPER plug-ins, fades, tempo maps and desktop channel effects are not reproduced.</string>
     <string name="audio_cache_full">Not enough temporary space for MP3. Free storage and try again.</string>
     <string name="mp3_cache_notice">MP3 sources are decoded to temporary audio in app storage before playback; originals remain unchanged. Temporary audio is removed when the project is closed.</string>
     <string name="rpp_native_click">The REAPER internal click has no audio file. This track uses the app click sound at the project tempo.</string>
@@ -222,4 +222,168 @@
     <string name="library_remove">Remove</string>
     <string name="library_clear">Clear list</string>
     <string name="library_remove_help">This only removes shortcuts from the app. Your files are kept.</string>
+    <string name="new_project">New project</string>
+    <string name="new_project_help">Select the song folder containing its WAV or MP3 tracks. The project will be saved in that folder.</string>
+    <string name="new_project_no_audio">No WAV or MP3 tracks were found in this folder.</string>
+    <string name="new_project_too_many_tracks">This folder contains more than 32 audio tracks. Select a folder with up to 32 tracks.</string>
+    <string name="project_details">Project details</string>
+    <string name="project_title">Song title</string>
+    <string name="project_meter">Time signature</string>
+    <string name="project_bpm_range">Enter a tempo between 20 and 400 BPM.</string>
+    <string name="save_new_project">Save project</string>
+    <string name="saving_new_project">Saving project…</string>
+    <string name="new_project_saved">Saved %1$s. To open it on a computer, transfer the song folder with its audio files.</string>
+    <string name="new_project_save_failed">The project could not be saved. Check that the folder allows files to be created.</string>
+    <string name="save_project_copy">Save project copy</string>
+    <string name="new_setlist">New setlist</string>
+    <string name="save_setlist_copy">Save setlist copy</string>
+    <string name="new_setlist_help">Select the parent folder containing the song folders. Each song folder needs a ZLPlay or REAPER project.</string>
+    <string name="new_setlist_no_projects">No projects were found directly inside the song folders.</string>
+    <string name="select_setlist_projects">Select songs in playback order</string>
+    <string name="save_new_setlist">Save setlist</string>
+    <string name="saving_setlist">Saving setlist…</string>
+    <string name="setlist_saved">Saved %1$s.</string>
+    <string name="setlist_save_failed">The setlist could not be saved. Check that the folder allows files to be created.</string>
+    <string name="file_name">File name</string>
+    <string name="write_folder_help">Choose the same folder and allow ZLPlay to write files there.</string>
+    <string name="edit_regions">Edit regions</string>
+    <string name="edit_tracks">Edit tracks</string>
+    <string name="apply_project_edits">Apply edits</string>
+    <string name="discard_project_edits">Discard these edits?</string>
+    <string name="add_project_region">Add region</string>
+    <string name="project_region_name">Region name</string>
+    <string name="project_start">Start (seconds)</string>
+    <string name="project_end">End (seconds)</string>
+    <string name="delete_project_region">Delete this region and its associated jumps?</string>
+    <string name="edit_project_jumps">Automatic jumps</string>
+    <string name="delete_project_jump">Delete this automatic jump?</string>
+    <string name="add_project_jump">Add jump</string>
+    <string name="project_jump_source">Jump from</string>
+    <string name="project_jump_target">Jump to</string>
+    <string name="project_clip_mute">Mute clip</string>
+    <string name="project_clip_offset">Source offset (seconds)</string>
+    <string name="project_clip_length">Length (seconds)</string>
+    <string name="project_clip_gain">Clip gain (dB)</string>
+    <string name="edit_project_clip">Edit clip</string>
+    <string name="project_use_cursor">Use playhead position</string>
+    <string name="project_split_clip">Split at playhead</string>
+    <string name="project_duplicate_clip">Duplicate at playhead</string>
+    <string name="project_delete_clip">Delete this clip?</string>
+    <string name="project_edit_invalid">Check the values and the playhead position.</string>
+    <string name="edit_tracks_missing_audio">Restore missing audio before editing clips.</string>
+    <string name="project_clip_eq">Clip EQ</string>
+    <string name="project_eq_enabled">Enable equalization</string>
+    <string name="project_eq_highpass">High-pass (Hz, 0 = off)</string>
+    <string name="project_eq_lowpass">Low-pass (Hz, 0 = off)</string>
+    <string name="project_eq_band">Band %1$d</string>
+    <string name="project_eq_frequency">Frequency (Hz)</string>
+    <string name="project_eq_q">Q</string>
+    <string name="project_add_guide">Add guide</string>
+    <string name="project_add_external_guide">Add external guide</string>
+    <string name="project_guide_language">Guide language</string>
+    <string name="project_guide_voice">Guide voice</string>
+    <string name="project_guide_male">Male voice</string>
+    <string name="project_guide_female">Female voice</string>
+    <string name="project_guide_import_failed">Could not import the guide audio.</string>
+    <string name="setlist_add_song">Add song</string>
+    <string name="setlist_remove_song">Remove song</string>
+    <string name="setlist_remove_song_confirm">Remove %1$s from this setlist? The song files are kept.</string>
+    <string name="setlist_no_more_songs">No more song folders with supported projects were found.</string>
+    <string name="project_editor_close">Close editor</string>
+    <string name="project_editor_undo">Undo</string>
+    <string name="project_editor_redo">Redo</string>
+    <string name="project_editor_zoom_out">Zoom out</string>
+    <string name="project_editor_zoom_in">Zoom in</string>
+    <string name="project_editor_fit">Fit</string>
+    <string name="project_editor_snap">Magnetic snapping</string>
+    <string name="project_editor_bars">Bars</string>
+    <string name="project_editor_regions_lane">Regions</string>
+    <string name="project_editor_mix_lane">Mix waveform</string>
+    <string name="project_editor_guide_lane">Guide</string>
+    <string name="project_editor_no_selection">Tap a clip or region</string>
+    <string name="project_editor_split">Split</string>
+    <string name="project_editor_duplicate">Duplicate</string>
+    <string name="project_editor_unmute">Unmute clip</string>
+    <string name="project_editor_details">Details</string>
+    <string name="project_editor_delete">Delete</string>
+    <string name="project_region_color">Color</string>
+    <string name="project_arrangement_enabled">Automations enabled</string>
+    <string name="project_arrangement_help">In Live mode, each jump runs once per pass. Rehearsal allows repeating jumps.</string>
+    <string name="project_jump_up">Move jump up</string>
+    <string name="project_jump_down">Move jump down</string>
+    <string name="project_no_jumps">No automatic jumps. Add a source and destination.</string>
+    <string-array name="editor_region_names">
+        <item>Count-in</item>
+        <item>Intro</item>
+        <item>Instrumental</item>
+        <item>Interlude</item>
+        <item>Turnaround</item>
+        <item>Verse</item>
+        <item>Verse 1</item>
+        <item>Verse 2</item>
+        <item>Verse 3</item>
+        <item>Verse 4</item>
+        <item>Verse 5</item>
+        <item>Pre-Chorus</item>
+        <item>Pre-Chorus 1</item>
+        <item>Pre-Chorus 2</item>
+        <item>Build</item>
+        <item>Chorus</item>
+        <item>Chorus 1</item>
+        <item>Chorus 2</item>
+        <item>Chorus 3</item>
+        <item>Chorus 4</item>
+        <item>Chorus 5</item>
+        <item>Chorus</item>
+        <item>Bridge</item>
+        <item>Bridge 1</item>
+        <item>Bridge 2</item>
+        <item>Bridge 3</item>
+        <item>Bridge 4</item>
+        <item>Bridge 5</item>
+        <item>Solo</item>
+        <item>Break</item>
+        <item>Repeat</item>
+        <item>Tag</item>
+        <item>Ending</item>
+        <item>Outro</item>
+        <item>Outro</item>
+    </string-array>
+    <string name="project_region_preset">Choose region…</string>
+    <string name="project_pad_change">Add pad change</string>
+    <string name="project_pad_changes">Pad changes</string>
+    <string name="project_pad_delete">Delete this pad change?</string>
+    <string name="project_channel_eq">Gain and EQ</string>
+    <string name="project_organize_tracks">Organize tracks</string>
+    <string name="project_create_group">Create group</string>
+    <string name="project_group_name">Group name</string>
+    <string name="project_group_for">Group for %1$s</string>
+    <string name="project_organize_help">Hold a track name to drag it, or use the arrows. Choose its group on the right.</string>
+    <string name="quick_editing">Editing</string>
+    <string name="quick_saving">Save</string>
+    <string name="quick_playback">Playback</string>
+    <string name="quick_regions_help">Regions, guide and pad changes</string>
+    <string name="quick_tracks_help">Align, split and edit audio</string>
+    <string name="quick_groups_help">Create groups and reorder tracks</string>
+    <string name="quick_details_help">Title, original key, tempo and meter</string>
+    <string name="quick_save_song">Save song</string>
+    <string name="quick_save_song_help">Save a copy of the current project</string>
+    <string name="quick_save_setlist">Save setlist</string>
+    <string name="quick_save_setlist_help">Include edits to every song</string>
+    <string name="quick_key_help">Set the original key of the song</string>
+    <string name="quick_click_help">Use the built-in click instead of the audio track</string>
+    <string name="quick_automations_help">Run the automatic jumps saved in this song</string>
+    <string name="quick_pad_help">Keep the pad sounding between songs</string>
+    <string name="quick_accent_help">Emphasize the first beat of each bar</string>
+    <string name="eq_gain">Gain</string>
+    <string name="eq_trim">Gain before fader</string>
+    <string name="eq_highpass">Low cut</string>
+    <string name="eq_lowpass">High cut</string>
+    <string name="eq_shape">Shape</string>
+    <string name="eq_peak">Peak / Bell</string>
+    <string name="eq_low_shelf">Low shelf</string>
+    <string name="eq_high_shelf">High shelf</string>
+    <string name="eq_off">Off</string>
+    <string name="eq_reset">Reset EQ</string>
+    <string name="eq_drag_hint">Drag the points to adjust frequency and gain.</string>
 </resources>

@@ -2,9 +2,42 @@
 <resources>
     <style name="Theme.ZLPlay" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:fontFamily">@font/inter</item>
+        <item name="android:alertDialogTheme">@style/Theme.ZLPlay.Dialog</item>
+        <item name="android:popupMenuStyle">@style/Widget.ZLPlay.PopupMenu</item>
+        <item name="android:buttonStyle">@style/Widget.ZLPlay.Dialog.Secondary</item>
         <item name="android:colorAccent">#9F75F4</item>
         <item name="android:windowBackground">#0B0F17</item>
         <item name="android:statusBarColor">#0B0F17</item>
         <item name="android:navigationBarColor">#0B0F17</item>
+    </style>
+    <style name="Widget.ZLPlay.PopupMenu" parent="android:style/Widget.Material.PopupMenu">
+        <item name="android:popupBackground">@drawable/zl_dialog_surface</item>
+    </style>
+    <style name="Theme.ZLPlay.Dialog" parent="android:style/Theme.Material.Dialog.Alert">
+        <item name="android:buttonStyle">@style/Widget.ZLPlay.Dialog.Secondary</item>
+        <item name="android:buttonBarPositiveButtonStyle">@style/Widget.ZLPlay.Dialog.Primary</item>
+        <item name="android:buttonBarNegativeButtonStyle">@style/Widget.ZLPlay.Dialog.Secondary</item>
+        <item name="android:buttonBarNeutralButtonStyle">@style/Widget.ZLPlay.Dialog.Secondary</item>
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="android:colorAccent">#B18AFF</item>
+        <item name="android:colorBackground">#101824</item>
+        <item name="android:windowBackground">@drawable/zl_dialog_surface</item>
+        <item name="android:textColorPrimary">#EDF3FC</item>
+        <item name="android:textColorSecondary">#A4B7D1</item>
+    </style>
+    <style name="Widget.ZLPlay.Dialog.Primary" parent="android:style/Widget.Material.Button.Borderless">
+        <item name="android:background">@drawable/zl_dialog_primary</item>
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:minWidth">100dp</item>
+        <item name="android:paddingLeft">20dp</item>
+        <item name="android:paddingRight">20dp</item>
+    </style>
+    <style name="Widget.ZLPlay.Dialog.Secondary" parent="Widget.ZLPlay.Dialog.Primary">
+        <item name="android:background">@drawable/zl_dialog_secondary</item>
+        <item name="android:textColor">#D9E3F4</item>
     </style>
 </resources>

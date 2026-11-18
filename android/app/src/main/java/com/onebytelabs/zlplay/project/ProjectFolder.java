@@ -10,16 +10,25 @@ import android.provider.DocumentsContract;
 
 /** Read-only inventory of the folder explicitly granted by the user. */
 public final class ProjectFolder {
- public String fallbackScope="";public ProjectFolder forSong(String prefix){ProjectFolder scoped=new ProjectFolder(tree);scoped.files.putAll(files);scoped.fallbackScope=prefix+"/";return scoped;}
+ public String fallbackScope="";public ProjectFolder forSong(String prefix){ProjectFolder scoped=new ProjectFolder(tree);scoped.files.putAll(files);scoped.directories.putAll(directories);scoped.fallbackScope=prefix+"/";return scoped;}
  public final Uri tree;public final Map<String,Uri> files=new LinkedHashMap<>();
+ public final Map<String,Uri> directories=new LinkedHashMap<>();
  public static final class Missing extends IOException {public final boolean ambiguous;public Missing(){this(false);}public Missing(boolean ambiguous){super("Missing or ambiguous project audio");this.ambiguous=ambiguous;}}
  public ProjectFolder(Uri tree){this.tree=tree;}
+ public String displayName(Context context){
+  Uri root=DocumentsContract.buildDocumentUriUsingTree(tree,DocumentsContract.getTreeDocumentId(tree));
+  try(Cursor cursor=context.getContentResolver().query(root,new String[]{DocumentsContract.Document.COLUMN_DISPLAY_NAME},null,null,null)){
+   if(cursor!=null&&cursor.moveToFirst()&&cursor.getString(0)!=null)return cursor.getString(0).trim();
+  }
+  return "";
+ }
  public static ProjectFolder scan(Context context,Uri tree)throws IOException{
   ProjectFolder result=new ProjectFolder(tree);Set<String> seen=new HashSet<>();int[] count={0};
   result.walk(context,DocumentsContract.getTreeDocumentId(tree),"",0,seen,count);return result;
  }
  private void walk(Context context,String id,String path,int depth,Set<String> seen,int[] count)throws IOException{
   if(depth>16||!seen.add(id))throw new IOException("Folder too deep or cyclic");
+  directories.put(path,DocumentsContract.buildDocumentUriUsingTree(tree,id));
   Uri children=DocumentsContract.buildChildDocumentsUriUsingTree(tree,id);
   try(Cursor rows=context.getContentResolver().query(children,new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID,DocumentsContract.Document.COLUMN_DISPLAY_NAME,DocumentsContract.Document.COLUMN_MIME_TYPE},null,null,null)){
    if(rows==null)throw new IOException("Folder unavailable");while(rows.moveToNext()){
@@ -39,6 +48,28 @@ public final class ProjectFolder {
   if(!absolute){String parent=project.contains("/")?project.substring(0,project.lastIndexOf('/')+1):"";Deque<String> parts=new ArrayDeque<>();for(String part:(parent+ref).split("/")){if(part.isEmpty()||part.equals("."))continue;if(part.equals("..")){if(parts.isEmpty())throw new Missing();parts.removeLast();}else parts.add(part);}String wanted=key(String.join("/",parts));Uri found=null;for(var entry:files.entrySet())if(key(entry.getKey()).equals(wanted)){if(found!=null)throw new Missing(true);found=entry.getValue();}if(found!=null)return found;}
   // Relocated desktop paths are accepted only for a unique basename inside this grant.
   String base=key(ref.substring(ref.lastIndexOf('/')+1));Uri found=null;for(var entry:files.entrySet())if(inScope(entry.getKey())&&key(entry.getKey().substring(entry.getKey().lastIndexOf('/')+1)).equals(base)){if(found!=null)throw new Missing();found=entry.getValue();}if(found==null)throw new Missing();return found;
+ }
+ /** Finds a named click stem in this song, without treating one-shot samples as stems. */
+ public String clickAudioReference(String project,String trackName){
+  String parent=project.contains("/")?project.substring(0,project.lastIndexOf('/')+1):"";
+  String scope=fallbackScope.isEmpty()?parent:fallbackScope;
+  String wanted=key(trackName.replaceFirst("(?i)\\.(wav|mp3)$",""));
+  String best=null;int score=Integer.MAX_VALUE;boolean tied=false;
+  for(String file:files.keySet()){
+   if(!key(file).startsWith(key(scope))||!file.toLowerCase(Locale.ROOT).matches(".*\\.(wav|mp3)$"))continue;
+   String leaf=file.substring(file.lastIndexOf('/')+1),name=leaf.replaceFirst("(?i)\\.(wav|mp3)$","");
+   if(!ProjectSpec.isClickName(name))continue;
+   String directory=file.contains("/")?file.substring(0,file.lastIndexOf('/')+1):"";
+   int rank=(key(name).equals(wanted)?0:8)+(key(directory).equals(key(scope))?0:2)+(file.toLowerCase(Locale.ROOT).endsWith(".wav")?0:1);
+   if(rank<score){best=file;score=rank;tied=false;}else if(rank==score)tied=true;
+  }
+  if(best==null||tied)return null;
+  List<String> from=new ArrayList<>(),to=new ArrayList<>(),relative=new ArrayList<>();
+  for(String part:parent.split("/"))if(!part.isEmpty())from.add(part);
+  for(String part:best.split("/"))if(!part.isEmpty())to.add(part);
+  int common=0;while(common<from.size()&&common<to.size()&&key(from.get(common)).equals(key(to.get(common))))common++;
+  for(int i=common;i<from.size();i++)relative.add("..");for(int i=common;i<to.size();i++)relative.add(to.get(i));
+  return String.join("/",relative);
  }
  public String read(Context context,String project)throws IOException{
   Uri uri=files.get(project);if(uri==null)throw new Missing();byte[] bytes;

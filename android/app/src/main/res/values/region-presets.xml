@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="editor_region_ids" translatable="false">
+        <item>Contagem</item>
+        <item>Intro</item>
+        <item>Instrumental</item>
+        <item>Interlúdio</item>
+        <item>Turnaround</item>
+        <item>Verso</item>
+        <item>Verso 1</item>
+        <item>Verso 2</item>
+        <item>Verso 3</item>
+        <item>Verso 4</item>
+        <item>Verso 5</item>
+        <item>Pre-Refrão</item>
+        <item>Pre-Refrão 1</item>
+        <item>Pre-Refrão 2</item>
+        <item>Rampa</item>
+        <item>Refrão</item>
+        <item>Refrão 1</item>
+        <item>Refrão 2</item>
+        <item>Refrão 3</item>
+        <item>Refrão 4</item>
+        <item>Refrão 5</item>
+        <item>Coro</item>
+        <item>Ponte</item>
+        <item>Ponte 1</item>
+        <item>Ponte 2</item>
+        <item>Ponte 3</item>
+        <item>Ponte 4</item>
+        <item>Ponte 5</item>
+        <item>Solo</item>
+        <item>Grande Pausa</item>
+        <item>Repete</item>
+        <item>Tag</item>
+        <item>Final</item>
+        <item>Saida</item>
+        <item>Outro</item>
+    </string-array>
+    <string-array name="editor_region_colors" translatable="false">
+        <item>#B4B4B4</item>
+        <item>#FFD700</item>
+        <item>#00C8C8</item>
+        <item>#96C864</item>
+        <item>#C864C8</item>
+        <item>#4682B4</item>
+        <item>#4682B4</item>
+        <item>#4169E1</item>
+        <item>#3C5FC8</item>
+        <item>#3755B4</item>
+        <item>#324BA0</item>
+        <item>#8A2BE2</item>
+        <item>#8A2BE2</item>
+        <item>#8026D2</item>
+        <item>#FFA500</item>
+        <item>#228B22</item>
+        <item>#228B22</item>
+        <item>#1E781E</item>
+        <item>#1A6E1A</item>
+        <item>#166416</item>
+        <item>#145A14</item>
+        <item>#00C878</item>
+        <item>#A050C8</item>
+        <item>#A050C8</item>
+        <item>#9646BE</item>
+        <item>#8C3CB4</item>
+        <item>#8232AA</item>
+        <item>#782DA0</item>
+        <item>#FF8C00</item>
+        <item>#787878</item>
+        <item>#FFEB96</item>
+        <item>#C8C850</item>
+        <item>#B22222</item>
+        <item>#783C28</item>
+        <item>#FFBE78</item>
+    </string-array>
+</resources>

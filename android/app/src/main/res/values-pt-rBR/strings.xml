@@ -53,7 +53,7 @@
     <string name="project_missing">Há áudios ausentes ou com nomes ambíguos. Coloque o projeto e todos os áudios na pasta selecionada.</string>
     <string name="project_ready">Projeto aberto · toque numa região para selecionar ou agendar</string>
     <string name="project_limits_title">Compatibilidade de reprodução</string>
-    <string name="project_limits">Este protótipo lê trechos WAV/MP3, volumes básicos, regiões e saltos do arranjo ZLPlay. Efeitos do REAPER, fades, mapas de tempo, roteamento personalizado e ajustes de click/pad do projeto não são reproduzidos. Use áudios renderizados quando precisar desses ajustes.</string>
+    <string name="project_limits">A reprodução aceita trechos WAV/MP3, ganho e EQ por trecho, regiões e saltos. Plugins do REAPER, fades, mapas de tempo e efeitos de canal do desktop não são reproduzidos.</string>
     <string name="audio_cache_full">Sem espaço temporário para o MP3. Libere armazenamento e tente novamente.</string>
     <string name="mp3_cache_notice">As fontes MP3 são decodificadas em áudio temporário no armazenamento do app antes de reproduzir; os originais são preservados. O áudio temporário é removido ao fechar o projeto.</string>
     <string name="rpp_native_click">O click interno do REAPER não tem arquivo de áudio. Essa track usa o som de click do app no andamento do projeto.</string>
@@ -222,4 +222,168 @@
     <string name="library_remove">Remover</string>
     <string name="library_clear">Limpar lista</string>
     <string name="library_remove_help">Isso remove apenas os atalhos do aplicativo. Seus arquivos são mantidos.</string>
+    <string name="new_project">Novo projeto</string>
+    <string name="new_project_help">Selecione a pasta da música com as faixas WAV ou MP3. O projeto será salvo nessa pasta.</string>
+    <string name="new_project_no_audio">Nenhuma faixa WAV ou MP3 foi encontrada nesta pasta.</string>
+    <string name="new_project_too_many_tracks">Esta pasta contém mais de 32 faixas de áudio. Selecione uma pasta com até 32 faixas.</string>
+    <string name="project_details">Dados do projeto</string>
+    <string name="project_title">Nome da música</string>
+    <string name="project_meter">Compasso</string>
+    <string name="project_bpm_range">Informe um andamento entre 20 e 400 BPM.</string>
+    <string name="save_new_project">Salvar projeto</string>
+    <string name="saving_new_project">Salvando projeto…</string>
+    <string name="new_project_saved">%1$s salvo. Para abrir no computador, transfira a pasta da música com os arquivos de áudio.</string>
+    <string name="new_project_save_failed">Não foi possível salvar o projeto. Verifique se a pasta permite criar arquivos.</string>
+    <string name="save_project_copy">Salvar cópia do projeto</string>
+    <string name="new_setlist">Novo repertório</string>
+    <string name="save_setlist_copy">Salvar cópia do repertório</string>
+    <string name="new_setlist_help">Selecione a pasta principal que contém as pastas das músicas. Cada pasta precisa ter um projeto do ZLPlay ou do REAPER.</string>
+    <string name="new_setlist_no_projects">Nenhum projeto foi encontrado diretamente nas pastas das músicas.</string>
+    <string name="select_setlist_projects">Selecione as músicas na ordem de reprodução</string>
+    <string name="save_new_setlist">Salvar repertório</string>
+    <string name="saving_setlist">Salvando repertório…</string>
+    <string name="setlist_saved">%1$s salvo.</string>
+    <string name="setlist_save_failed">Não foi possível salvar o repertório. Verifique se a pasta permite criar arquivos.</string>
+    <string name="file_name">Nome do arquivo</string>
+    <string name="write_folder_help">Selecione a mesma pasta e permita que o ZLPlay grave arquivos nela.</string>
+    <string name="edit_regions">Editar regiões</string>
+    <string name="edit_tracks">Editar faixas</string>
+    <string name="apply_project_edits">Aplicar alterações</string>
+    <string name="discard_project_edits">Descartar estas alterações?</string>
+    <string name="add_project_region">Adicionar região</string>
+    <string name="project_region_name">Nome da região</string>
+    <string name="project_start">Início (segundos)</string>
+    <string name="project_end">Fim (segundos)</string>
+    <string name="delete_project_region">Excluir esta região e os saltos associados?</string>
+    <string name="edit_project_jumps">Saltos automáticos</string>
+    <string name="delete_project_jump">Excluir este salto automático?</string>
+    <string name="add_project_jump">Adicionar salto</string>
+    <string name="project_jump_source">Saltar de</string>
+    <string name="project_jump_target">Saltar para</string>
+    <string name="project_clip_mute">Silenciar trecho</string>
+    <string name="project_clip_offset">Deslocamento na fonte (segundos)</string>
+    <string name="project_clip_length">Duração (segundos)</string>
+    <string name="project_clip_gain">Ganho do trecho (dB)</string>
+    <string name="edit_project_clip">Editar trecho</string>
+    <string name="project_use_cursor">Usar posição do cursor</string>
+    <string name="project_split_clip">Dividir no cursor</string>
+    <string name="project_duplicate_clip">Duplicar no cursor</string>
+    <string name="project_delete_clip">Excluir este trecho?</string>
+    <string name="project_edit_invalid">Confira os valores e a posição do cursor.</string>
+    <string name="edit_tracks_missing_audio">Recupere os áudios ausentes antes de editar os trechos.</string>
+    <string name="project_clip_eq">EQ do trecho</string>
+    <string name="project_eq_enabled">Ativar equalização</string>
+    <string name="project_eq_highpass">Corte de graves (Hz, 0 = desligado)</string>
+    <string name="project_eq_lowpass">Corte de agudos (Hz, 0 = desligado)</string>
+    <string name="project_eq_band">Banda %1$d</string>
+    <string name="project_eq_frequency">Frequência (Hz)</string>
+    <string name="project_eq_q">Q</string>
+    <string name="project_add_guide">Adicionar guia</string>
+    <string name="project_add_external_guide">Adicionar guia externa</string>
+    <string name="project_guide_language">Idioma da guia</string>
+    <string name="project_guide_voice">Voz da guia</string>
+    <string name="project_guide_male">Voz masculina</string>
+    <string name="project_guide_female">Voz feminina</string>
+    <string name="project_guide_import_failed">Não foi possível importar o áudio da guia.</string>
+    <string name="setlist_add_song">Adicionar música</string>
+    <string name="setlist_remove_song">Remover música</string>
+    <string name="setlist_remove_song_confirm">Remover %1$s deste repertório? Os arquivos da música serão mantidos.</string>
+    <string name="setlist_no_more_songs">Nenhuma outra pasta de música com projeto compatível foi encontrada.</string>
+    <string name="project_editor_close">Fechar editor</string>
+    <string name="project_editor_undo">Desfazer</string>
+    <string name="project_editor_redo">Refazer</string>
+    <string name="project_editor_zoom_out">Diminuir zoom</string>
+    <string name="project_editor_zoom_in">Aumentar zoom</string>
+    <string name="project_editor_fit">Ajustar</string>
+    <string name="project_editor_snap">Encaixe magnético</string>
+    <string name="project_editor_bars">Compassos</string>
+    <string name="project_editor_regions_lane">Regiões</string>
+    <string name="project_editor_mix_lane">Waveform geral</string>
+    <string name="project_editor_guide_lane">Guia</string>
+    <string name="project_editor_no_selection">Toque em um trecho ou região</string>
+    <string name="project_editor_split">Dividir</string>
+    <string name="project_editor_duplicate">Duplicar</string>
+    <string name="project_editor_unmute">Reativar trecho</string>
+    <string name="project_editor_details">Detalhes</string>
+    <string name="project_editor_delete">Excluir</string>
+    <string name="project_region_color">Cor</string>
+    <string name="project_arrangement_enabled">Automações ativadas</string>
+    <string name="project_arrangement_help">Ao vivo, cada salto executa uma vez por passagem. Ensaio permite repetir os saltos.</string>
+    <string name="project_jump_up">Subir salto</string>
+    <string name="project_jump_down">Descer salto</string>
+    <string name="project_no_jumps">Nenhum salto automático. Adicione uma origem e um destino.</string>
+    <string-array name="editor_region_names">
+        <item>Contagem</item>
+        <item>Intro</item>
+        <item>Instrumental</item>
+        <item>Interlúdio</item>
+        <item>Turnaround</item>
+        <item>Verso</item>
+        <item>Verso 1</item>
+        <item>Verso 2</item>
+        <item>Verso 3</item>
+        <item>Verso 4</item>
+        <item>Verso 5</item>
+        <item>Pre-Refrão</item>
+        <item>Pre-Refrão 1</item>
+        <item>Pre-Refrão 2</item>
+        <item>Rampa</item>
+        <item>Refrão</item>
+        <item>Refrão 1</item>
+        <item>Refrão 2</item>
+        <item>Refrão 3</item>
+        <item>Refrão 4</item>
+        <item>Refrão 5</item>
+        <item>Coro</item>
+        <item>Ponte</item>
+        <item>Ponte 1</item>
+        <item>Ponte 2</item>
+        <item>Ponte 3</item>
+        <item>Ponte 4</item>
+        <item>Ponte 5</item>
+        <item>Solo</item>
+        <item>Grande Pausa</item>
+        <item>Repete</item>
+        <item>Tag</item>
+        <item>Final</item>
+        <item>Saida</item>
+        <item>Outro</item>
+    </string-array>
+    <string name="project_region_preset">Escolher região…</string>
+    <string name="project_pad_change">Adicionar mudança de pad</string>
+    <string name="project_pad_changes">Mudanças de pad</string>
+    <string name="project_pad_delete">Excluir esta mudança de pad?</string>
+    <string name="project_channel_eq">Ganho e EQ</string>
+    <string name="project_organize_tracks">Organizar faixas</string>
+    <string name="project_create_group">Criar grupo</string>
+    <string name="project_group_name">Nome do grupo</string>
+    <string name="project_group_for">Grupo de %1$s</string>
+    <string name="project_organize_help">Segure o nome para arrastar a faixa ou use as setas. Escolha o grupo à direita.</string>
+    <string name="quick_editing">Edição</string>
+    <string name="quick_saving">Salvar</string>
+    <string name="quick_playback">Reprodução</string>
+    <string name="quick_regions_help">Regiões, guia e mudanças de pad</string>
+    <string name="quick_tracks_help">Alinhar, cortar e editar áudios</string>
+    <string name="quick_groups_help">Criar grupos e ordenar faixas</string>
+    <string name="quick_details_help">Nome, tom original, BPM e compasso</string>
+    <string name="quick_save_song">Salvar música</string>
+    <string name="quick_save_song_help">Gravar uma cópia do projeto atual</string>
+    <string name="quick_save_setlist">Salvar repertório</string>
+    <string name="quick_save_setlist_help">Incluir as edições de todas as músicas</string>
+    <string name="quick_key_help">Definir o tom original da música</string>
+    <string name="quick_click_help">Usar o click integrado no lugar da faixa de áudio</string>
+    <string name="quick_automations_help">Executar os saltos automáticos desta música</string>
+    <string name="quick_pad_help">Continuar o pad ao trocar de música</string>
+    <string name="quick_accent_help">Destacar a primeira batida de cada compasso</string>
+    <string name="eq_gain">Ganho</string>
+    <string name="eq_trim">Ganho antes do fader</string>
+    <string name="eq_highpass">Corte de graves</string>
+    <string name="eq_lowpass">Corte de agudos</string>
+    <string name="eq_shape">Formato</string>
+    <string name="eq_peak">Pico / Bell</string>
+    <string name="eq_low_shelf">Shelf de graves</string>
+    <string name="eq_high_shelf">Shelf de agudos</string>
+    <string name="eq_off">Desligado</string>
+    <string name="eq_reset">Zerar ajustes</string>
+    <string name="eq_drag_hint">Arraste os pontos para ajustar frequência e ganho.</string>
 </resources>

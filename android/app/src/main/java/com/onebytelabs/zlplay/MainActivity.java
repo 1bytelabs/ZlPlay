@@ -1,6 +1,7 @@
 package com.onebytelabs.zlplay;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import java.util.*;
@@ -22,8 +23,23 @@ public final class MainActivity extends Activity {
     private final Handler handler=new Handler(Looper.getMainLooper());
     private TextView clock,status,songTitle;
     public static final int OPEN_WAV=100,OPEN_PROJECT=101,OPEN_SETLIST=102;
+    private static final int NEW_PROJECT=103, NEW_SETLIST=104, GRANT_WRITE=105, IMPORT_GUIDE=106;
     private SetlistSpec setlist;private ProjectFolder setlistFolder;private String setlistFile;private boolean setlistPersistent;private int setlistIndex=-1,pendingSong=-1;private Button setlistButton,automationModeButton;private LinearLayout songCards;private HorizontalScrollView cardScroll;private TextView nextSong;
     private ProjectFolder projectFolder;private String projectFilename;private ProjectSpec activeProject;private String projectKey;private Button projectButton;private EditText bpmField;
+    private boolean projectDraft, projectFolderPersistent;
+    private String projectManifest;
+    private String songEditBaseline;
+    private final ProjectEditDialog.Transport editingTransport=new ProjectEditDialog.Transport(){
+        @Override public double position(){return mixer.position();}
+        @Override public void seek(double position){mixer.seek(position);}
+        @Override public void toggle(){if(mixer.isPlaying())mixer.pause();else if(ready())mixer.play();}
+        @Override public void stop(){mixer.stop();}
+        @Override public boolean playing(){return mixer.isPlaying();}
+    };
+    private ProjectFolder pendingWriteFolder;
+    private Runnable pendingWrite;
+    private Runnable pendingWriteCancel;
+    private java.util.function.Consumer<List<ProjectGuide.Audio>> pendingExternalGuide;
     private final ExecutorService imports=Executors.newSingleThreadExecutor();
     private volatile boolean destroyed;
     private boolean loading;
@@ -32,6 +48,7 @@ public final class MainActivity extends Activity {
     private Button importButton;
     private List<Uri> currentUris=new ArrayList<>();
     private float[] sourcePeaks;
+    private Map<String,SourceWaveform> editorWaveforms=Collections.emptyMap();
     private String missingAudioNotice="";
     private Button play,loop,click,pad;
     private LinearLayout mixerPanel;
@@ -73,18 +90,18 @@ public final class MainActivity extends Activity {
     private LinearLayout brand(){LinearLayout brand=row();View mark=new View(this){final Paint p=new Paint(3);protected void onDraw(Canvas c){p.setColor(purple);p.setStrokeWidth(dp(3.8f));p.setStrokeCap(Paint.Cap.ROUND);float[] heights={10,19,28,19,10};for(int i=0;i<5;i++){float x=dp(3+i*6);c.drawLine(x,(getHeight()-dp(heights[i]))/2,x,(getHeight()+dp(heights[i]))/2,p);}}};brand.addView(mark,new LinearLayout.LayoutParams(dp(31),dp(34)));TextView name=label("ZLPlay",22);name.setTypeface(Typeface.create(uiFont,Typeface.BOLD));name.setPadding(dp(9),0,dp(10),0);brand.addView(name);return brand;}
     private void immersive(Window window){window.getDecorView();if(Build.VERSION.SDK_INT>=30){WindowInsetsController controller=window.getInsetsController();if(controller!=null){controller.hide(WindowInsets.Type.systemBars());controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);}}else window.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);}
     private void songHeading(String raw){songTitle.setText(SongDisplay.title(raw));songArtist.setText(SongDisplay.artist(raw));songArtist.setVisibility(songArtist.getText().length()==0?View.GONE:View.VISIBLE);if(play!=null&&keyDisplay!=null&&setlist==null)renderSetlist();}
-    private LinearLayout transport(boolean primary){LinearLayout controls=row();controls.setPadding(dp(5),dp(6),dp(5),dp(6));controls.setBackground(background(0xff101925));float width=getResources().getDisplayMetrics().widthPixels/getResources().getDisplayMetrics().density;float scale=Math.min(1,(width-30)/780f);int small=Math.max(32,Math.round(43*scale)),large=Math.max(38,Math.round(49*scale));
-        if(primary){place(controls,icon(R.string.rewind,"rewind",mixer::rewind),small,44);
-        Button action=icon(R.string.play,"play",this::togglePlay);((PerformanceButton)action).style(PerformanceButton.Style.PRIMARY);place(controls,action,large,46);if(primary)play=action;else playCopies.add(action);
-        place(controls,icon(R.string.stop,"stop",mixer::stop),small,44);Button looping=icon(R.string.loop,"loop",()->mixer.setLoop(!mixer.isLoop()));place(controls,looping,small,44);if(primary)loop=looping;}
+    private LinearLayout transport(boolean primary){LinearLayout controls=row();controls.setPadding(dp(5),dp(6),dp(5),dp(6));controls.setBackground(background(0xff101925));float width=getResources().getDisplayMetrics().widthPixels/getResources().getDisplayMetrics().density;float scale=Math.min(1,(width-30)/780f);int small=Math.max(32,Math.round((tablet?48:43)*scale)),large=Math.max(38,Math.round((tablet?55:49)*scale));
+        if(primary){place(controls,icon(R.string.rewind,"rewind",mixer::rewind),small,tablet?52:44);
+        Button action=icon(R.string.play,"play",this::togglePlay);((PerformanceButton)action).style(PerformanceButton.Style.PRIMARY);place(controls,action,large,tablet?54:46);if(primary)play=action;else playCopies.add(action);
+        place(controls,icon(R.string.stop,"stop",mixer::stop),small,tablet?52:44);Button looping=icon(R.string.loop,"loop",()->mixer.setLoop(!mixer.isLoop()));place(controls,looping,small,tablet?52:44);if(primary)loop=looping;}
         divider(controls);Button clicking=button(R.string.solo_click,this::toggleClick);place(controls,clicking,Math.round(93*scale),38);if(primary)click=clicking;else clickCopies.add(clicking);
-        Button padding=button(R.string.pad,this::togglePad);((PerformanceButton)padding).leadingSymbol("pad");place(controls,padding,Math.round(74*scale),38);if(primary)pad=padding;else padCopies.add(padding);
+        Button padding=button(R.string.pad,this::togglePad);((PerformanceButton)padding).leadingSymbol("pad");place(controls,padding,Math.round(74*scale),tablet?44:38);if(primary)pad=padding;else padCopies.add(padding);
         Button note=button(R.string.pad_note,()->{});note.setText(MusicalKey.FLATS[mixer.getPadNote()]+" ▾");note.setSingleLine();note.setPadding(dp(5),0,dp(5),0);note.setOnClickListener(v->chooseNote(note,true));place(controls,note,Math.round(48*scale),36);if(primary)padKeyButton=note;else padKeyCopies.add(note);divider(controls);
         LinearLayout bpmGroup=row();bpmGroup.setBackground(background(panel));Button minus=button(R.string.decrease,()->changeBpm(-1));((PerformanceButton)minus).style(PerformanceButton.Style.GHOST);place(bpmGroup,minus,29,34);
         if(primary){bpmField=new EditText(this);bpmField.setSingleLine();bpmField.setTextColor(text);bpmField.setTextSize(14);bpmField.setTypeface(uiFont);bpmField.setGravity(Gravity.CENTER);bpmField.setPadding(0,0,0,0);bpmField.setIncludeFontPadding(false);bpmField.setBackgroundColor(Color.TRANSPARENT);bpmField.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);bpmField.setText(String.valueOf(mixer.getBpm()));bpmField.setContentDescription(getString(R.string.bpm));bpmField.setSelectAllOnFocus(true);bpmField.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_DONE);bpmField.setOnEditorActionListener((v,actionId,event)->{applyBpm();bpmField.clearFocus();((android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(bpmField.getWindowToken(),0);return true;});bpmField.setOnFocusChangeListener((v,focus)->{if(!focus)applyBpm();});place(bpmGroup,bpmField,42,34);}else{TextView bpm=label(String.valueOf(mixer.getBpm()),14);bpm.setGravity(Gravity.CENTER);tempoCopies.add(bpm);place(bpmGroup,bpm,42,34);}
         Button plus=button(R.string.increase,()->changeBpm(1));((PerformanceButton)plus).style(PerformanceButton.Style.GHOST);place(bpmGroup,plus,29,34);controls.addView(bpmGroup);Button tap=button(R.string.tap,this::tapTempo);tap.setSingleLine();tap.setPadding(dp(5),0,dp(5),0);place(controls,tap,Math.round(44*scale),36);
         if(primary){LinearLayout.LayoutParams timerSize=new LinearLayout.LayoutParams(0,dp(40),1);timerSize.setMargins(dp(5),0,dp(5),0);controls.addView(clock,timerSize);}else{clickSourceLabel=label("",10);clickSourceLabel.setGravity(Gravity.CENTER);controls.addView(clickSourceLabel,new LinearLayout.LayoutParams(0,dp(35),1));}
-        if(primary){Button mixerOpen=button(R.string.mixer,this::showMixer);((PerformanceButton)mixerOpen).style(PerformanceButton.Style.CYAN);((PerformanceButton)mixerOpen).leadingSymbol("mixer");place(controls,mixerOpen,Math.round(90*scale),44);}else place(controls,button(R.string.audio_output,()->showSettings(1)),Math.round(124*scale),38);
+        if(primary){Button mixerOpen=button(R.string.mixer,this::showMixer);((PerformanceButton)mixerOpen).style(PerformanceButton.Style.CYAN);((PerformanceButton)mixerOpen).leadingSymbol("mixer");place(controls,mixerOpen,Math.round(90*scale),tablet?52:44);}else place(controls,button(R.string.audio_output,()->showSettings(1)),Math.round(124*scale),38);
         return controls;
     }
     private boolean isolatedTest(){return (getApplicationInfo().flags&android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)!=0&&getIntent().getBooleanExtra("com.onebytelabs.zlplay.SKIP_RESTORE_TEST",false);}
@@ -112,14 +129,14 @@ public final class MainActivity extends Activity {
         cardScroll=new HorizontalScrollView(this);cardScroll.setHorizontalScrollBarEnabled(false);songCards=row();cardScroll.addView(songCards);cardScroll.setVisibility(View.GONE);LinearLayout.LayoutParams cardsSize=new LinearLayout.LayoutParams(-1,dp(tablet?72:60));cardsSize.setMargins(0,dp(3),0,dp(6));root.addView(cardScroll,cardsSize);
         nextSong=label("",11);clock=label("",17);clock.setSingleLine();clock.setGravity(Gravity.CENTER);if(isolatedTest())songHeading(getString(R.string.demo_project));
         waveform=new Waveform();waveform.setMinimumHeight(dp(80));waveform.setContentDescription(getString(R.string.timeline));root.addView(waveform,new LinearLayout.LayoutParams(-1,0,1));
-        root.addView(transport(true),new LinearLayout.LayoutParams(-1,dp(63)));
-        mixerPanel=new LinearLayout(this);mixerPanel.setOrientation(LinearLayout.VERTICAL);root.addView(mixerPanel,new LinearLayout.LayoutParams(-1,dp(tablet?220:0)));renderMixer();mixerPanel.setVisibility(tablet?View.VISIBLE:View.GONE);
+        root.addView(transport(true),new LinearLayout.LayoutParams(-1,dp(tablet?73:63)));
+        mixerPanel=new LinearLayout(this);mixerPanel.setOrientation(LinearLayout.VERTICAL);LinearLayout.LayoutParams mixerSize=new LinearLayout.LayoutParams(-1,dp(tablet?260:0));mixerSize.topMargin=dp(tablet?10:0);root.addView(mixerPanel,mixerSize);renderMixer();mixerPanel.setVisibility(tablet?View.VISIBLE:View.GONE);
         status=label("",10);status.setTextColor(0xffa9b6cd);status.setSingleLine();status.setEllipsize(android.text.TextUtils.TruncateAt.END);root.addView(status,new LinearLayout.LayoutParams(-1,dp(16)));status.setVisibility(View.GONE);status.setOnClickListener(v->{if(!loading&&hasMissingAudio())new android.app.AlertDialog.Builder(this).setTitle(R.string.open_project).setMessage(missingAudioNotice).setPositiveButton(android.R.string.ok,null).show();});renderSetlist();
         if(prefs.getBoolean("restoreSession",true)&&((getApplicationInfo().flags&android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)==0||!getIntent().getBooleanExtra("com.onebytelabs.zlplay.SKIP_RESTORE_TEST",false)))restoreImport();
     }
 
     private void refreshKeys(){if(keyDisplay!=null)keyDisplay.setText(originalNote<0?"—":MusicalKey.FLATS[originalNote]);if(targetKeyButton!=null)targetKeyButton.setText((targetNote<0?"—":MusicalKey.FLATS[targetNote])+" ▾");}
-    private void configureSongKeys(String filename){var prefs=getSharedPreferences("mix",MODE_PRIVATE);int from=-1,to=-1;if(setlist!=null&&setlistIndex>=0){SetlistSpec.Song song=setlist.songs.get(setlistIndex);from=MusicalKey.parse(song.originalKey);to=MusicalKey.parse(song.tonalKey);}if(from<0)from=MusicalKey.parse(activeProject.originalKey);if(from<0)from=MusicalKey.filename(filename);if(from<0)from=MusicalKey.filename(activeProject.title);originalNote=prefs.getInt("originalNote:"+projectKey,from);int savedTarget=MusicalKey.parse(activeProject.targetKey);if(to<0)to=savedTarget<0?originalNote:savedTarget;targetNote=prefs.getInt("targetNote:"+projectKey,to);for(int i=0;i<mixer.trackCount();i++)mixer.setPitchEnabled(i,prefs.getBoolean("pitchTrack:"+projectKey+":"+i,mixer.pitchEnabled(i)));for(int kind=-1;kind>=-5;kind--){mixer.setChannelPan(kind,prefs.getFloat("pan:"+projectKey+":"+kind,0));if(prefs.contains("mute:"+projectKey+":"+kind))mixer.setMuted(kind,prefs.getBoolean("mute:"+projectKey+":"+kind,false));mixer.setSolo(kind,prefs.getBoolean("solo:"+projectKey+":"+kind,false));}mixer.setVsLevel(prefs.getFloat("vsLevel:"+projectKey,1));mixer.setGuideLevel(prefs.getFloat("guideLevel:"+projectKey,1));configurePlaybackOptions();for(int i=0;i<mixer.trackCount();i++)mixer.setTrackRoute(i,prefs.getInt("trackRoute:"+projectKey+":"+i,-1));if(originalNote>=0&&targetNote>=0){mixer.setTranspose(MusicalKey.delta(originalNote,targetNote));mixer.setPadNote(prefs.getInt("padNote:"+projectKey,targetNote));}refreshKeys();}
+    private void configureSongKeys(String filename){var prefs=getSharedPreferences("mix",MODE_PRIVATE);int from=-1,to=-1;if(setlist!=null&&setlistIndex>=0){SetlistSpec.Song song=setlist.songs.get(setlistIndex);if(song.pendingSnapshot==null){from=MusicalKey.parse(song.originalKey);to=MusicalKey.parse(song.tonalKey);}}if(from<0)from=MusicalKey.parse(activeProject.originalKey);if(from<0)from=MusicalKey.filename(filename);if(from<0)from=MusicalKey.filename(activeProject.title);originalNote=prefs.getInt("originalNote:"+projectKey,from);int savedTarget=MusicalKey.parse(activeProject.targetKey);if(to<0)to=savedTarget<0?originalNote:savedTarget;targetNote=prefs.getInt("targetNote:"+projectKey,to);for(int i=0;i<mixer.trackCount();i++)mixer.setPitchEnabled(i,prefs.getBoolean("pitchTrack:"+projectKey+":"+i,mixer.pitchEnabled(i)));for(int kind=-1;kind>=-5;kind--){mixer.setChannelPan(kind,prefs.getFloat("pan:"+projectKey+":"+kind,0));if(prefs.contains("mute:"+projectKey+":"+kind))mixer.setMuted(kind,prefs.getBoolean("mute:"+projectKey+":"+kind,false));mixer.setSolo(kind,prefs.getBoolean("solo:"+projectKey+":"+kind,false));}mixer.setVsLevel(prefs.getFloat("vsLevel:"+projectKey,1));mixer.setGuideLevel(prefs.getFloat("guideLevel:"+projectKey,1));configurePlaybackOptions();for(int i=0;i<mixer.trackCount();i++)mixer.setTrackRoute(i,prefs.getInt("trackRoute:"+projectKey+":"+i,-1));if(originalNote>=0&&targetNote>=0){mixer.setTranspose(MusicalKey.delta(originalNote,targetNote));mixer.setPadNote(prefs.getInt("padNote:"+projectKey,targetNote));}refreshKeys();}
     private void chooseNote(Button anchor,boolean padNote){if(!padNote&&originalNote<0){new android.app.AlertDialog.Builder(this).setMessage(R.string.original_required).setPositiveButton(R.string.original_key,(d,w)->informOriginalKey()).setNegativeButton(android.R.string.cancel,null).show();return;}PopupMenu menu=new PopupMenu(this,anchor);for(int i=0;i<12;i++){final int note=i;menu.getMenu().add(0,i,i,MusicalKey.FLATS[i]).setCheckable(true).setChecked((padNote?mixer.getPadNote():targetNote)==i);}menu.getMenu().setGroupCheckable(0,true,true);menu.setOnMenuItemClickListener(item->{int note=item.getItemId();if(padNote){mixer.setPadNote(note);getSharedPreferences("mix",MODE_PRIVATE).edit().putInt(activeProject==null?"padNote":"padNote:"+projectKey,note).apply();}else{targetNote=note;mixer.setTranspose(MusicalKey.delta(originalNote,note));mixer.setPadNote(note);getSharedPreferences("mix",MODE_PRIVATE).edit().putInt("targetNote:"+projectKey,note).putInt("padNote:"+projectKey,note).apply();refreshKeys();renderSetlist();}return true;});menu.show();}
     private void informOriginalKey(){if(activeProject==null){Toast.makeText(this,R.string.project_required,Toast.LENGTH_SHORT).show();return;}new android.app.AlertDialog.Builder(this).setTitle(R.string.original_key).setSingleChoiceItems(MusicalKey.FLATS,originalNote,(d,note)->{originalNote=note;if(targetNote<0)targetNote=note;getSharedPreferences("mix",MODE_PRIVATE).edit().putInt("originalNote:"+projectKey,note).putInt("targetNote:"+projectKey,targetNote).apply();mixer.setTranspose(MusicalKey.delta(originalNote,targetNote));mixer.setPadNote(targetNote);refreshKeys();d.dismiss();}).setNegativeButton(android.R.string.cancel,null).show();}
     private void chooseSound(int request){if(loading)return;Intent picker=new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("audio/*");picker.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,request==IMPORT_PADS);picker.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"audio/wav","audio/x-wav","audio/mpeg"});picker.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);try{startActivityForResult(picker,request);}catch(android.content.ActivityNotFoundException unavailable){status.setText(R.string.no_picker);}}
@@ -137,6 +154,19 @@ public final class MainActivity extends Activity {
     private LinearLayout section(LinearLayout parent){LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(12),dp(8),dp(12),dp(8));body.setBackground(background(panel));LinearLayout.LayoutParams size=new LinearLayout.LayoutParams(-1,-2);size.setMargins(0,dp(8),0,dp(8));parent.addView(body,size);return body;}
     private void description(LinearLayout parent,int title,int detail){TextView name=label(getString(title),15);name.setTypeface(Typeface.create(uiFont,Typeface.BOLD));parent.addView(name,new LinearLayout.LayoutParams(-1,dp(28)));TextView info=label(getString(detail),12);info.setTextColor(0xffa9b6cd);parent.addView(info,new LinearLayout.LayoutParams(-1,-2));}
     private void showRepertoire(){if(repertoireDialog!=null)repertoireDialog.dismiss();repertoireDialog=page(R.string.open_setlist);final android.app.Dialog dialog=repertoireDialog;LinearLayout content=pageContent(dialog);LinearLayout actions=row();TextView title=label(setlist==null?getString(R.string.no_setlist_loaded):setlist.title,18);title.setTypeface(Typeface.create(uiFont,Typeface.BOLD));actions.addView(title,new LinearLayout.LayoutParams(0,dp(47),1));place(actions,button(R.string.import_setlist,()->{dialog.dismiss();chooseSetlist();}),153,36);place(actions,button(R.string.open_project,()->{dialog.dismiss();chooseProject();}),129,36);content.addView(actions);
+        LinearLayout projectActions=row();
+        addButton(projectActions,button(R.string.new_project,()->{dialog.dismiss();chooseNewProject();}));
+        addButton(projectActions,button(R.string.new_setlist,()->{dialog.dismiss();chooseNewSetlist();}));
+        if(setlist!=null)addButton(projectActions,button(R.string.save_setlist_copy,()->{dialog.dismiss();saveSetlistCopy();}));
+        content.addView(projectActions);
+        if(setlist!=null){
+            LinearLayout songs=row();
+            addButton(songs,button(R.string.setlist_add_song,()->{dialog.dismiss();addSetlistSong();}));
+            Button remove=button(R.string.setlist_remove_song,()->{dialog.dismiss();removeSetlistSong();});
+            remove.setEnabled(setlist.songs.size()>1);
+            addButton(songs,remove);
+            content.addView(songs);
+        }
         LinearLayout columns=row();columns.setPadding(dp(12),0,dp(12),0);TextView songLabel=label(getString(R.string.song_column),10);songLabel.setTextColor(0xff9baec8);columns.addView(songLabel,new LinearLayout.LayoutParams(0,dp(25),1));place(columns,label(getString(R.string.project_column),10),60,25);place(columns,label(getString(R.string.key_column),10),42,25);place(columns,label(getString(R.string.duration_column),10),57,25);place(columns,new View(this),62,25);place(columns,new View(this),110,25);content.addView(columns);ScrollView scroll=new ScrollView(this);LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);repertoireScroll=scroll;scroll.addView(list);ReorderController reorder=new ReorderController(scroll,handler,()->!loading&&pendingSong<0,(from,to)->{int previous=scroll.getScrollY();moveSong(from,to);showRepertoire();repertoireScroll.post(()->repertoireScroll.scrollTo(0,previous));});dialog.setOnDismissListener(d->reorder.cancel());content.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         if(setlist!=null)for(int i=0;i<setlist.songs.size();i++){final int index=i;SetlistSpec.Song song=setlist.songs.get(i);LinearLayout line=row();line.setPadding(dp(10),dp(3),dp(8),dp(3));GradientDrawable face=background(index==setlistIndex?0xff251f3b:0xff121b27);if(index==setlistIndex)face.setStroke(dp(1.2f),purple);line.setBackground(face);TextView number=label("☰",14);number.setTextColor(0xffa5badb);place(line,number,26,40);LinearLayout names=new LinearLayout(this);names.setOrientation(LinearLayout.VERTICAL);names.setGravity(Gravity.CENTER_VERTICAL);TextView name=label(SongDisplay.title(song.name),13);name.setTypeface(Typeface.create(uiFont,Typeface.BOLD));name.setSingleLine();name.setEllipsize(android.text.TextUtils.TruncateAt.END);names.addView(name);TextView artist=label(song.project==null?getString(R.string.setlist_project_required):SongDisplay.artist(song.name),11);artist.setTextColor(song.project==null?0xffffbd55:0xffa5badb);names.addView(artist);line.addView(names,new LinearLayout.LayoutParams(0,dp(43),1));place(line,label(song.project==null?"—":song.project.toLowerCase(Locale.ROOT).endsWith(".rpp")?"RPP":"ZLPlay",11),60,40);place(line,label(SongDisplay.flat(song.tonalKey.isEmpty()?song.originalKey:song.tonalKey),12),42,40);place(line,label(i==setlistIndex?time(mixer.duration()):"—",12),57,40);Button open=button(R.string.open_song,()->{dialog.dismiss();requestSong(index);});open.setEnabled(song.project!=null&&!loading);open.setAlpha(song.project==null?.25f:1);state(open,index==setlistIndex);place(line,button(R.string.choose_cover,()->chooseCover(song)),62,34);place(line,open,110,34);LinearLayout.LayoutParams size=new LinearLayout.LayoutParams(-1,dp(52));size.setMargins(0,0,0,dp(5));line.setContentDescription(getString(R.string.reorder_help)+" "+song.name);reorder.attach(line);list.addView(line,size);}
         else{description(section(list),R.string.open_project,R.string.prepared_projects);if(projectKey!=null)list.addView(button(R.string.choose_cover,()->chooseCoverKey(projectKey)),new LinearLayout.LayoutParams(-1,dp(36)));}TextView footer=label(getString(R.string.reorder_help),10);footer.setTextColor(0xff8fa5c4);content.addView(footer,new LinearLayout.LayoutParams(-1,dp(22)));
@@ -144,7 +174,7 @@ public final class MainActivity extends Activity {
     private void preference(LinearLayout parent,int title,int help,String key,boolean fallback){LinearLayout line=row();LinearLayout words=new LinearLayout(this);words.setOrientation(LinearLayout.VERTICAL);words.setGravity(Gravity.CENTER_VERTICAL);TextView name=label(getString(title),12);name.setTypeface(Typeface.create(uiFont,Typeface.BOLD));words.addView(name);TextView info=label(getString(help),10);info.setTextColor(0xff93a9c7);words.addView(info);line.addView(words,new LinearLayout.LayoutParams(0,dp(57),1));Switch value=new Switch(this);value.setContentDescription(getString(title));value.setChecked(getSharedPreferences("mix",MODE_PRIVATE).getBoolean(key,fallback));value.setThumbTintList(android.content.res.ColorStateList.valueOf(0xfff1eaff));int[][] states={new int[]{android.R.attr.state_checked},new int[]{}};value.setTrackTintList(new android.content.res.ColorStateList(states,new int[]{0xff9050ee,0xff344158}));value.setOnCheckedChangeListener((v,on)->getSharedPreferences("mix",MODE_PRIVATE).edit().putBoolean(key,on).apply());line.addView(value);parent.addView(line);View divider=new View(this);divider.setBackgroundColor(0xff243246);parent.addView(divider,new LinearLayout.LayoutParams(-1,dp(.5f)));}
     private void languageSettings(){Intent settings=new Intent(Build.VERSION.SDK_INT>=33?android.provider.Settings.ACTION_APP_LOCALE_SETTINGS:android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+getPackageName()));try{startActivity(settings);}catch(android.content.ActivityNotFoundException unavailable){new android.app.AlertDialog.Builder(this).setMessage(R.string.system_language).setPositiveButton(android.R.string.ok,null).show();}}
     private void showSettings(int tab){if(settingsDialog==null||!settingsDialog.isShowing())settingsDialog=page(R.string.settings);else{LinearLayout current=pageContent(settingsDialog);if(current.getChildCount()>1)current.removeViews(1,current.getChildCount()-1);}final List<Button> ownedClicks=new ArrayList<>();settingsDialog.setOnDismissListener(d->clickCopies.removeAll(ownedClicks));LinearLayout content=pageContent(settingsDialog);LinearLayout columns=row();columns.setGravity(Gravity.TOP);LinearLayout nav=new LinearLayout(this);nav.setOrientation(LinearLayout.VERTICAL);nav.setPadding(dp(5),dp(8),dp(10),0);nav.setBackground(background(0xff101a27));int[] names={R.string.general,R.string.audio_output,R.string.custom_sounds,R.string.remote_mode};for(int i=0;i<names.length;i++){final int selected=i;PerformanceButton entry=(PerformanceButton)button(names[i],()->showSettings(selected));entry.style(PerformanceButton.Style.CARD);entry.leadingSymbol(i==0?"settings":i==1?"audio":"note");entry.setSelected(i==tab);entry.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);entry.setPadding(dp(14),0,dp(8),0);LinearLayout.LayoutParams size=new LinearLayout.LayoutParams(-1,dp(49));size.setMargins(0,0,0,dp(8));nav.addView(entry,size);}columns.addView(nav,new LinearLayout.LayoutParams(dp(tablet?195:174),-1));ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(12),0,0,0);scroll.addView(body);columns.addView(scroll,new LinearLayout.LayoutParams(0,-1,1));content.addView(columns,new LinearLayout.LayoutParams(-1,0,1));
-        if(tab==0){LinearLayout modes=section(body);description(modes,R.string.playback_mode,R.string.playback_mode_help);LinearLayout choices=row();Button local=button(R.string.player_mode,()->{});local.setSelected(true);local.setEnabled(false);addButton(choices,local);addButton(choices,button(R.string.remote_mode,()->{mixer.silence();if(audio!=null){audio.close();audio=null;}showSettings(3);}));modes.addView(choices);LinearLayout general=section(body);LinearLayout language=row();descriptionColumn(language,R.string.language,R.string.system_language);String locale=getResources().getConfiguration().getLocales().get(0).getDisplayName(getResources().getConfiguration().getLocales().get(0));Button select=button(R.string.language,this::languageSettings);select.setText(locale);place(language,select,155,34);general.addView(language,new LinearLayout.LayoutParams(-1,dp(52)));preference(general,R.string.keep_awake,R.string.keep_awake_help,"keepAwake",true);preference(general,R.string.restore_session,R.string.restore_session_help,"restoreSession",true);preference(general,R.string.confirm_song,R.string.confirm_song_help,"confirmSong",true);
+        if(tab==0){LinearLayout general=section(body);LinearLayout language=row();descriptionColumn(language,R.string.language,R.string.system_language);String locale=getResources().getConfiguration().getLocales().get(0).getDisplayName(getResources().getConfiguration().getLocales().get(0));Button select=button(R.string.language,this::languageSettings);select.setText(locale);place(language,select,155,34);general.addView(language,new LinearLayout.LayoutParams(-1,dp(52)));preference(general,R.string.keep_awake,R.string.keep_awake_help,"keepAwake",true);preference(general,R.string.restore_session,R.string.restore_session_help,"restoreSession",true);preference(general,R.string.confirm_song,R.string.confirm_song_help,"confirmSong",true);
             android.os.StatFs storage=new android.os.StatFs(getFilesDir().getAbsolutePath());description(general,R.string.storage,R.string.storage_help);TextView free=label(android.text.format.Formatter.formatShortFileSize(this,storage.getAvailableBytes()),14);free.setTextColor(0xff36c5da);general.addView(free,new LinearLayout.LayoutParams(-1,dp(28)));LinearLayout actions=row();addButton(actions,button(R.string.compatibility_details,()->showCompatibility(true)));addButton(actions,button(R.string.about_licenses,this::showLicenses));body.addView(actions);}
         else if(tab==1)audioSettings(body);
         else if(tab==3){LinearLayout remote=section(body);description(remote,R.string.remote_mode,R.string.remote_connect_help);TextView hint=label(getString(R.string.remote_no_audio),12);hint.setTextColor(0xffa9bddb);hint.setPadding(0,dp(10),0,dp(10));remote.addView(hint);Button scan=button(R.string.remote_scan,()->startActivityForResult(new Intent(this,QrScanActivity.class),SCAN_REMOTE));((PerformanceButton)scan).style(PerformanceButton.Style.PRIMARY);remote.addView(scan,new LinearLayout.LayoutParams(-1,dp(48)));}
@@ -153,7 +183,7 @@ public final class MainActivity extends Activity {
     }
     private void padImportIndicators(LinearLayout card){card.setMinimumHeight(dp(tablet?250:235));TextView heading=label(getString(R.string.imported_pad_notes),11);heading.setTextColor(0xffa9bddb);heading.setPadding(0,dp(8),0,dp(5));card.addView(heading);for(int r=0;r<2;r++){LinearLayout notes=row();for(int column=0;column<6;column++){int note=r*6+column;boolean imported=mixer.hasPad(note);TextView chip=label(MusicalKey.FLATS[note]+(imported?"  ✓":"  —"),12);chip.setGravity(Gravity.CENTER);chip.setTextColor(imported?0xff8ce6c3:0xff8292a9);chip.setBackground(background(imported?0xff12352f:0xff101a27));chip.setContentDescription(getString(R.string.pad_note_status,MusicalKey.FLATS[note],getString(imported?R.string.pad_imported:R.string.pad_not_imported)));chip.setClickable(false);chip.setFocusable(false);LinearLayout.LayoutParams size=new LinearLayout.LayoutParams(0,dp(34),1);size.setMargins(dp(2),dp(3),dp(2),dp(3));notes.addView(chip,size);}card.addView(notes);}TextView status=label(getString(mixer.hasPads()?R.string.pads_ready:R.string.pad_bank_empty),10);status.setTextColor(0xffa9bddb);status.setPadding(0,dp(6),0,0);card.addView(status);}
     private void audioSettings(LinearLayout body){var prefs=getSharedPreferences("mix",MODE_PRIVATE);android.media.AudioManager manager=(android.media.AudioManager)getSystemService(AUDIO_SERVICE);if(draftDevice<0){draftDevice=AudioSession.configuredDevice(this);if(draftDevice<0)draftDevice=Integer.MAX_VALUE;draftRate=prefs.getInt("outputRate",48000);draftChannels=prefs.getInt("outputChannels",2);}LinearLayout device=section(body);description(device,R.string.audio_output,R.string.output_help);android.media.AudioDeviceInfo selected=AudioSession.device(manager,draftDevice);Button devices=button(R.string.select_device,()->{android.media.AudioDeviceInfo[] found=manager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS);String[] labels=new String[found.length+1];labels[0]=getString(R.string.system_output);for(int i=0;i<found.length;i++)labels[i+1]=found[i].getProductName()+" · "+found[i].getId();new android.app.AlertDialog.Builder(this).setTitle(R.string.select_device).setItems(labels,(d,i)->{draftDevice=i==0?0:found[i-1].getId();android.media.AudioDeviceInfo chosen=AudioSession.device(manager,draftDevice);int[] rates=AudioSession.rates(chosen),counts=AudioSession.channels(chosen);draftRate=rates.length==0?48000:rates[0];for(int rate:rates)if(rate==48000)draftRate=rate;draftChannels=counts.length==0?2:counts[0];for(int count:counts)if(count==2)draftChannels=count;showSettings(1);}).show();});devices.setText(draftDevice==0?getString(R.string.system_output):selected==null?getString(R.string.output_disconnected):selected.getProductName().toString());device.addView(devices,new LinearLayout.LayoutParams(-1,dp(38)));LinearLayout formats=row();Button rate=button(R.string.sample_rate,()->{int[] values=AudioSession.rates(AudioSession.device(manager,draftDevice));String[] names=new String[values.length];for(int i=0;i<values.length;i++)names[i]=values[i]+" Hz";new android.app.AlertDialog.Builder(this).setTitle(R.string.sample_rate).setItems(names,(d,i)->{draftRate=values[i];showSettings(1);}).show();});rate.setText(getString(R.string.sample_rate)+" · "+draftRate+" Hz");addButton(formats,rate);Button channels=button(R.string.output_channels,()->{int[] values=AudioSession.channels(AudioSession.device(manager,draftDevice));String[] names=new String[values.length];for(int i=0;i<values.length;i++)names[i]=String.valueOf(values[i]);new android.app.AlertDialog.Builder(this).setTitle(R.string.output_channels).setItems(names,(d,i)->{draftChannels=values[i];showSettings(1);}).show();});channels.setText(getString(R.string.output_channels)+" · "+draftChannels);addButton(formats,channels);device.addView(formats);Button apply=button(R.string.apply_output,()->applyOutput(draftDevice,draftRate,draftChannels));device.addView(apply,new LinearLayout.LayoutParams(-1,dp(38)));LinearLayout routing=section(body);description(routing,R.string.routing,R.string.routing_help);int[] names={R.string.master_channel,R.string.click_track,R.string.guide_track,R.string.pad,R.string.vs_bus};int activeChannels=prefs.getInt("outputChannels",2);for(int b=0;b<5;b++){final int bus=b;LinearLayout line=row();line.addView(label(getString(names[b]),12),new LinearLayout.LayoutParams(0,dp(40),1));Button route=button(R.string.select_output,()->{java.util.ArrayList<Integer> values=new java.util.ArrayList<>();java.util.ArrayList<String> labels=new java.util.ArrayList<>();values.add(-1);labels.add(bus==0?getString(R.string.stereo_output):getString(R.string.follow_master));for(int c=0;c<activeChannels;c++){values.add(c);labels.add(getString(R.string.output_number,c+1));}for(int c=0;c+1<activeChannels;c+=2){values.add(100+c);labels.add(getString(R.string.output_pair,c+1,c+2));}new android.app.AlertDialog.Builder(this).setTitle(names[bus]).setItems(labels.toArray(new String[0]),(d,i)->{mixer.setRoute(bus,values.get(i));prefs.edit().putInt("route:"+bus,values.get(i)).apply();showSettings(1);}).show();});route.setText(routeLabel(bus,mixer.getRoute(bus)));line.addView(route,new LinearLayout.LayoutParams(dp(220),dp(34)));routing.addView(line);}trackOutputSettings(body,activeChannels);}
-    private void trackOutputSettings(LinearLayout body,int channels){if(!mixer.hasImported()||activeProject==null)return;java.util.LinkedHashMap<String,LinearLayout> groups=new java.util.LinkedHashMap<>();for(int i=0;i<mixer.trackCount();i++){final int track=i;String group=activeProject.tracks.get(i).group;if(mixer.role(i)!=0)group=getString(R.string.special_channels);LinearLayout section=groups.get(group);if(section==null){section=section(body);TextView heading=label(group,14);section.addView(heading);groups.put(group,section);}LinearLayout line=row();line.addView(label(mixer.trackName(i),12),new LinearLayout.LayoutParams(0,dp(40),1));Button select=button(R.string.select_output,()->{java.util.ArrayList<Integer> routes=new java.util.ArrayList<>();java.util.ArrayList<String> labels=new java.util.ArrayList<>();routes.add(-1);labels.add(getString(R.string.follow_bus));for(int c=0;c<channels;c++){routes.add(c);labels.add(getString(R.string.output_number,c+1));}for(int c=0;c+1<channels;c+=2){routes.add(100+c);labels.add(getString(R.string.output_pair,c+1,c+2));}new android.app.AlertDialog.Builder(this).setTitle(mixer.trackName(track)).setItems(labels.toArray(new String[0]),(d,index)->{mixer.setTrackRoute(track,routes.get(index));getSharedPreferences("mix",MODE_PRIVATE).edit().putInt("trackRoute:"+projectKey+":"+track,routes.get(index)).apply();showSettings(1);}).show();});select.setText(mixer.trackRoute(i)<0?getString(R.string.follow_bus):routeLabel(0,mixer.trackRoute(i)));line.addView(select,new LinearLayout.LayoutParams(dp(220),dp(34)));section.addView(line);}}
+    private void trackOutputSettings(LinearLayout body,int channels){if(!mixer.hasImported()||activeProject==null)return;java.util.LinkedHashMap<String,LinearLayout> groups=new java.util.LinkedHashMap<>();for(int i=0;i<mixer.trackCount();i++){final int track=i;if(mixer.role(i)!=0)continue;String group=activeProject.tracks.get(i).group;LinearLayout section=groups.get(group);if(section==null){section=section(body);TextView heading=label(group,14);section.addView(heading);groups.put(group,section);}LinearLayout line=row();line.addView(label(mixer.trackName(i),12),new LinearLayout.LayoutParams(0,dp(40),1));Button select=button(R.string.select_output,()->{java.util.ArrayList<Integer> routes=new java.util.ArrayList<>();java.util.ArrayList<String> labels=new java.util.ArrayList<>();routes.add(-1);labels.add(getString(R.string.follow_bus));for(int c=0;c<channels;c++){routes.add(c);labels.add(getString(R.string.output_number,c+1));}for(int c=0;c+1<channels;c+=2){routes.add(100+c);labels.add(getString(R.string.output_pair,c+1,c+2));}new android.app.AlertDialog.Builder(this).setTitle(mixer.trackName(track)).setItems(labels.toArray(new String[0]),(d,index)->{mixer.setTrackRoute(track,routes.get(index));getSharedPreferences("mix",MODE_PRIVATE).edit().putInt("trackRoute:"+projectKey+":"+track,routes.get(index)).apply();showSettings(1);}).show();});select.setText(mixer.trackRoute(i)<0?getString(R.string.follow_bus):routeLabel(0,mixer.trackRoute(i)));line.addView(select,new LinearLayout.LayoutParams(dp(220),dp(34)));section.addView(line);}}
     private String routeLabel(int bus,int route){return route<0?getString(bus==0?R.string.stereo_output:R.string.follow_master):route>=100?getString(R.string.output_pair,route-99,route-98):getString(R.string.output_number,route+1);}
     private void applyOutput(int device,int rate,int channels){if(loading)return;loading=true;mixer.silence();if(audio!=null){audio.close();audio=null;}imports.execute(()->{try{AudioSession.validate(this,device,rate,channels);runOnUiThread(()->{if(destroyed)return;var edit=getSharedPreferences("mix",MODE_PRIVATE).edit().putInt("outputDevice",device).putInt("outputRate",rate).putInt("outputChannels",channels);android.media.AudioDeviceInfo selected=AudioSession.device((android.media.AudioManager)getSystemService(AUDIO_SERVICE),device);edit.putString("outputDeviceName",selected==null?"":selected.getProductName().toString()).putInt("outputDeviceType",selected==null?0:selected.getType());for(int b=0;b<5;b++){int route=mixer.getRoute(b);if(route>=100?route-99>=channels:route>=channels){mixer.setRoute(b,-1);edit.putInt("route:"+b,-1);}}for(int i=0;i<mixer.trackCount();i++){int r=mixer.trackRoute(i);if(r>=100?r-99>=channels:r>=channels){mixer.setTrackRoute(i,-1);edit.putInt("trackRoute:"+projectKey+":"+i,-1);}}edit.apply();loading=false;showSettings(1);Toast.makeText(this,R.string.output_applied,Toast.LENGTH_LONG).show();});}catch(Exception failure){runOnUiThread(()->{if(destroyed)return;loading=false;draftDevice=-1;showSettings(1);Toast.makeText(this,R.string.output_failed,Toast.LENGTH_LONG).show();});}});}
     private LinearLayout sectionColumns(LinearLayout row){LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(11),dp(10),dp(11),dp(10));panel.setBackground(background(0xff121d2b));LinearLayout.LayoutParams size=new LinearLayout.LayoutParams(0,-2,1);size.setMargins(0,dp(8),dp(8),dp(8));row.addView(panel,size);return panel;}
@@ -170,10 +200,65 @@ public final class MainActivity extends Activity {
     private float mixerValue(int kind){return kind>=0?mixer.getGain(kind):kind==-1?mixer.getMasterLevel():kind==-2?mixer.getClickLevel():kind==-3?mixer.getGuideLevel():kind==-4?mixer.getPadLevel():mixer.getVsLevel();}
     private void mixerValue(int kind,float value){String key;if(kind>=0){mixer.setGain(kind,value);key=gainKey(kind);}else if(kind==-1){mixer.setMasterLevel(value);key="masterLevel";}else if(kind==-2){mixer.setClickLevel(value);key="clickLevel";}else if(kind==-3){mixer.setGuideLevel(value);key="guideLevel:"+projectKey;}else if(kind==-4){mixer.setPadLevel(value);key="padLevel";}else{mixer.setVsLevel(value);key="vsLevel:"+projectKey;}getSharedPreferences("mix",MODE_PRIVATE).edit().putFloat(key,value).apply();}
     private void mixerStrip(LinearLayout group,String name,int kind,int stripHeight){LinearLayout strip=new LinearLayout(this);strip.setOrientation(LinearLayout.VERTICAL);strip.setGravity(Gravity.CENTER_HORIZONTAL);strip.setBackground(background(kind==-5?0xff29203f:0xff101a26));TextView title=label(name,10);title.setGravity(Gravity.CENTER);title.setSingleLine();title.setEllipsize(android.text.TextUtils.TruncateAt.END);title.setContentDescription(name);strip.addView(title,new LinearLayout.LayoutParams(-1,dp(22)));TextView value=label(decibels(mixerValue(kind)),9);value.setGravity(Gravity.CENTER);value.setTextColor(purple);strip.addView(value,new LinearLayout.LayoutParams(-1,dp(17)));
+        Button eq=button(R.string.project_channel_eq,()->openMixerEq(kind,name));eq.setText("EQ/Gain");eq.setTextSize(8);eq.setPadding(0,0,0,0);eq.setEnabled(projectManifest!=null);strip.addView(eq,new LinearLayout.LayoutParams(dp(62),dp(23)));
         if(kind>=0){Button pitch=button(R.string.pitch_short,()->{});pitch.setTextSize(8);pitch.setPadding(0,0,0,0);state(pitch,mixer.pitchEnabled(kind));pitch.setOnClickListener(v->{mixer.setPitchEnabled(kind,!mixer.pitchEnabled(kind));getSharedPreferences("mix",MODE_PRIVATE).edit().putBoolean("pitchTrack:"+projectKey+":"+kind,mixer.pitchEnabled(kind)).apply();state(pitch,mixer.pitchEnabled(kind));});strip.addView(pitch,new LinearLayout.LayoutParams(dp(40),dp(20)));}else strip.addView(new View(this),new LinearLayout.LayoutParams(1,dp(20)));
-        int height=Math.max(50,stripHeight-87);FrameLayout container=new FrameLayout(this);SeekBar gain=new FaderSeekBar(this);gain.setMax(Math.max(200,Math.round(mixerValue(kind)*100)));gain.setProgress(Math.round(mixerValue(kind)*100));gain.setRotation(-90);gain.setContentDescription(getString(R.string.volume,name));container.addView(gain,new FrameLayout.LayoutParams(dp(Math.max(50,height-8)),dp(34),Gravity.CENTER));View meter=new View(this){final Paint ink=new Paint(3);protected void onDraw(Canvas c){float level=mixer.meter(kind),fraction=level<=.0001f?0:Math.max(0,Math.min(1,(float)((20*Math.log10(level)+60)/60)));ink.setColor(0xff09111c);c.drawRoundRect(0,0,getWidth(),getHeight(),dp(2),dp(2),ink);ink.setShader(new LinearGradient(0,getHeight(),0,0,new int[]{0xff28d29a,0xff38d29c,0xfff2d760,0xffef6964},new float[]{0,.72f,.9f,1},Shader.TileMode.CLAMP));c.drawRect(0,getHeight()*(1-fraction),getWidth(),getHeight(),ink);ink.setShader(null);if(isAttachedToWindow())postInvalidateDelayed(50);}};meter.setContentDescription(getString(R.string.level_meter,name));FrameLayout.LayoutParams meterSize=new FrameLayout.LayoutParams(dp(5),dp(Math.max(42,height-10)),Gravity.RIGHT|Gravity.CENTER_VERTICAL);meterSize.setMargins(0,0,dp(2),0);container.addView(meter,meterSize);strip.addView(container,new LinearLayout.LayoutParams(dp(56),dp(height)));gain.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar bar,int p,boolean user){mixerValue(kind,p/100f);value.setText(decibels(mixerValue(kind)));}public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}});LinearLayout.LayoutParams size=new LinearLayout.LayoutParams(dp(65),-1);size.setMargins(dp(2),dp(3),dp(2),dp(2));LinearLayout states=row();for(boolean solo:new boolean[]{false,true}){Button control=button(solo?R.string.solo_channel:R.string.mute_channel,()->{});control.setText(solo?"S":"M");control.setTextSize(10);control.setPadding(0,0,0,0);state(control,solo?mixer.isSolo(kind):mixer.isMuted(kind));control.setOnClickListener(v->{if(solo)mixer.setSolo(kind,!mixer.isSolo(kind));else mixer.setMuted(kind,!mixer.isMuted(kind));boolean on=solo?mixer.isSolo(kind):mixer.isMuted(kind);getSharedPreferences("mix",MODE_PRIVATE).edit().putBoolean((solo?"solo:":"mute:")+projectKey+":"+kind,on).apply();if(kind<0)for(int i=0;i<mixer.trackCount();i++)getSharedPreferences("mix",MODE_PRIVATE).edit().putBoolean((solo?"solo:":"mute:")+projectKey+":"+i,solo?mixer.isSolo(i):mixer.isMuted(i)).apply();state(control,on);});place(states,control,23,22);}strip.addView(states);group.addView(strip,size);
+        int height=Math.max(50,stripHeight-110);FrameLayout container=new FrameLayout(this);SeekBar gain=new FaderSeekBar(this);gain.setMax(Math.max(200,Math.round(mixerValue(kind)*100)));gain.setProgress(Math.round(mixerValue(kind)*100));gain.setRotation(-90);gain.setContentDescription(getString(R.string.volume,name));container.addView(gain,new FrameLayout.LayoutParams(dp(Math.max(50,height-8)),dp(34),Gravity.CENTER));View meter=new View(this){final Paint ink=new Paint(3);protected void onDraw(Canvas c){float level=mixer.meter(kind),fraction=level<=.0001f?0:Math.max(0,Math.min(1,(float)((20*Math.log10(level)+60)/60)));ink.setColor(0xff09111c);c.drawRoundRect(0,0,getWidth(),getHeight(),dp(2),dp(2),ink);ink.setShader(new LinearGradient(0,getHeight(),0,0,new int[]{0xff28d29a,0xff38d29c,0xfff2d760,0xffef6964},new float[]{0,.72f,.9f,1},Shader.TileMode.CLAMP));c.drawRect(0,getHeight()*(1-fraction),getWidth(),getHeight(),ink);ink.setShader(null);if(isAttachedToWindow())postInvalidateDelayed(50);}};meter.setContentDescription(getString(R.string.level_meter,name));FrameLayout.LayoutParams meterSize=new FrameLayout.LayoutParams(dp(5),dp(Math.max(42,height-10)),Gravity.RIGHT|Gravity.CENTER_VERTICAL);meterSize.setMargins(0,0,dp(2),0);container.addView(meter,meterSize);strip.addView(container,new LinearLayout.LayoutParams(dp(56),dp(height)));gain.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar bar,int p,boolean user){mixerValue(kind,p/100f);value.setText(decibels(mixerValue(kind)));}public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}});LinearLayout.LayoutParams size=new LinearLayout.LayoutParams(dp(65),-1);size.setMargins(dp(2),dp(3),dp(2),dp(2));LinearLayout states=row();for(boolean solo:new boolean[]{false,true}){Button control=button(solo?R.string.solo_channel:R.string.mute_channel,()->{});control.setText(solo?"S":"M");control.setTextSize(10);control.setPadding(0,0,0,0);state(control,solo?mixer.isSolo(kind):mixer.isMuted(kind));control.setOnClickListener(v->{if(solo)mixer.setSolo(kind,!mixer.isSolo(kind));else mixer.setMuted(kind,!mixer.isMuted(kind));boolean on=solo?mixer.isSolo(kind):mixer.isMuted(kind);getSharedPreferences("mix",MODE_PRIVATE).edit().putBoolean((solo?"solo:":"mute:")+projectKey+":"+kind,on).apply();if(kind<0)for(int i=0;i<mixer.trackCount();i++)getSharedPreferences("mix",MODE_PRIVATE).edit().putBoolean((solo?"solo:":"mute:")+projectKey+":"+i,solo?mixer.isSolo(i):mixer.isMuted(i)).apply();state(control,on);});place(states,control,23,22);}strip.addView(states);group.addView(strip,size);
     }
-    private void renderMixer(){mixerPanel.removeAllViews();int height=Math.round(getResources().getDisplayMetrics().heightPixels/getResources().getDisplayMetrics().density),stripHeight=mixerDialog==null?195:Math.max(140,height-140);HorizontalScrollView scroll=new HorizontalScrollView(this);scroll.setHorizontalScrollBarEnabled(false);LinearLayout channels=row();scroll.addView(channels,new HorizontalScrollView.LayoutParams(-2,-1));mixerPanel.addView(scroll,new LinearLayout.LayoutParams(-1,-1));LinearLayout master=mixerGroup(channels,getString(R.string.master_channel));mixerStrip(master,getString(R.string.master_channel),-1,stripHeight);LinearLayout special=mixerGroup(channels,getString(R.string.special_channels));mixerStrip(special,getString(R.string.click_track),-2,stripHeight);mixerStrip(special,getString(R.string.guide_track),-3,stripHeight);mixerStrip(special,getString(R.string.pad),-4,stripHeight);LinearLayout vs=mixerGroup(channels,getString(R.string.vs_bus));mixerStrip(vs,"VS",-5,stripHeight);int[] demos={R.string.bass,R.string.keys,R.string.drums};for(int i=0;hasSong()&&i<mixer.trackCount();i++)if(mixer.role(i)==0)mixerStrip(vs,mixer.hasImported()?mixer.trackName(i):getString(demos[i]),i,stripHeight);}
+    private void openMixerEq(int kind,String name){
+        if(loading||projectManifest==null)return;
+        try{
+            JSONObject root=new JSONObject(currentProjectManifest());
+            JSONObject settings=root.optJSONObject("settings");
+            if(settings==null){settings=new JSONObject();root.put("settings",settings);}
+            JSONObject effects=settings.optJSONObject("channelEffects");
+            if(effects==null){effects=new JSONObject();settings.put("channelEffects",effects);}
+            final JSONObject channels=effects;
+            String key=kind>=0?"track:"+activeProject.tracks.get(kind).name:new String[]{"master","click","guide","pad","vs"}[-kind-1];
+            ChannelEqDialog.open(this,name+" · "+getString(R.string.project_channel_eq),effects.optJSONObject(key),value->{
+                try{
+                    channels.put(key,value);String updated=root.toString();
+                    ProjectSpec parsed=ZlplayReader.parse(updated);
+                    mixer.configureEffects(parsed);projectManifest=updated;
+                    captureSetlistSong();
+                }catch(Exception failure){showProjectSaveError();}
+            });
+        }catch(Exception failure){showProjectSaveError();}
+    }
+
+    private void organizeTracks(){
+        if(loading||projectManifest==null)return;
+        try{TrackOrganizerDialog.open(this,currentProjectManifest(),updated->{
+            try{
+                ProjectSpec parsed=ZlplayReader.parse(updated);
+                for(int i=0;i<activeProject.tracks.size();i++)activeProject.tracks.get(i).group=parsed.tracks.get(i).group;
+                projectManifest=updated;mixer.configureEffects(parsed);captureSetlistSong();renderMixer();
+            }catch(Exception failure){showProjectSaveError();}
+        });}catch(Exception failure){showProjectSaveError();}
+    }
+    private void renderMixer(){
+        mixerPanel.removeAllViews();
+        int height=Math.round(getResources().getDisplayMetrics().heightPixels/getResources().getDisplayMetrics().density);
+        int stripHeight=mixerDialog==null?(tablet?235:195):Math.max(140,height-172);
+        HorizontalScrollView scroll=new HorizontalScrollView(this);scroll.setHorizontalScrollBarEnabled(true);LinearLayout channels=row();
+        scroll.addView(channels,new HorizontalScrollView.LayoutParams(-2,-1));mixerPanel.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        LinearLayout master=mixerGroup(channels,getString(R.string.master_channel));mixerStrip(master,getString(R.string.master_channel),-1,stripHeight);
+        LinearLayout special=mixerGroup(channels,getString(R.string.special_channels));mixerStrip(special,getString(R.string.click_track),-2,stripHeight);mixerStrip(special,getString(R.string.guide_track),-3,stripHeight);mixerStrip(special,getString(R.string.pad),-4,stripHeight);
+        LinearLayout vs=mixerGroup(channels,getString(R.string.vs_bus));mixerStrip(vs,"VS",-5,stripHeight);
+        Map<String,LinearLayout> groups=new LinkedHashMap<>();
+        try{
+            if(projectManifest!=null){
+                JSONObject root=new JSONObject(projectManifest);JSONArray tracks=root.getJSONArray("tracks");
+                for(int i:MixerOrder.tracks(root))if(hasSong()&&mixer.role(i)==0){
+                    String name=tracks.getJSONObject(i).optString("group","VS");
+                    LinearLayout parent=vs;
+                    if(!name.equals("VS")&&!name.isEmpty()){
+                        parent=groups.get(name);if(parent==null){parent=mixerGroup(channels,name);groups.put(name,parent);}
+                    }
+                    mixerStrip(parent,mixer.trackName(i),i,stripHeight);
+                }
+            }else{int[] demos={R.string.bass,R.string.keys,R.string.drums};for(int i=0;hasSong()&&i<mixer.trackCount();i++)if(mixer.role(i)==0)mixerStrip(vs,mixer.hasImported()?mixer.trackName(i):getString(demos[Math.min(i,2)]),i,stripHeight);}
+        }catch(Exception failure){showProjectSaveError();}
+    }
     private void showMixer(){if(mixerDialog!=null)return;final ViewGroup parent=(ViewGroup)mixerPanel.getParent();final int index=parent.indexOfChild(mixerPanel);final ViewGroup.LayoutParams previous=mixerPanel.getLayoutParams();parent.removeView(mixerPanel);android.app.Dialog dialog=new android.app.Dialog(this,R.style.Theme_ZLPlay);mixerDialog=dialog;LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff0e1823,0xff090f17}));content.setPadding(dp(10),dp(6),dp(10),dp(6));
         LinearLayout header=row();Button back=icon(R.string.back,"back",dialog::dismiss);((PerformanceButton)back).style(PerformanceButton.Style.GHOST);place(header,back,30,38);header.addView(brand());divider(header);TextView title=label(getString(R.string.mixer),20);title.setTypeface(Typeface.create(uiFont,Typeface.BOLD));place(header,title,70,38);place(header,button(R.string.pitch_tracks,this::showPitchSelection),85,34);TextView song=label(songTitle.getText().toString(),12);song.setSingleLine();song.setEllipsize(android.text.TextUtils.TruncateAt.END);header.addView(song,new LinearLayout.LayoutParams(0,dp(38),1));TextView timer=label(clock.getText().toString(),11);clockCopies.add(timer);place(header,timer,87,38);place(header,icon(R.string.rewind,"rewind",mixer::rewind),38,36);Button action=icon(R.string.play,"play",this::togglePlay);((PerformanceButton)action).style(PerformanceButton.Style.PRIMARY);playCopies.add(action);place(header,action,40,36);place(header,icon(R.string.stop,"stop",mixer::stop),38,36);Button looping=icon(R.string.loop,"loop",()->mixer.setLoop(!mixer.isLoop()));loopCopies.add(looping);state(looping,mixer.isLoop());looping.setOnClickListener(v->{mixer.setLoop(!mixer.isLoop());state(looping,mixer.isLoop());});place(header,looping,38,36);content.addView(header,new LinearLayout.LayoutParams(-1,dp(43)));
         content.addView(mixerPanel,new LinearLayout.LayoutParams(-1,0,1));mixerPanel.setVisibility(View.VISIBLE);renderMixer();content.addView(transport(false),new LinearLayout.LayoutParams(-1,dp(61)));dialog.setContentView(content);dialog.setOnDismissListener(ignored->{((ViewGroup)mixerPanel.getParent()).removeView(mixerPanel);mixerDialog=null;if(!destroyed){parent.addView(mixerPanel,index,previous);mixerPanel.setVisibility(tablet?View.VISIBLE:View.GONE);playCopies.clear();loopCopies.clear();padCopies.clear();clickCopies.clear();clockCopies.clear();tempoCopies.clear();padKeyCopies.clear();renderMixer();}});dialog.show();if(dialog.getWindow()!=null){dialog.getWindow().setLayout(-1,-1);immersive(dialog.getWindow());}
@@ -240,12 +325,15 @@ public final class MainActivity extends Activity {
     }
     void moveSong(int from,int insertion){if(setlist==null||loading||pendingSong>=0||from<0||from>=setlist.songs.size())return;SetlistSpec.Song current=setlistIndex<0?null:setlist.songs.get(setlistIndex);SetlistSpec.Song moved=setlist.songs.remove(from);if(insertion>from)insertion--;setlist.songs.add(Math.max(0,Math.min(insertion,setlist.songs.size())),moved);setlistIndex=current==null?-1:setlist.songs.indexOf(current);if(!isolatedTest()&&setlistFolder!=null){library.saveOrder(RepertoireLibrary.key(setlistFolder.tree.toString(),setlistFile),setlist.songs);if(setlistPersistent)getSharedPreferences("mix",MODE_PRIVATE).edit().putInt("setlistIndex",setlistIndex).apply();}renderSetlist();}
     private String playbackPreference(String option){
-        if(setlist!=null&&setlistFolder!=null)return option+":setlist:"+RepertoireLibrary.key(setlistFolder.tree.toString(),setlistFile);
+        if(setlist!=null&&setlistFolder!=null&&!option.equals("nativeClick")&&!option.equals("clickAccent"))
+            return option+":setlist:"+RepertoireLibrary.key(setlistFolder.tree.toString(),setlistFile);
         return option+":project:"+projectKey;
     }
     private void configurePlaybackOptions(){
         var prefs=getSharedPreferences("mix",MODE_PRIVATE);
-        mixer.useProjectClick(!prefs.getBoolean(playbackPreference("nativeClick"),true));
+        mixer.useProjectClick(!prefs.getBoolean(playbackPreference("nativeClick"),!activeProject.projectClick));
+        boolean defaultAccent=activeProject.clickAccent==null?prefs.getBoolean("clickAccent",false):activeProject.clickAccent;
+        mixer.setAccent(prefs.getBoolean(playbackPreference("clickAccent"),defaultAccent));
         mixer.setAutomationRehearsal(prefs.getBoolean(playbackPreference("automationRehearsal"),activeProject.automationRehearsal));
         mixer.setAutomationEnabled(prefs.getBoolean(playbackPreference("automationEnabled"),activeProject.automationEnabled));
         refreshAutomationMode();
@@ -274,10 +362,32 @@ public final class MainActivity extends Activity {
         ScrollView scroll=new ScrollView(this);
         LinearLayout controls=new LinearLayout(this);controls.setOrientation(LinearLayout.VERTICAL);
         scroll.addView(controls);content.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        LinearLayout body=section(controls);
-        body.addView(button(R.string.original_key,this::informOriginalKey),new LinearLayout.LayoutParams(-1,dp(40)));
+        controls.setPadding(dp(10),dp(6),dp(10),dp(18));
+        if(activeProject!=null){
+            LinearLayout summary=section(controls);summary.setBackground(background(0xff142333));
+            TextView title=label(activeProject.title,18);title.setTypeface(Typeface.create(uiFont,Typeface.BOLD));summary.addView(title);
+            TextView detail=label(mixer.getBpm()+" BPM  ·  "+activeProject.numerator+"/"+activeProject.denominator+(setlist==null?"":"  ·  "+setlist.title),12);detail.setTextColor(0xffa8bed8);summary.addView(detail);
+        }
+        boolean wide=getResources().getConfiguration().screenWidthDp>=700;
+        LinearLayout columns=new LinearLayout(this);columns.setOrientation(wide?LinearLayout.HORIZONTAL:LinearLayout.VERTICAL);controls.addView(columns);
+        LinearLayout left=new LinearLayout(this),right=new LinearLayout(this);left.setOrientation(LinearLayout.VERTICAL);right.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams columnSize=new LinearLayout.LayoutParams(wide?0:-1,-2,wide?1:0);columnSize.setMargins(0,0,wide?dp(14):0,0);columns.addView(left,columnSize);columns.addView(right,new LinearLayout.LayoutParams(wide?0:-1,-2,wide?1:0));
+        if(projectDraft||projectManifest!=null){
+            LinearLayout edit=section(left);quickHeading(edit,R.string.quick_editing);
+            LinearLayout first=row();edit.addView(first);
+            quickAction(first,R.string.edit_regions,R.string.quick_regions_help,"regions",()->{dialog.dismiss();openRegionEditor();},true);
+            quickAction(first,R.string.edit_tracks,R.string.quick_tracks_help,"tracks",()->{dialog.dismiss();openTrackEditor();},true);
+            LinearLayout second=row();edit.addView(second);
+            quickAction(second,R.string.project_organize_tracks,R.string.quick_groups_help,"list",()->{dialog.dismiss();organizeTracks();},true);
+            quickAction(second,R.string.project_details,R.string.quick_details_help,"settings",this::editProjectDetails,true);
+            LinearLayout save=section(left);quickHeading(save,R.string.quick_saving);
+            LinearLayout saveSong=row();save.addView(saveSong);
+            quickAction(saveSong,R.string.quick_save_song,R.string.quick_save_song_help,"save",()->{dialog.dismiss();saveProject();},true);
+            if(setlist!=null){LinearLayout saveSet=row();save.addView(saveSet);quickAction(saveSet,R.string.quick_save_setlist,R.string.quick_save_setlist_help,"list",()->{dialog.dismiss();saveSetlistCopy();},true);}
+        }
+        LinearLayout body=section(right);quickHeading(body,R.string.quick_playback);
         Switch nativeChoice=quickSwitch(body,R.string.native_click_source,!mixer.usesProjectClick());
-        nativeChoice.setEnabled(mixer.hasProjectClick());
+        nativeChoice.setEnabled(activeProject!=null||mixer.hasImported());
         nativeChoice.setOnCheckedChangeListener((button,on)->{
             mixer.useProjectClick(!on);
             getSharedPreferences("mix",MODE_PRIVATE).edit().putBoolean(playbackPreference("nativeClick"),on).apply();
@@ -290,13 +400,32 @@ public final class MainActivity extends Activity {
             refreshAutomationMode();
         });
         quickToggle(body,R.string.keep_pad,"keepPad",false,()->{});
-        quickToggle(body,R.string.click_accent,"clickAccent",false,()->mixer.setAccent(getSharedPreferences("mix",MODE_PRIVATE).getBoolean("clickAccent",false)));
+        Switch accent=quickSwitch(body,R.string.click_accent,mixer.isAccent());
+        accent.setOnCheckedChangeListener((button,on)->{
+            mixer.setAccent(on);
+            String key=activeProject==null?"clickAccent":playbackPreference("clickAccent");
+            getSharedPreferences("mix",MODE_PRIVATE).edit().putBoolean(key,on).apply();
+        });
+    }
+    private void quickHeading(LinearLayout parent,int title){TextView text=label(getString(title),13);text.setTextColor(0xffbda0f5);text.setTypeface(Typeface.create(uiFont,Typeface.BOLD));text.setPadding(dp(4),dp(3),0,dp(8));parent.addView(text);}
+    private void quickAction(LinearLayout parent,int title,int help,String icon,Runnable action,boolean weighted){
+        PerformanceButton card=new PerformanceButton(this);card.style(PerformanceButton.Style.CARD);card.leadingSymbol(icon);
+        String heading=getString(title),description=getString(help);android.text.SpannableString words=new android.text.SpannableString(heading+"\n"+description);
+        words.setSpan(new android.text.style.StyleSpan(Typeface.BOLD),0,heading.length(),0);
+        words.setSpan(new android.text.style.RelativeSizeSpan(.78f),heading.length()+1,words.length(),0);
+        words.setSpan(new android.text.style.ForegroundColorSpan(0xffa3b7d1),heading.length()+1,words.length(),0);
+        card.setText(words);card.setTypeface(uiFont);card.setTextSize(14);card.setMaxLines(3);card.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);card.setPadding(dp(12),dp(8),dp(8),dp(8));card.setContentDescription(heading);card.setOnClickListener(v->action.run());
+        LinearLayout.LayoutParams size=new LinearLayout.LayoutParams(weighted?0:-1,dp(84),weighted?1:0);size.setMargins(dp(3),dp(3),dp(3),dp(6));parent.addView(card,size);
     }
     private Switch quickSwitch(LinearLayout parent,int title,boolean checked){
-        Switch toggle=new Switch(this);
-        toggle.setText(title);toggle.setTextColor(text);toggle.setTypeface(uiFont);
-        toggle.setPadding(dp(12),0,dp(12),0);toggle.setChecked(checked);
-        parent.addView(toggle,new LinearLayout.LayoutParams(-1,dp(44)));
+        LinearLayout line=row();line.setPadding(dp(5),dp(10),dp(5),dp(10));
+        LinearLayout words=new LinearLayout(this);words.setOrientation(LinearLayout.VERTICAL);
+        TextView name=label(getString(title),14);words.addView(name);
+        int help=title==R.string.native_click_source?R.string.quick_click_help:title==R.string.automations_enabled?R.string.quick_automations_help:title==R.string.keep_pad?R.string.quick_pad_help:R.string.quick_accent_help;
+        TextView detail=label(getString(help),11);detail.setTextColor(0xff92a8c4);words.addView(detail);
+        line.addView(words,new LinearLayout.LayoutParams(0,-2,1));
+        Switch toggle=new Switch(this);toggle.setContentDescription(getString(title));toggle.setChecked(checked);line.addView(toggle,new LinearLayout.LayoutParams(dp(52),dp(42)));parent.addView(line);
+        View divider=new View(this);divider.setBackgroundColor(0xff25344a);parent.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
         return toggle;
     }
     private void quickToggle(LinearLayout parent,int title,String key,boolean fallback,Runnable changed){
@@ -308,8 +437,521 @@ public final class MainActivity extends Activity {
     void readSetlist(ProjectFolder folder,String filename,boolean persistent,int index){if(loading)return;lastImportError=0;loading=true;importButton.setEnabled(false);projectButton.setEnabled(false);setlistButton.setEnabled(false);renderSetlist();imports.execute(()->{try{SetlistSpec parsed=SetlistSpec.parse(folder.read(getApplicationContext(),filename),filename,folder);for(SetlistSpec.Song entry:parsed.songs)if(entry.project!=null){try{if(entry.snapshot!=null||entry.project.toLowerCase(Locale.ROOT).endsWith(".zlplay")){ProjectSpec metadata=ZlplayReader.parse(entry.snapshot!=null?entry.snapshot:folder.read(getApplicationContext(),entry.project));entry.preparedKey=metadata.targetKey;if(entry.originalKey==null||entry.originalKey.isEmpty())entry.originalKey=metadata.originalKey;}else{int note=MusicalKey.filename(entry.project);entry.preparedKey=note<0?"":MusicalKey.FLATS[note];}}catch(Exception ignored){}}
                 runOnUiThread(()->{if(destroyed)return;if(!isolatedTest())library.applyOrder(RepertoireLibrary.key(folder.tree.toString(),filename),parsed.songs);if(persistent&&!isolatedTest()){library.pruneMissing(folder.tree.toString(),folder.setlists());library.remember(folder.tree.toString(),filename,parsed.title);}setlist=parsed;setlistFolder=folder;setlistFile=filename;setlistPersistent=persistent;setlistIndex=-1;pendingSong=-1;loading=false;importButton.setEnabled(true);projectButton.setEnabled(true);setlistButton.setEnabled(true);renderSetlist();int available=parsed.availableFrom(index);if(available>=0)openSetlistSong(available);else status.setText(R.string.setlist_none_ready);});}catch(Exception failure){importFailure(R.string.setlist_failed);}});}
     private void requestSong(int index){if(loading||setlist==null||index==setlistIndex)return;if(mixer.isPlaying()&&getSharedPreferences("mix",MODE_PRIVATE).getBoolean("confirmSong",true)){new android.app.AlertDialog.Builder(this).setTitle(R.string.confirm_song).setMessage(R.string.confirm_song_message).setNegativeButton(android.R.string.cancel,null).setPositiveButton(R.string.open_song,(d,w)->openSetlistSong(index)).show();}else openSetlistSong(index);}
-    void openSetlistSong(int index){if(loading||setlist==null||index<0||index>=setlist.songs.size()||index==setlistIndex)return;SetlistSpec.Song song=setlist.songs.get(index);if(song.project==null){importFailure(R.string.setlist_song_missing);return;}pendingSong=index;loadProject(setlistFolder.forSong(song.folder),song.project,song.snapshot,setlistPersistent);renderSetlist();}
+    void openSetlistSong(int index){
+        if(loading||setlist==null||index<0||index>=setlist.songs.size()||index==setlistIndex)return;
+        SetlistSpec.Song song=setlist.songs.get(index);
+        if(song.project==null){importFailure(R.string.setlist_song_missing);return;}
+        if(!captureSetlistSong())return;
+        pendingSong=index;
+        loadProject(setlistFolder.forSong(song.folder),song.project,
+            song.pendingSnapshot!=null?song.pendingSnapshot:song.snapshot,setlistPersistent);
+        renderSetlist();
+    }
     private void projectOpened(ProjectFolder folder,String filename,boolean persistent){if(pendingSong>=0&&setlist!=null&&setlist.songs.get(pendingSong).project.equals(filename)){setlistIndex=pendingSong;pendingSong=-1;songHeading(setlist.songs.get(setlistIndex).name);if(persistent)getSharedPreferences("mix",MODE_PRIVATE).edit().putString("sourceMode","setlist").putString("setlistTree",setlistFolder.tree.toString()).putString("setlistFile",setlistFile).putInt("setlistIndex",setlistIndex).apply();}else{setlist=null;setlistIndex=-1;pendingSong=-1;}setlistButton.setEnabled(true);renderSetlist();if(setlist!=null&&setlist.unavailableCount()>0){int count=setlist.unavailableCount();status.setText(getResources().getQuantityString(R.plurals.setlist_missing_projects,count,count));}}
+
+    private void chooseNewProject(){
+        if(loading)return;
+        new android.app.AlertDialog.Builder(this).setTitle(R.string.new_project).setMessage(R.string.new_project_help)
+            .setNegativeButton(android.R.string.cancel,null).setPositiveButton(R.string.choose_folder,(dialog,which)->{
+                Intent picker=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    |Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION|Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+                try{startActivityForResult(picker,NEW_PROJECT);}
+                catch(android.content.ActivityNotFoundException unavailable){status.setText(R.string.no_picker);}
+            }).show();
+    }
+
+    private void openNewProject(Uri tree, boolean persistent) {
+        if(loading)return;
+        loading=true;
+        status.setText(R.string.scanning_project);
+        imports.execute(()->{
+            try {
+                ProjectFolder folder=ProjectFolder.scan(getApplicationContext(),tree);
+                List<String> files=ProjectAuthor.audioFiles(folder);
+                if(files.isEmpty()){importFailure(R.string.new_project_no_audio);return;}
+                if(files.size()>32){importFailure(R.string.new_project_too_many_tracks);return;}
+                String title=folder.displayName(getApplicationContext());
+                if(title.isEmpty())title=getString(R.string.new_project);
+                String snapshot=ProjectAuthor.manifest(ProjectAuthor.draft(title,files));
+                runOnUiThread(()->{
+                    if(destroyed)return;
+                    pendingSong=-1;
+                    loadProject(folder,UUID.randomUUID()+".zlplay",snapshot,persistent,true);
+                });
+            } catch(Exception failure){importFailure(R.string.project_failed);}
+        });
+    }
+
+    private void projectDataField(LinearLayout parent,int name,View input,boolean weighted){
+        LinearLayout field=new LinearLayout(this);field.setOrientation(LinearLayout.VERTICAL);field.setPadding(dp(4),dp(8),dp(4),dp(8));
+        TextView caption=label(getString(name),12);caption.setTextColor(0xffa4b7d1);LinearLayout.LayoutParams labelSize=new LinearLayout.LayoutParams(-1,-2);labelSize.bottomMargin=dp(6);field.addView(caption,labelSize);
+        if(input instanceof EditText){EditText text=(EditText)input;text.setTextColor(0xffedf3fc);text.setHintTextColor(0xff8296b2);text.setTextSize(14);text.setTypeface(uiFont);text.setPadding(dp(12),0,dp(12),0);text.setBackground(background(0xff172333));}
+        input.setContentDescription(getString(name));field.addView(input,new LinearLayout.LayoutParams(-1,dp(46)));
+        parent.addView(field,new LinearLayout.LayoutParams(weighted?0:-1,-2,weighted?1:0));
+    }
+    private void editProjectDetails(){
+        if(activeProject==null||loading)return;
+        LinearLayout fields=new LinearLayout(this);
+        fields.setOrientation(LinearLayout.VERTICAL);
+        fields.setPadding(dp(20),0,dp(20),0);
+        EditText title=new EditText(this);
+        title.setSingleLine();
+        title.setHint(R.string.project_title);
+        title.setText(activeProject.title);
+        fields.addView(title);
+        fields.addView(label(getString(R.string.original_key),12));
+        boolean unknownKey=originalNote<0;
+        List<String> keyChoices=new ArrayList<>(Arrays.asList(MusicalKey.FLATS));
+        if(unknownKey)keyChoices.add(0,"—");
+        Spinner originalKey=new StyledSpinner(this);
+        originalKey.setContentDescription(getString(R.string.original_key));
+        ArrayAdapter<String> keyAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,keyChoices);
+        keyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        originalKey.setAdapter(keyAdapter);originalKey.setSelection(unknownKey?0:originalNote);
+        fields.addView(originalKey);
+        EditText bpm=new EditText(this);
+        bpm.setHint(R.string.bpm);
+        bpm.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        bpm.setText(String.valueOf(mixer.getBpm()));
+        fields.addView(bpm);
+        int[] meters={2,3,4,6};
+        List<String> signatures=new ArrayList<>();
+        int selected=0;
+        for(int i=0;i<meters.length;i++){
+            int numerator=meters[i],denominator=numerator==6?8:4;
+            signatures.add(numerator+"/"+denominator);
+            if(numerator==activeProject.numerator&&denominator==activeProject.denominator)selected=i;
+        }
+        String activeSignature=activeProject.numerator+"/"+activeProject.denominator;
+        if(!signatures.contains(activeSignature)){
+            selected=signatures.size();
+            signatures.add(activeSignature);
+        }
+        Spinner meter=new StyledSpinner(this);
+        meter.setContentDescription(getString(R.string.project_meter));
+        ArrayAdapter<String> adapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,signatures);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        meter.setAdapter(adapter);
+        meter.setSelection(selected);
+        fields.addView(meter);
+        fields.removeAllViews();
+        projectDataField(fields,R.string.project_title,title,false);
+        boolean wide=getResources().getConfiguration().screenWidthDp>=600;
+        LinearLayout values=new LinearLayout(this);values.setOrientation(wide?LinearLayout.HORIZONTAL:LinearLayout.VERTICAL);fields.addView(values);
+        projectDataField(values,R.string.original_key,originalKey,wide);
+        projectDataField(values,R.string.bpm,bpm,wide);
+        projectDataField(values,R.string.project_meter,meter,wide);
+        ScrollView scroll=new ScrollView(this);scroll.addView(fields);
+        android.app.AlertDialog form=new android.app.AlertDialog.Builder(this).setTitle(R.string.project_details).setView(scroll)
+            .setNegativeButton(android.R.string.cancel,null).setPositiveButton(android.R.string.ok,null).create();
+        form.setOnShowListener(ignored->form.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(view->{
+            String name=title.getText().toString().trim();
+            if(name.isEmpty()){title.setError(getString(R.string.project_title));return;}
+            int tempo;
+            try{tempo=Integer.parseInt(bpm.getText().toString());}catch(NumberFormatException invalid){tempo=0;}
+            if(tempo<20||tempo>400){bpm.setError(getString(R.string.project_bpm_range));return;}
+            int note=originalKey.getSelectedItemPosition()-(unknownKey?1:0);
+            if(note>=0&&note!=originalNote){
+                originalNote=note;if(targetNote<0)targetNote=note;
+                getSharedPreferences("mix",MODE_PRIVATE).edit().putInt("originalNote:"+projectKey,note).putInt("targetNote:"+projectKey,targetNote).apply();
+                mixer.setTranspose(MusicalKey.delta(originalNote,targetNote));mixer.setPadNote(targetNote);refreshKeys();
+            }
+            activeProject.title=name;
+            songHeading(name);
+            setBpm(tempo);
+            bpmField.setText(String.valueOf(tempo));
+            String[] signature=signatures.get(meter.getSelectedItemPosition()).split("/");
+            mixer.setProjectMeter(Integer.parseInt(signature[0]),Integer.parseInt(signature[1]));
+            waveform.invalidate();
+            form.dismiss();
+        }));
+        form.show();
+        form.getWindow().setLayout(Math.min(dp(600),(int)(getResources().getDisplayMetrics().widthPixels*.94)),-2);
+    }
+
+    private void saveProject(){
+        if(loading||activeProject==null)return;
+        if(projectDraft)withFolderWrite(projectFolder,()->writeProject(activeProject.title));
+        else if(projectManifest!=null)askFilename(R.string.save_project_copy,activeProject.title,
+            name->withFolderWrite(projectFolder,()->writeProject(name)));
+    }
+
+    private String currentProjectManifest() throws Exception {
+        String source=projectManifest;
+        List<ProjectAuthor.Mix> edits=new ArrayList<>();
+        for(int i=0;i<mixer.trackCount();i++)edits.add(new ProjectAuthor.Mix(mixer.getGain(i),mixer.getPan(i),
+            mixer.isMuted(i),mixer.isSolo(i),mixer.pitchEnabled(i)));
+        return ProjectAuthor.editedManifest(source,activeProject.title,mixer.getBpm(),activeProject.numerator,
+            activeProject.denominator,originalNote<0?"":MusicalKey.FLATS[originalNote],
+            targetNote<0?"":MusicalKey.FLATS[targetNote],mixer.usesProjectClick(),mixer.isAccent(),edits);
+    }
+
+    private void rememberSongBaseline(){
+        songEditBaseline=null;
+        if(setlist==null||setlistIndex<0||projectManifest==null)return;
+        try{songEditBaseline=currentProjectManifest();}catch(Exception ignored){}
+    }
+
+    private boolean captureSetlistSong(){
+        if(setlist==null||setlistIndex<0||songEditBaseline==null)return true;
+        try{
+            String current=currentProjectManifest();
+            if(!current.equals(songEditBaseline)){
+                SetlistSpec.Song song=setlist.songs.get(setlistIndex);
+                song.pendingSnapshot=current;
+                song.preparedKey=targetNote<0?"":MusicalKey.FLATS[targetNote];
+            }
+            return true;
+        }catch(Exception failure){showProjectSaveError();return false;}
+    }
+
+    private void openRegionEditor(){
+        if(loading||projectManifest==null)return;
+        try{
+            String manifest=ProjectEditDialog.withResolvedLengths(currentProjectManifest(),activeProject);
+            String tracks=new JSONObject(manifest).getJSONArray("tracks").toString();
+            ProjectEditDialog.regions(this,manifest,mixer.duration(),editingTransport,sourcePeaks,editorWaveforms,edited->{
+                try{
+                    if(!new JSONObject(edited).getJSONArray("tracks").toString().equals(tracks)){
+                        applyTrackEdits(edited);
+                        return;
+                    }
+                    ProjectSpec parsed=ZlplayReader.parse(edited);
+                    projectManifest=edited;
+                    mixer.updateProjectRegions(parsed);
+                    waveform.invalidate();
+                    renderSetlist();
+                }catch(Exception failure){showProjectSaveError();}
+            },this::selectGuideFiles);
+        }catch(Exception failure){showProjectSaveError();}
+    }
+
+    private void selectGuideFiles(String asset,java.util.function.Consumer<List<ProjectGuide.Audio>> imported){
+        if(asset!=null){importGuide(asset,Collections.emptyList(),imported);return;}
+        Intent picker=new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+            .setType("audio/*").putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        pendingExternalGuide=imported;
+        try{startActivityForResult(picker,IMPORT_GUIDE);}
+        catch(android.content.ActivityNotFoundException unavailable){
+            pendingExternalGuide=null;
+            imported.accept(Collections.emptyList());
+            Toast.makeText(this,R.string.no_picker,Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void importGuide(String asset,List<Uri> external,java.util.function.Consumer<List<ProjectGuide.Audio>> imported){
+        if(external.size()>64){imported.accept(Collections.emptyList());return;}
+        ProjectFolder folder=projectFolder;
+        String directory=parentPath(projectFilename);
+        withFolderWrite(folder,()->{
+            loading=true;
+            status.setText(R.string.loading_audio);
+            imports.execute(()->{
+                try{
+                    List<ProjectGuide.Audio> files=ProjectGuide.importFiles(getApplicationContext(),folder,directory,asset,external);
+                    runOnUiThread(()->{
+                        if(destroyed)return;
+                        loading=false;
+                        if(setlistFolder!=null&&setlistFolder.tree.equals(folder.tree)){
+                            setlistFolder.files.putAll(folder.files);
+                            setlistFolder.directories.putAll(folder.directories);
+                        }
+                        imported.accept(files);
+                    });
+                }catch(Exception|OutOfMemoryError failure){
+                    runOnUiThread(()->{
+                        if(destroyed)return;
+                        loading=false;
+                        imported.accept(Collections.emptyList());
+                        Toast.makeText(this,R.string.project_guide_import_failed,Toast.LENGTH_LONG).show();
+                    });
+                }
+            });
+        },()->imported.accept(Collections.emptyList()));
+    }
+
+    private void openTrackEditor(){
+        if(loading||projectManifest==null)return;
+        if(hasMissingAudio()){
+            Toast.makeText(this,R.string.edit_tracks_missing_audio,Toast.LENGTH_LONG).show();
+            return;
+        }
+        try{
+            String manifest=ProjectEditDialog.withResolvedLengths(currentProjectManifest(),activeProject);
+            ProjectEditDialog.tracks(this,manifest,mixer.duration(),editingTransport,editorWaveforms,
+                this::applyTrackEdits,this::selectGuideFiles);
+        }catch(Exception failure){showProjectSaveError();}
+    }
+
+    private void applyTrackEdits(String edited){
+        if(setlist!=null&&setlistIndex>=0)pendingSong=setlistIndex;
+        loadEditedProject(projectFolder,projectFilename,edited,projectFolderPersistent,projectDraft,mixer.position(),true);
+    }
+
+    private void writeProject(String name){
+        final String manifest;
+        final ProjectFolder folder=projectFolder;
+        final boolean persist=projectFolderPersistent;
+        try {
+            manifest=currentProjectManifest();
+        } catch(Exception failure){showProjectSaveError();return;}
+        String directory=parentPath(projectFilename);
+        loading=true;
+        status.setText(R.string.saving_new_project);
+        imports.execute(()->{
+            try {
+                String filename=ProjectAuthor.saveDocument(getApplicationContext(),folder,directory,name,".zlplay",manifest);
+                runOnUiThread(()->{
+                    if(destroyed)return;
+                    loading=false;
+                    if(setlist==null){
+                        projectDraft=false;
+                        projectFilename=filename;
+                        projectManifest=manifest;
+                        var prefs=getSharedPreferences("mix",MODE_PRIVATE).edit();
+                        if(persist)prefs.putString("sourceMode","project").putString("projectTree",folder.tree.toString()).putString("projectFile",filename);
+                        else prefs.remove("sourceMode").remove("wavSources");
+                        prefs.apply();
+                    }
+                    Toast.makeText(this,getString(R.string.new_project_saved,filename.substring(directory.length())),Toast.LENGTH_LONG).show();
+                });
+            } catch(Exception failure){
+                runOnUiThread(()->{if(!destroyed){loading=false;showProjectSaveError();}});
+            }
+        });
+    }
+
+    private static String parentPath(String file){return file.substring(0,file.lastIndexOf('/')+1);}
+
+    private void askFilename(int action,String defaultName,java.util.function.Consumer<String> save){
+        EditText field=new EditText(this);
+        field.setSingleLine();
+        field.setText(defaultName);
+        field.setHint(R.string.file_name);
+        android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this).setTitle(action).setView(field)
+            .setNegativeButton(android.R.string.cancel,null).setPositiveButton(android.R.string.ok,null).create();
+        dialog.setOnShowListener(ignored->dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(view->{
+            String name=field.getText().toString().trim();
+            if(name.isEmpty()){field.setError(getString(R.string.file_name));return;}
+            dialog.dismiss();
+            save.accept(name);
+        }));
+        dialog.show();
+    }
+
+    private void withFolderWrite(ProjectFolder folder,Runnable action){
+        withFolderWrite(folder,action,()->{});
+    }
+
+    private void withFolderWrite(ProjectFolder folder,Runnable action,Runnable cancel){
+        Uri root=folder.directories.get("");
+        if(root!=null&&checkUriPermission(root,android.os.Process.myPid(),android.os.Process.myUid(),Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                ==android.content.pm.PackageManager.PERMISSION_GRANTED){action.run();return;}
+        new android.app.AlertDialog.Builder(this).setMessage(R.string.write_folder_help)
+            .setNegativeButton(android.R.string.cancel,(dialog,which)->cancel.run()).setOnCancelListener(dialog->cancel.run())
+            .setPositiveButton(R.string.choose_folder,(dialog,which)->{
+                pendingWriteFolder=folder;
+                pendingWrite=action;
+                pendingWriteCancel=cancel;
+                pickWritableFolder(GRANT_WRITE,root);
+            }).show();
+    }
+
+    private void pickWritableFolder(int request,Uri initial){
+        Intent picker=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+            |Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION|Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+        if(initial!=null)picker.putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI,initial);
+        try{startActivityForResult(picker,request);}
+        catch(android.content.ActivityNotFoundException unavailable){
+            if(pendingWriteCancel!=null)pendingWriteCancel.run();
+            pendingWrite=null;
+            pendingWriteFolder=null;
+            pendingWriteCancel=null;
+            status.setText(R.string.no_picker);
+        }
+    }
+
+    private void chooseNewSetlist(){
+        if(loading)return;
+        new android.app.AlertDialog.Builder(this).setTitle(R.string.new_setlist).setMessage(R.string.new_setlist_help)
+            .setNegativeButton(android.R.string.cancel,null)
+            .setPositiveButton(R.string.choose_folder,(dialog,which)->pickWritableFolder(NEW_SETLIST,null)).show();
+    }
+
+    private void selectSetlistProjects(Uri tree,boolean persistent){
+        if(loading)return;
+        loading=true;
+        status.setText(R.string.scanning_project);
+        imports.execute(()->{
+            try {
+                ProjectFolder folder=ProjectFolder.scan(getApplicationContext(),tree);
+                List<String> candidates=new ArrayList<>();
+                for(String file:folder.projects()){
+                    int slash=file.indexOf('/');
+                    if(slash>0&&slash==file.lastIndexOf('/'))candidates.add(file);
+                }
+                runOnUiThread(()->{
+                    if(destroyed)return;
+                    loading=false;
+                    if(candidates.isEmpty()){importFailure(R.string.new_setlist_no_projects);return;}
+                    showSetlistProjectSelection(folder,persistent,candidates);
+                });
+            }catch(Exception failure){importFailure(R.string.setlist_failed);}
+        });
+    }
+
+    private void showSetlistProjectSelection(ProjectFolder folder,boolean persistent,List<String> candidates){
+        List<String> selected=new ArrayList<>();
+        android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this).setTitle(R.string.select_setlist_projects)
+            .setMultiChoiceItems(candidates.toArray(new String[0]),null,(view,index,on)->{
+                String entry=candidates.get(index);
+                if(on){
+                    String directory=parentPath(entry);
+                    int position=-1;
+                    for(int i=0;i<selected.size();i++)if(parentPath(selected.get(i)).equalsIgnoreCase(directory)){position=i;break;}
+                    if(position<0)selected.add(entry);
+                    else{
+                        String previous=selected.set(position,entry);
+                        ((android.app.AlertDialog)view).getListView().setItemChecked(candidates.indexOf(previous),false);
+                    }
+                }else selected.remove(entry);
+                ((android.app.AlertDialog)view).getButton(android.app.AlertDialog.BUTTON_POSITIVE)
+                    .setEnabled(!selected.isEmpty()&&selected.size()<=256);
+            }).setNegativeButton(android.R.string.cancel,null)
+            .setPositiveButton(R.string.save_new_setlist,(view,which)->askFilename(R.string.save_new_setlist,"",
+                name->writeSetlist(folder,persistent,"",name,new ArrayList<>(selected),null,Collections.emptyMap(),
+                    Collections.emptyMap(),Collections.emptyMap()))).create();
+        dialog.setOnShowListener(view->dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setEnabled(false));
+        dialog.show();
+    }
+
+    private void addSetlistSong(){
+        if(loading||setlist==null||setlistFolder==null||setlist.songs.size()>=256)return;
+        SetlistSpec current=setlist;
+        ProjectFolder oldFolder=setlistFolder;
+        String parent=parentPath(setlistFile);
+        Set<String> occupied=new HashSet<>();
+        for(SetlistSpec.Song song:current.songs)occupied.add(song.folder.toLowerCase(Locale.ROOT));
+        loading=true;
+        imports.execute(()->{
+            try{
+                ProjectFolder inventory=ProjectFolder.scan(getApplicationContext(),oldFolder.tree);
+                List<String> candidates=new ArrayList<>();
+                for(String file:inventory.projects()){
+                    if(!file.startsWith(parent))continue;
+                    String relative=file.substring(parent.length());
+                    int slash=relative.indexOf('/');
+                    if(slash>0&&slash==relative.lastIndexOf('/')){
+                        String directory=(parent+relative.substring(0,slash)).toLowerCase(Locale.ROOT);
+                        if(!occupied.contains(directory))candidates.add(relative);
+                    }
+                }
+                runOnUiThread(()->{
+                    if(destroyed)return;
+                    loading=false;
+                    if(setlist!=current)return;
+                    if(candidates.isEmpty()){
+                        Toast.makeText(this,R.string.setlist_no_more_songs,Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    new android.app.AlertDialog.Builder(this).setTitle(R.string.setlist_add_song)
+                        .setItems(candidates.toArray(new String[0]),(view,index)->{
+                            try{
+                                String candidate=candidates.get(index);
+                                int slash=candidate.indexOf('/');
+                                String folder=candidate.substring(0,slash);
+                                SetlistSpec.Song song=new SetlistSpec.Song();
+                                song.id=folder;
+                                if(current.songs.stream().anyMatch(entry->entry.id.equals(song.id)))song.id=UUID.randomUUID().toString();
+                                song.name=folder;
+                                song.folder=parent+folder;
+                                song.project=parent+candidate;
+                                song.originalKey=song.tonalKey="";
+                                song.newEntry=SetlistAuthor.song(folder,candidate.substring(slash+1)).put("id",song.id).toString();
+                                setlistFolder=inventory;
+                                current.songs.add(song);
+                                renderSetlist();
+                                showRepertoire();
+                            }catch(Exception failure){showProjectSaveError();}
+                        }).setNegativeButton(android.R.string.cancel,null).show();
+                });
+            }catch(Exception failure){importFailure(R.string.setlist_failed);}
+        });
+    }
+
+    private void removeSetlistSong(){
+        if(loading||setlist==null||setlist.songs.size()<2)return;
+        String[] songs=setlist.songs.stream().map(song->song.name).toArray(String[]::new);
+        new android.app.AlertDialog.Builder(this).setTitle(R.string.setlist_remove_song)
+            .setItems(songs,(view,index)->new android.app.AlertDialog.Builder(this)
+                .setMessage(getString(R.string.setlist_remove_song_confirm,songs[index]))
+                .setNegativeButton(android.R.string.cancel,null).setPositiveButton(R.string.setlist_remove_song,(confirm,which)->{
+                    setlist.songs.remove(index);
+                    if(index==setlistIndex){
+                        setlistIndex=-1;
+                        songEditBaseline=null;
+                        mixer.stop();
+                        int next=setlist.availableFrom(index);
+                        if(next>=0)openSetlistSong(next);
+                    }else if(index<setlistIndex)setlistIndex--;
+                    renderSetlist();
+                    if(!loading)showRepertoire();
+                }).show()).setNegativeButton(android.R.string.cancel,null).show();
+    }
+
+    private void saveSetlistCopy(){
+        if(loading||setlist==null||setlistFolder==null||!captureSetlistSong())return;
+        List<String> order=new ArrayList<>();
+        Map<String,String> snapshots=new LinkedHashMap<>(),projects=new LinkedHashMap<>(),additions=new LinkedHashMap<>();
+        for(SetlistSpec.Song song:setlist.songs){
+            order.add(song.id);
+            if(song.newEntry!=null)additions.put(song.id,song.newEntry);
+            if(song.pendingSnapshot!=null){
+                snapshots.put(song.id,song.pendingSnapshot);
+                projects.put(song.id,song.project);
+            }
+        }
+        ProjectFolder folder=setlistFolder;
+        String source=setlistFile;
+        boolean persistent=setlistPersistent;
+        askFilename(R.string.save_setlist_copy,setlist.title,
+            name->withFolderWrite(folder,()->writeSetlist(folder,persistent,parentPath(source),name,order,source,snapshots,projects,additions)));
+    }
+
+    private void writeSetlist(ProjectFolder folder,boolean persistent,String directory,String name,List<String> entries,
+                              String source,Map<String,String> snapshots,Map<String,String> projects,Map<String,String> additions){
+        if(loading)return;
+        loading=true;
+        status.setText(R.string.saving_setlist);
+        imports.execute(()->{
+            try {
+                Context context=getApplicationContext();
+                String manifest=source==null?SetlistAuthor.create(entries):
+                    SetlistAuthor.saveEdits(folder.read(context,source),entries,snapshots,projects,additions);
+                String filename=ProjectAuthor.saveDocument(context,folder,directory,name,".zlset",manifest);
+                runOnUiThread(()->{
+                    if(destroyed)return;
+                    loading=false;
+                    Toast.makeText(this,getString(R.string.setlist_saved,filename.substring(directory.length())),Toast.LENGTH_LONG).show();
+                    if(source==null)readSetlist(folder,filename,persistent,0);
+                    else if(persistent)library.remember(folder.tree.toString(),filename,filename.substring(directory.length(),filename.length()-6));
+                });
+            }catch(Exception failure){
+                runOnUiThread(()->{
+                    if(destroyed)return;
+                    loading=false;
+                    new android.app.AlertDialog.Builder(this).setMessage(R.string.setlist_save_failed)
+                        .setPositiveButton(android.R.string.ok,null).show();
+                });
+            }
+        });
+    }
+
+    private void showProjectSaveError(){
+        new android.app.AlertDialog.Builder(this).setTitle(R.string.save_new_project).setMessage(R.string.new_project_save_failed)
+            .setPositiveButton(android.R.string.ok,null).show();
+    }
 
     private void chooseProject(){
         if(loading)return;new android.app.AlertDialog.Builder(this).setTitle(R.string.open_project).setMessage(R.string.project_folder_help).setNegativeButton(android.R.string.cancel,null).setPositiveButton(R.string.choose_folder,(dialog,which)->{Intent picker=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION|Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);try{startActivityForResult(picker,OPEN_PROJECT);}catch(android.content.ActivityNotFoundException unavailable){status.setText(R.string.no_picker);}}).show();
@@ -320,8 +962,14 @@ public final class MainActivity extends Activity {
     }
     void loadProject(ProjectFolder folder,String filename,boolean persistent){loadProject(folder,filename,null,persistent);}
     private void loadProject(ProjectFolder folder,String filename,String snapshot,boolean persistent){
+        loadProject(folder,filename,snapshot,persistent,false);
+    }
+    private void loadProject(ProjectFolder folder,String filename,String snapshot,boolean persistent,boolean draft){
+        loadEditedProject(folder,filename,snapshot,persistent,draft,0,false);
+    }
+    private void loadEditedProject(ProjectFolder folder,String filename,String snapshot,boolean persistent,boolean draft,double position,boolean edited){
         loading=true;lastImportError=0;if(projectNotice!=null)projectNotice.dismiss();importButton.setEnabled(false);projectButton.setEnabled(false);boolean keepPad=getSharedPreferences("mix",MODE_PRIVATE).getBoolean("keepPad",false)&&mixer.isPad();mixer.prepareProjectChange(keepPad);if(!keepPad&&audio!=null){audio.close();audio=null;}status.setText(R.string.loading_audio);
-        imports.execute(()->{try{ProjectLoader.Result result=ProjectLoader.read(getApplicationContext(),folder,filename,snapshot,(done,total)->runOnUiThread(()->{if(!destroyed)status.setText(getString(R.string.loading_count,done,total));}));runOnUiThread(()->{if(destroyed){result.close();return;}projectFolder=folder;projectFilename=filename;activeProject=result.spec;missingAudioNotice=activeProject.missingAudio.isEmpty()?"":getString(R.string.project_partial_audio,String.join(", ",activeProject.missingAudio));projectKey=folder.tree+":"+filename;currentUris=new ArrayList<>();sourcePeaks=result.peaks;PcmTrack[] pitchSources=Arrays.copyOf(result.tracks,result.tracks.length+(result.guidePreview==null?0:1));if(result.guidePreview!=null)pitchSources[result.tracks.length]=result.guidePreview;PitchBank pitches=new PitchBank(pitchSources,mixer);mixer.load(Arrays.copyOf(pitches.tracks,result.tracks.length));mixer.configureProject(activeProject);mixer.configureGuidePreview(result.guidePreview==null?null:pitches.tracks[result.tracks.length],result.guideIndex);var prefs=getSharedPreferences("mix",MODE_PRIVATE);for(int i=0;i<mixer.trackCount();i++){mixer.setGain(i,prefs.getFloat(gainKey(i),(float)activeProject.tracks.get(i).volume));mixer.setPan(i,prefs.getFloat("pan:"+projectKey+":"+i,(float)activeProject.tracks.get(i).pan));mixer.setMuted(i,prefs.getBoolean("mute:"+projectKey+":"+i,activeProject.tracks.get(i).mute));mixer.setSolo(i,!activeProject.tracks.get(i).clips.isEmpty()&&prefs.getBoolean("solo:"+projectKey+":"+i,activeProject.tracks.get(i).solo));}mixer.setBpm(prefs.getInt("projectBpm:"+projectKey,mixer.getBpm()));bpmField.setText(String.valueOf(mixer.getBpm()));songHeading(activeProject.title);if(persistent)prefs.edit().putString("sourceMode","project").putString("projectTree",folder.tree.toString()).putString("projectFile",filename).apply();renderMixer();loading=false;importButton.setEnabled(true);projectButton.setEnabled(true);status.setText(R.string.project_ready);projectOpened(folder,filename,persistent);configureSongKeys(filename);renderSetlist();renderMixer();waveform.resetViewport();waveform.invalidate();if(!activeProject.warnings.isEmpty())showCompatibility(false);});}catch(ProjectSpec.Processing unsupported){importFailure(R.string.project_processing);}catch(ProjectFolder.Missing missing){importFailure(R.string.project_missing);}catch(ProjectSpec.Invalid invalid){importFailure(R.string.project_invalid_data);}catch(WavImport.NotSeekable unsupported){importFailure(R.string.not_seekable);}catch(WavReader.Unsupported unsupported){importFailure(R.string.unsupported_wav);}catch(Mp3Decode.NoSpace storage){importFailure(R.string.audio_cache_full);}catch(OutOfMemoryError memory){importFailure(R.string.import_memory);}catch(Exception failure){importFailure(R.string.project_failed);}});
+        imports.execute(()->{try{ProjectLoader.Result result=ProjectLoader.read(getApplicationContext(),folder,filename,snapshot,(done,total)->runOnUiThread(()->{if(!destroyed)status.setText(getString(R.string.loading_count,done,total));}));String editable=draft?ProjectEditDialog.withResolvedLengths(result.manifest,result.spec):result.manifest;runOnUiThread(()->{if(destroyed){result.close();return;}projectFolder=folder;projectFilename=filename;projectManifest=editable;projectDraft=draft;projectFolderPersistent=persistent;activeProject=result.spec;missingAudioNotice=activeProject.missingAudio.isEmpty()?"":getString(R.string.project_partial_audio,String.join(", ",activeProject.missingAudio));projectKey=pendingSong>=0&&setlist!=null?RepertoireLibrary.key(folder.tree.toString(),setlistFile)+":"+setlist.songs.get(pendingSong).id:folder.tree+":"+filename;currentUris=new ArrayList<>();sourcePeaks=result.peaks;editorWaveforms=result.waveforms;PcmTrack[] pitchSources=Arrays.copyOf(result.tracks,result.tracks.length+(result.guidePreview==null?0:1));if(result.guidePreview!=null)pitchSources[result.tracks.length]=result.guidePreview;PitchBank pitches=new PitchBank(pitchSources,mixer);mixer.load(Arrays.copyOf(pitches.tracks,result.tracks.length));mixer.configureProject(activeProject);mixer.configureGuidePreview(result.guidePreview==null?null:pitches.tracks[result.tracks.length],result.guideIndex);var prefs=getSharedPreferences("mix",MODE_PRIVATE);for(int i=0;i<mixer.trackCount();i++){mixer.setGain(i,prefs.getFloat(gainKey(i),(float)activeProject.tracks.get(i).volume));mixer.setPan(i,prefs.getFloat("pan:"+projectKey+":"+i,(float)activeProject.tracks.get(i).pan));mixer.setMuted(i,prefs.getBoolean("mute:"+projectKey+":"+i,activeProject.tracks.get(i).mute));mixer.setSolo(i,!activeProject.tracks.get(i).clips.isEmpty()&&prefs.getBoolean("solo:"+projectKey+":"+i,activeProject.tracks.get(i).solo));}mixer.setBpm(prefs.getInt("projectBpm:"+projectKey,mixer.getBpm()));bpmField.setText(String.valueOf(mixer.getBpm()));songHeading(activeProject.title);if(persistent&&!draft)prefs.edit().putString("sourceMode","project").putString("projectTree",folder.tree.toString()).putString("projectFile",filename).apply();renderMixer();loading=false;importButton.setEnabled(true);projectButton.setEnabled(true);status.setText(R.string.project_ready);if(edited&&pendingSong>=0&&setlist!=null)setlist.songs.get(pendingSong).pendingSnapshot=editable;projectOpened(folder,filename,persistent);configureSongKeys(filename);if(position>0)mixer.seek(Math.min(position,mixer.duration()));rememberSongBaseline();renderSetlist();renderMixer();waveform.resetViewport();waveform.invalidate();if(!activeProject.warnings.isEmpty())showCompatibility(false);});}catch(ProjectSpec.Processing unsupported){importFailure(R.string.project_processing);}catch(ProjectFolder.Missing missing){importFailure(R.string.project_missing);}catch(ProjectSpec.Invalid invalid){importFailure(R.string.project_invalid_data);}catch(WavImport.NotSeekable unsupported){importFailure(R.string.not_seekable);}catch(WavReader.Unsupported unsupported){importFailure(R.string.unsupported_wav);}catch(Mp3Decode.NoSpace storage){importFailure(R.string.audio_cache_full);}catch(OutOfMemoryError memory){importFailure(R.string.import_memory);}catch(Exception failure){importFailure(R.string.project_failed);}});
     }
 
     private void chooseWav(){
@@ -331,12 +979,59 @@ public final class MainActivity extends Activity {
         try{startActivityForResult(picker,OPEN_WAV);}catch(android.content.ActivityNotFoundException unavailable){status.setText(R.string.no_picker);}
     }
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);
+        if(request==IMPORT_GUIDE){
+            var callback=pendingExternalGuide;
+            pendingExternalGuide=null;
+            if(callback==null)return;
+            if(result!=RESULT_OK||data==null){callback.accept(Collections.emptyList());return;}
+            Set<Uri> selected=new LinkedHashSet<>();
+            if(data.getClipData()!=null)for(int i=0;i<data.getClipData().getItemCount();i++)
+                selected.add(data.getClipData().getItemAt(i).getUri());
+            else if(data.getData()!=null)selected.add(data.getData());
+            if(selected.isEmpty())callback.accept(Collections.emptyList());
+            else importGuide(null,new ArrayList<>(selected),callback);
+            return;
+        }
+        if(request==GRANT_WRITE){
+            Runnable action=pendingWrite;
+            Runnable cancel=pendingWriteCancel;
+            ProjectFolder folder=pendingWriteFolder;
+            pendingWrite=null;
+            pendingWriteFolder=null;
+            pendingWriteCancel=null;
+            if(result!=RESULT_OK||data==null||action==null||folder==null){if(cancel!=null)cancel.run();return;}
+            Uri chosen=data.getData();
+            if(!folder.tree.equals(chosen)||!hasWriteGrant(data)){
+                Toast.makeText(this,R.string.write_folder_help,Toast.LENGTH_LONG).show();
+                if(cancel!=null)cancel.run();
+                return;
+            }
+            persistFolderGrant(data);
+            action.run();
+            return;
+        }
         if(result!=RESULT_OK||data==null)return;if(request==SCAN_REMOTE){String invitation=data.getStringExtra("invitation");try{com.onebytelabs.zlplay.remote.QrInvitation.parse(invitation);}catch(Exception e){Toast.makeText(this,R.string.remote_bad_qr,Toast.LENGTH_LONG).show();return;}mixer.silence();if(audio!=null){audio.close();audio=null;}if(settingsDialog!=null)settingsDialog.dismiss();startActivity(new Intent(this,RemoteActivity.class).putExtra("invitation",invitation));return;}if(request==IMPORT_COVER&&data.getData()!=null&&coverRequestKey!=null){final String key=coverRequestKey;Uri uri=data.getData();imports.execute(()->{try{Bitmap image=library.importCover(key,uri);runOnUiThread(()->{if(destroyed)return;coverCache.put(key,image);renderSetlist();if(repertoireDialog!=null&&repertoireDialog.isShowing())showRepertoire();});}catch(Exception|OutOfMemoryError error){runOnUiThread(()->Toast.makeText(this,R.string.cover_failed,Toast.LENGTH_LONG).show());}});return;}if(request==IMPORT_PADS||request==IMPORT_NORMAL||request==IMPORT_ACCENT){List<Uri> sounds=new ArrayList<>();if(data.getClipData()!=null)for(int i=0;i<data.getClipData().getItemCount();i++)sounds.add(data.getClipData().getItemAt(i).getUri());else if(data.getData()!=null)sounds.add(data.getData());importSoundFiles(request,sounds);return;}
+        if((request==NEW_PROJECT||request==NEW_SETLIST)&&data.getData()!=null){
+            if(!hasWriteGrant(data)){Toast.makeText(this,R.string.write_folder_help,Toast.LENGTH_LONG).show();return;}
+            boolean durable=persistFolderGrant(data);
+            if(request==NEW_PROJECT)openNewProject(data.getData(),durable);
+            else selectSetlistProjects(data.getData(),durable);
+            return;
+        }
         if(request==OPEN_SETLIST&&data.getData()!=null){Uri tree=data.getData();boolean durable=true;try{getContentResolver().takePersistableUriPermission(tree,Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(SecurityException unavailable){durable=false;}openSetlistFolder(tree,null,durable,0);return;}
         if(request==OPEN_PROJECT&&data.getData()!=null){Uri tree=data.getData();boolean durable=true;try{getContentResolver().takePersistableUriPermission(tree,Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(SecurityException unavailable){durable=false;}openProjectFolder(tree,null,durable);return;}
         if(request!=OPEN_WAV)return;
         LinkedHashSet<Uri> selected=new LinkedHashSet<>();if(data.getClipData()!=null)for(int i=0;i<data.getClipData().getItemCount();i++)selected.add(data.getClipData().getItemAt(i).getUri());else if(data.getData()!=null)selected.add(data.getData());
         importAudioUris(new ArrayList<>(selected));
+    }
+    private static boolean hasWriteGrant(Intent data){return (data.getFlags()&Intent.FLAG_GRANT_WRITE_URI_PERMISSION)!=0;}
+    private boolean persistFolderGrant(Intent data){
+        try{
+            if(hasWriteGrant(data))getContentResolver().takePersistableUriPermission(data.getData(),
+                Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            else getContentResolver().takePersistableUriPermission(data.getData(),Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            return true;
+        }catch(SecurityException unavailable){return false;}
     }
     void importAudioUris(List<Uri> selected){
         if(loading||selected.isEmpty())return;if(selected.size()>32){status.setText(R.string.too_many_files);return;}
@@ -347,7 +1042,7 @@ public final class MainActivity extends Activity {
                 boolean durable=true;for(Uri uri:files)try{if(!"content".equals(uri.getScheme())){durable=false;continue;}getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(SecurityException unavailable){durable=false;}
                 final boolean persistent=durable;
                 WavImport.Result decoded=WavImport.read(getApplicationContext(),files,(done,total)->runOnUiThread(()->{if(!destroyed)status.setText(getString(R.string.loading_count,done,total));}));
-                runOnUiThread(()->{if(destroyed){decoded.close();return;}activeProject=null;missingAudioNotice="";projectKey=null;originalNote=targetNote=-1;refreshKeys();setlist=null;setlistIndex=-1;pendingSong=-1;renderSetlist();currentUris=files;sourcePeaks=decoded.peaks;mixer.load(decoded.tracks);
+                runOnUiThread(()->{if(destroyed){decoded.close();return;}projectDraft=false;projectManifest=null;songEditBaseline=null;editorWaveforms=Collections.emptyMap();activeProject=null;mixer.setAccent(getSharedPreferences("mix",MODE_PRIVATE).getBoolean("clickAccent",false));missingAudioNotice="";projectKey=null;originalNote=targetNote=-1;refreshKeys();setlist=null;setlistIndex=-1;pendingSong=-1;renderSetlist();currentUris=files;sourcePeaks=decoded.peaks;mixer.load(decoded.tracks);
                     var prefs=getSharedPreferences("mix",MODE_PRIVATE);for(int i=0;i<mixer.trackCount();i++)mixer.setGain(i,prefs.getFloat(gainKey(i),.7f));
                     if(persistent){JSONArray list=new JSONArray();for(Uri uri:files)list.put(uri.toString());prefs.edit().putString("wavSources",list.toString()).putString("sourceMode","wav").apply();}
                     songHeading(getString(R.string.imported_project,mixer.trackCount()));renderMixer();loading=false;importButton.setEnabled(true);projectButton.setEnabled(true);setlistButton.setEnabled(true);status.setText(persistent?R.string.import_done:R.string.import_session_only);waveform.invalidate();if(decoded.temporary)projectNotice=new android.app.AlertDialog.Builder(this).setMessage(R.string.mp3_cache_notice).setPositiveButton(android.R.string.ok,null).show();

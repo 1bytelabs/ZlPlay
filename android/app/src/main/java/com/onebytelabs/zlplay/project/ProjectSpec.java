@@ -1,16 +1,24 @@
 package com.onebytelabs.zlplay.project;
 import java.util.*;
 import java.text.Normalizer;
+import java.util.regex.Pattern;
 
 /** Shared project model. Times are seconds at the project's original execution rate. */
 public final class ProjectSpec {
+ public static final int MAX_CLIPS=4096;
  public String originalKey="",targetKey="";public String title="Project";public double bpm=120,duration;public int numerator=4,denominator=4;public boolean automationEnabled=true,automationRehearsal=true;
+ public final List<PadMarker> padMarkers=new ArrayList<>();
+ public final double[][][] busEq=new double[5][][];public final double[] busTrim={1,1,1,1,1};
+ public static final class PadMarker {public final double time;public final int note;public PadMarker(double time,int note){this.time=time;this.note=note;}}
+ public boolean projectClick;public Boolean clickAccent;
  public final List<Track> tracks=new ArrayList<>();public final List<Region> regions=new ArrayList<>();public final List<Jump> jumps=new ArrayList<>();public final Set<String> warnings=new LinkedHashSet<>(),missingAudio=new LinkedHashSet<>();
  public static boolean defaultPitch(String name){if(isClickName(name)||isGuideName(name))return false;String n=Normalizer.normalize(name,Normalizer.Form.NFD).replaceAll("\\p{M}+","").toLowerCase(Locale.ROOT).trim();if(n.equals("loop"))return false;List<String> blocked=Arrays.asList("drum","drums","bateria","percussao","percussion","perc","shaker","tambourine","pandeiro","cajon","clap","snare","kick","hihat","cymbal","cymbals","prato","pratos","toms","tom");for(String word:n.split("[^a-z0-9]+"))if(blocked.contains(word))return false;return true;}
- public static boolean isGuideName(String name){String n=Normalizer.normalize(name,Normalizer.Form.NFD).replaceAll("\\p{M}+","").toLowerCase(Locale.ROOT);return n.matches(".*(?:^|[^a-z])(?:guia|guide|cue|cues|regencia)(?:[^a-z]|$).*");}
- public static boolean isClickName(String name){String n=Normalizer.normalize(name,Normalizer.Form.NFD).replaceAll("\\p{M}+","").toLowerCase(Locale.ROOT);return n.matches(".*(?:click|clique|claqueta|metronom).*");}
- public static final class Track {public Boolean pitchEnabled;public int role;public boolean isGuide(){return role==1||role==0&&isGuideName(name);}public boolean isClick(){return role==2||role==0&&isClickName(name);}public String name="Track",group="VS";public double volume=1,pan;public boolean mute,solo;public final List<Clip> clips=new ArrayList<>();}
- public static final class Clip {public boolean nativeClick;public String file="";public double position,offset,length=-1,gain=1,pan;}
+ private static final Pattern CLICK_NAME=Pattern.compile("(?:^|[\\W_])(?:click|claqueta|metr[oóô]nom[eo]?)(?=$|[\\W_])",Pattern.CASE_INSENSITIVE|Pattern.UNICODE_CASE);
+ private static final Pattern GUIDE_NAME=Pattern.compile("(?:^|[\\W_])(?:guia|guide|reg[eê]ncia)(?=$|[\\W_])",Pattern.CASE_INSENSITIVE|Pattern.UNICODE_CASE);
+ public static boolean isGuideName(String name){return GUIDE_NAME.matcher(Normalizer.normalize(name==null?"":name,Normalizer.Form.NFC)).find();}
+ public static boolean isClickName(String name){return CLICK_NAME.matcher(Normalizer.normalize(name==null?"":name,Normalizer.Form.NFC)).find();}
+ public static final class Track {public Boolean pitchEnabled;public int role;public boolean isGuide(){return role==1||role==0&&isGuideName(name);}public boolean isClick(){return role==2||role==0&&isClickName(name);}public String name="Track",group="VS";public double volume=1,pan,eqTrim=1;public double[][] eq;public boolean mute,solo;public final List<Clip> clips=new ArrayList<>();}
+ public static final class Clip {public boolean nativeClick,muted;public String file="";public double position,offset,length=-1,gain=1,pan,trimDb;public double[][] eq;}
  public static final class Region {public final String name,color;public final double start,end;public Region(String n,double s,double e,String c){name=n;start=s;end=e;color=c==null?"":c;}}
  public static final class Jump {public final double fromStart,fromEnd,target;public Jump(double s,double e,double t){fromStart=s;fromEnd=e;target=t;}}
  public static final class Invalid extends Exception {public Invalid(){super("Invalid project");}}
@@ -18,9 +26,12 @@ public final class ProjectSpec {
  public static double number(String value)throws Invalid{try{double n=Double.parseDouble(value);if(!Double.isFinite(n))throw new Invalid();return n;}catch(NumberFormatException bad){throw new Invalid();}}
  public void validate()throws Invalid{
   if(!Double.isFinite(duration)||duration<0||duration>86400||!Double.isFinite(bpm)||bpm<20||bpm>400||tracks.isEmpty()||tracks.size()>32)throw new Invalid();
+  if(padMarkers.size()>512)throw new Invalid();
+  padMarkers.sort(Comparator.comparingDouble(m->m.time));
+  for(PadMarker marker:padMarkers)if(!Double.isFinite(marker.time)||marker.time<0||marker.time>86400||marker.note<0||marker.note>11)throw new Invalid();
   int clips=0;for(Track t:tracks){if(!Double.isFinite(t.volume)||t.volume<0||t.volume>8||!Double.isFinite(t.pan)||Math.abs(t.pan)>1)throw new Invalid();for(Clip c:t.clips){clips++;if(c.file.trim().isEmpty()||!Double.isFinite(c.position)||c.position<0||!Double.isFinite(c.offset)||c.offset<0||!Double.isFinite(c.length)||(c.length!=-1&&c.length<=0)||!Double.isFinite(c.gain)||c.gain<0||c.gain>8||!Double.isFinite(c.pan)||Math.abs(c.pan)>1)throw new Invalid();}}
   if(numerator<1||numerator>32||denominator<1||denominator>32)throw new Invalid();
-  if(clips==0||clips>64||regions.size()>512||jumps.size()>512)throw new Invalid();regions.sort(Comparator.comparingDouble(r->r.start));
+  if(clips==0||clips>MAX_CLIPS||regions.size()>512||jumps.size()>512)throw new Invalid();regions.sort(Comparator.comparingDouble(r->r.start));
   for(Region r:regions){if(!Double.isFinite(r.start)||!Double.isFinite(r.end)||r.start<0||r.end<=r.start)throw new Invalid();duration=Math.max(duration,r.end);}
   if(duration>86400)throw new Invalid();
   for(Jump j:jumps){boolean from=false,to=false;for(Region r:regions){from|=Math.abs(r.start-j.fromStart)<.01&&Math.abs(r.end-j.fromEnd)<.01;to|=Math.abs(r.start-j.target)<.01;}if(!from||!to)throw new Invalid();}

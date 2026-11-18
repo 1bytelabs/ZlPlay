@@ -43,6 +43,7 @@ public final class RppReader {
     if("ITEM".equals(parent)){
      if(key.equals("POSITION"))item.position=n(p,1,0);if(key.equals("SOFFS"))item.offset=n(p,1,0);if(key.equals("LENGTH"))item.length=n(p,1,-1);
      if(key.equals("VOLPAN")){item.gain=n(p,1,1);item.pan=n(p,2,0);}
+     if(key.equals("MUTE"))item.muted=n(p,1,0)!=0;
      if(key.equals("SM"))throw new ProjectSpec.Processing();
      if(key.equals("PLAYRATE")&&(Math.abs(n(p,1,1)-1)>.00001||Math.abs(n(p,3,0))>.00001))throw new ProjectSpec.Processing();
      if((key.equals("FADEIN")||key.equals("FADEOUT"))&&Math.abs(n(p,2,0))>.00001)result.warnings.add("fades");

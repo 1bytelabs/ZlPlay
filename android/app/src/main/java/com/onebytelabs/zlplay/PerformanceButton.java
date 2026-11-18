@@ -30,6 +30,10 @@ public final class PerformanceButton extends Button {
     @Override protected void onDraw(Canvas canvas){if(symbol==null){super.onDraw(canvas);return;}ink.setColor(style==Style.CYAN?0xff07151d:0xffe9eef8);ink.setStrokeWidth(1.9f);ink.setStyle(Paint.Style.STROKE);ink.setStrokeCap(Paint.Cap.ROUND);ink.setStrokeJoin(Paint.Join.ROUND);int save=canvas.save();float size=d(22);canvas.translate((getWidth()-size)/2,(getHeight()-size)/2);canvas.scale(size/24,size/24);drawSymbol(canvas,ink,symbol.equals("play")&&isSelected()?"pause":symbol);canvas.restoreToCount(save);}
     public static void drawSymbol(Canvas c,Paint p,String name){Path path=new Path();
         switch(name){
+        case "save":c.drawRoundRect(4,3,20,21,2,2,p);c.drawRect(8,3,16,9,p);c.drawRect(8,14,16,21,p);break;
+        case "regions":c.drawLine(3,20,21,20,p);c.drawRoundRect(3,5,10,16,1,1,p);c.drawRoundRect(12,5,21,16,1,1,p);c.drawLine(7,2,7,21,p);break;
+        case "tracks":for(int i=0;i<3;i++){float y=5+i*7;c.drawLine(2,y,5,y,p);c.drawRoundRect(7,y-2,22-i*3,y+2,1,1,p);}break;
+        case "magnet":path.moveTo(5,4);path.lineTo(5,13);path.cubicTo(5,22,19,22,19,13);path.lineTo(19,4);path.lineTo(15,4);path.lineTo(15,13);path.cubicTo(15,17,9,17,9,13);path.lineTo(9,4);path.close();c.drawPath(path,p);c.drawLine(5,8,9,8,p);c.drawLine(15,8,19,8,p);break;
         case "play":p.setStyle(Paint.Style.FILL);path.moveTo(8,4);path.lineTo(21,12);path.lineTo(8,20);path.close();c.drawPath(path,p);break;
         case "pause":p.setStyle(Paint.Style.FILL);c.drawRoundRect(6,4,10,20,1,1,p);c.drawRoundRect(15,4,19,20,1,1,p);break;
         case "stop":p.setStyle(Paint.Style.FILL);c.drawRoundRect(5,5,20,20,1.5f,1.5f,p);break;

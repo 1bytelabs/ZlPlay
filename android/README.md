@@ -1,6 +1,6 @@
 # ZLPlay Mobile — Android
 
-The signed distribution is ZLPlay Mobile 0.11.1 (versionCode 24), published as an APK alongside Windows 2.8.1 in release v2.8.1. It updates the previous Mobile installation using the same application ID and permanent signing certificate. Debug builds remain separate and must not be published. This is an early, foreground-only player and LAN remote controller; the historical development sections below document implementation milestones and limitations.
+The Android distribution now follows the desktop release number: **ZLPlay Mobile 2.8.3**, versionCode **27**. The application ID remains `com.onebytelabs.zlplay.mobile`; release builds require the permanent distribution certificate. Debug builds remain separate and must not be published. Local playback, project/setlist authoring and the LAN remote controller share one application. See [Mobile 2.8.3](../docs/releases/MOBILE-2.8.3.md) for current editing features and validation limits. The development sections below record earlier implementation milestones; their old scope descriptions are historical.
 
 ## Build
 
@@ -211,7 +211,7 @@ Sounds shows a larger pad card with twelve read-only note status tiles, based on
 
 ## Signed APK distribution
 
-The installable distribution is **ZLPlay Mobile**, application ID `com.onebytelabs.zlplay.mobile`, currently version `0.11.0` / versionCode `23`. It is a test-stage Mobile release with its own version, independent of the desktop release tag. Debug retains `com.onebytelabs.zlplay.dev` and its existing data; the two apps can coexist. They do not share private imported pads, document grants or preferences: import projects/sounds into Mobile after installing it.
+The installable distribution is **ZLPlay Mobile**, application ID `com.onebytelabs.zlplay.mobile`, version `2.8.3` / versionCode `27`. Visible version numbers follow the desktop release series; Android versionCode increases independently for each new Android build. Debug retains `com.onebytelabs.zlplay.dev`; debug and distribution apps do not share private imported pads, document grants or preferences.
 
 Release builds require a permanent private signing key and fail before packaging if credentials are missing. They never fall back to the Android debug key. The certificate is self-signed RSA-4096/SHA256withRSA with 10,000-day validity. APK v2/v3 signatures are verified for the supported Android 8+ devices; v1 is not required at this minimum SDK. The public certificate SHA-256 identifies the signing key; it is distinct from the APK file checksum.
 
