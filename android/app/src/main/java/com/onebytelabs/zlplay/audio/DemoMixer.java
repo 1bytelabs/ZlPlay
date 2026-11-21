@@ -108,6 +108,26 @@ public final class DemoMixer {
     private void hintSources(long frame){if(imported!=null&&frame>=0)for(PcmTrack track:imported)track.hint(frame);}
     public synchronized void closeImported(){if(guidePreview!=null){guidePreview.close();guidePreview=null;}guideIndex=-1;previewStart=-1;if(imported!=null){for(PcmTrack track:imported)track.close();imported=null;}buffering=false;}
     public boolean isBuffering(){return buffering;}
+    private volatile long sourceStarvationFrames,padStarvationFrames;
+    public long sourceStarvationFrames(){return sourceStarvationFrames;}
+    public long padStarvationFrames(){return padStarvationFrames;}
+    /** Nonblocking cache check. The output worker retries outside this monitor;
+     * it must not enqueue silence just because a pitch generation is warming. */
+    public synchronized boolean prepareAudio(int frames){
+        if(sourceFailed())return true;
+        boolean ready=true;
+        if(playing&&imported!=null){
+            int count=(int)Math.min(frames,Math.max(1,durationFrames-cursor));
+            for(int i=0;i<imported.length;i++)if(!click||soloMix>1e-4||roles[i]==2)
+                ready=imported[i].prepare(cursor,count)&&ready;
+        }else if(pad&&!click&&padBank!=null){
+            PcmTrack selected=padBank[padNote];long length=Math.max(1,Math.round(selected.duration()*RATE));
+            long frame=padFrame>=length?Math.min(1920,length/4):padFrame;
+            if(!selected.failed())ready=selected.prepare(frame,frames);
+        }
+        buffering=playing&&!ready;
+        return ready;
+    }
     public boolean sourceFailed(){PcmTrack[] sources=imported;if(sources!=null)for(PcmTrack track:sources)if(track.failed())return true;return false;}
     private final float[][] sourceBlocks=new float[32][1024];private final float[] previewBlock=new float[1024];private long preparedCursor;
     private boolean prepareSources(int frames){boolean ready=true;preparedCursor=cursor;if(imported!=null)for(int i=0;i<imported.length;i++){boolean needed=!click||soloMix>1e-4||roles[i]==2;if(needed){boolean available=imported[i].prepare(cursor,frames);ready=available&&ready;if(available){imported[i].readStereo(cursor,frames,sourceBlocks[i],0);if(trackEq[i]!=null)trackEq[i].process(sourceBlocks[i],cursor,frames);if(eqTrim[i]!=0&&eqTrim[i]!=1)for(int n=0;n<frames*2;n++)sourceBlocks[i][n]*=eqTrim[i];}}}if(previewReady&&guidePreview!=null)guidePreview.readStereo(previewSource+cursor-previewStart,frames,previewBlock,0);return ready;}
@@ -199,6 +219,8 @@ public final class DemoMixer {
         boolean ready=!playing||prepareSources((int)Math.min(Math.min(frames,512),Math.max(1,durationFrames-cursor)));
         buffering=playing&&!ready;
         boolean renderPad=pad||padGain>1e-6;boolean padsReady=padBank==null||!renderPad||padBank[padNote].prepare(padFrame,Math.min(frames,512)),previousReady=renderPad&&padBank!=null&&previousPad>=0&&padBank[previousPad].prepare(padFrame,Math.min(frames,512));
+        if(playing&&!ready)sourceStarvationFrames+=frames;
+        if(renderPad&&!padsReady&&!previousReady)padStarvationFrames+=frames;
         for(int i=0;i<frames;i++,auxiliary++,clickFrame++) {
             if(playing&&project!=null){long target=-1;if(manualBoundary>=0&&cursor>=manualBoundary){target=manualTarget;manualBoundary=-1;pendingRegion=-1;loop=false;if(arrangement!=null)arrangement.seek(target);}else if(arrangement!=null)target=arrangement.target(cursor,loop||manualBoundary>=0);if(target>=0){cursor=target;updatePreview();ready=prepareSources((int)Math.min(Math.min(frames-i,512),Math.max(1,durationFrames-cursor)));buffering=!ready;if(!loop)hintSources(arrangement==null?-1:arrangement.hint());}}
             if(i>0&&i%512==0&&playing){updatePreview();ready=prepareSources((int)Math.min(Math.min(frames-i,512),Math.max(1,durationFrames-cursor)));buffering=!ready;}

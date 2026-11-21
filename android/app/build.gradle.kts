@@ -14,7 +14,7 @@ android {
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         targetSdk = 36
         testInstrumentationRunner = "com.onebytelabs.zlplay.PadSmokeTest"
-        versionCode = 27
+        versionCode = 28
         versionName = "2.8.3"
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }

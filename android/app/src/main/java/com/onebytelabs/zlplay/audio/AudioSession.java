@@ -18,6 +18,18 @@ public final class AudioSession implements AutoCloseable {
     private volatile int underruns;private volatile long maxRenderNanos;
     public int underruns(){return underruns;}
     public long maxRenderNanos(){return maxRenderNanos;}
+    private volatile long renderNanos,renderCalls,maxMixerWaitNanos,writeNanos,writeCalls;
+    private volatile int queuedFrames,bufferFrames;
+    public long renderNanos(){return renderNanos;}
+    public long renderCalls(){return renderCalls;}
+    public long maxMixerWaitNanos(){return maxMixerWaitNanos;}
+    public long writeNanos(){return writeNanos;}
+    public long writeCalls(){return writeCalls;}
+    public int queuedFrames(){return queuedFrames;}
+    public int bufferFrames(){return bufferFrames;}
+    private volatile long sourceWaitNanos,maxSourceWaitNanos;
+    public long sourceWaitNanos(){return sourceWaitNanos;}
+    public long maxSourceWaitNanos(){return maxSourceWaitNanos;}
     public AudioSession(Context context,DemoMixer mixer){this(context,mixer,configuredDevice(context),context.getSharedPreferences("mix",Context.MODE_PRIVATE).getInt("outputRate",48000),context.getSharedPreferences("mix",Context.MODE_PRIVATE).getInt("outputChannels",2));}
     public AudioSession(Context context,DemoMixer mixer,int device,int rate,int channels) {
         this.mixer=mixer;outputRate=rate;outputChannels=channels;deviceId=device;
@@ -44,20 +56,41 @@ public final class AudioSession implements AutoCloseable {
     public String error() { return error; }
     public long writtenFrames() { return writtenFrames; }
     public double blockRms() { return blockRms; }
-    private void renderQuantum(float[] block){for(int offset=0;offset<512;offset+=256)mixer.renderRoutedInto(block,offset,256,outputChannels);}
+    private void renderQuantum(float[] block)throws InterruptedException{
+        for(int offset=0;offset<512;offset+=256){
+            long waiting=0;
+            while(running){
+                long before=System.nanoTime();
+                synchronized(mixer){
+                    long entered=System.nanoTime();maxMixerWaitNanos=Math.max(maxMixerWaitNanos,entered-before);
+                    if(mixer.prepareAudio(256)){
+                        if(waiting!=0){long elapsed=System.nanoTime()-waiting;sourceWaitNanos+=elapsed;maxSourceWaitNanos=Math.max(maxSourceWaitNanos,elapsed);}
+                        mixer.renderRoutedInto(block,offset,256,outputChannels);renderNanos+=System.nanoTime()-entered;renderCalls++;break;
+                    }
+                }
+                if(waiting==0)waiting=System.nanoTime();
+                // AudioTrack continues consuming already queued PCM. Never wait
+                // while holding the mixer monitor or perform DSP/file I/O here.
+                Thread.sleep(1);
+            }
+            if(!running)return;
+        }
+    }
     private void stream() {
         AudioTrack output=null;
         try {
             Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
             output=open(manager,deviceId,outputRate,outputChannels);
+            bufferFrames=output.getBufferSizeInFrames();
             if(output.getState()!=AudioTrack.STATE_INITIALIZED)throw new IllegalStateException("Audio initialization failed");
             float[] block=new float[512*outputChannels],input=new float[512*outputChannels],previous=new float[outputChannels],next=new float[outputChannels];int inputFrame=512;double fraction=0;boolean primed=false,outputStarted=false;int primedBlocks=0;
             while(running) {
                 long renderStart=System.nanoTime();if(outputRate==DemoMixer.RATE)renderQuantum(block);else{for(int f=0;f<512;f++){if(!primed){renderQuantum(input);inputFrame=2;System.arraycopy(input,0,previous,0,outputChannels);System.arraycopy(input,outputChannels,next,0,outputChannels);primed=true;}for(int c=0;c<outputChannels;c++)block[f*outputChannels+c]=(float)(previous[c]+(next[c]-previous[c])*fraction);fraction+=DemoMixer.RATE/(double)outputRate;while(fraction>=1){fraction-=1;System.arraycopy(next,0,previous,0,outputChannels);if(inputFrame>=512){renderQuantum(input);inputFrame=0;}System.arraycopy(input,inputFrame++*outputChannels,next,0,outputChannels);}}}maxRenderNanos=Math.max(maxRenderNanos,System.nanoTime()-renderStart);underruns=output.getUnderrunCount();double energy=0;for(float sample:block)energy+=(double)sample*sample;blockRms=Math.sqrt(energy/block.length);int offset=0;
                 while(running&&offset<block.length) {
-                    int written=output.write(block,offset,block.length-offset,AudioTrack.WRITE_BLOCKING);
+                    long writeStart=System.nanoTime();int written=output.write(block,offset,block.length-offset,AudioTrack.WRITE_BLOCKING);writeNanos+=System.nanoTime()-writeStart;writeCalls++;
                     if(written<=0)throw new IllegalStateException("Audio write failed: "+written);
                     offset+=written;writtenFrames+=written/outputChannels;
+                    queuedFrames=(int)Math.max(0,writtenFrames-Integer.toUnsignedLong(output.getPlaybackHeadPosition()));
                 }
                 // Fill the hardware queue before starting it; startup/JIT must not drain an empty track.
                 if(!outputStarted&&++primedBlocks>=3){output.play();outputStarted=true;if(deviceId!=0){AudioDeviceInfo routed=output.getRoutedDevice();if(routed!=null&&routed.getId()!=deviceId)throw new IllegalStateException("Requested device was not routed");}}

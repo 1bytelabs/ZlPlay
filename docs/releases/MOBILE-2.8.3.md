@@ -1,6 +1,12 @@
 # ZLPlay Mobile 2.8.3
 
-The Android app uses the same visible release number as Windows and macOS. Its Android versionCode is 27 and application ID is `com.onebytelabs.zlplay.mobile`. Each subsequent Android distribution must increase versionCode, including a platform-specific maintenance build. Release signing uses the permanent key; debug/test APKs are separate applications.
+The Android app uses the same visible release number as Windows and macOS. Its Android versionCode is 28 and application ID is `com.onebytelabs.zlplay.mobile`. Each subsequent Android distribution must increase versionCode, including a platform-specific maintenance build. Release signing uses the permanent key; debug/test APKs are separate applications.
+
+## Audio continuity maintenance
+
+The output producer retries a pending pitch or standalone pad cache outside the mixer monitor instead of appending silent PCM. Short preparation waits can be covered by audio already queued; the output buffer size, pitch preset and musical clock are unchanged. JNI processing reuses a native transfer buffer and limits subnormal handling to its DSP worker. The Android pitch pool remains capped at two workers.
+
+Synthetic AudioTrack checks covered standalone click, pad, two/ten streamed musical tracks, live pitch changes and pitch changes while paused. The corrected measurements recorded no source/pad starvation or AudioTrack underruns. A longer pad check ran for approximately 101 seconds, including file loops and a note change. Nine Android-independent suites, 84 Node tests and editing/save round-trip instrumentation passed. These emulator observations do not certify physical audibility, all host-emulator audio paths, devices or sessions; a wait longer than the actual device queue can still underrun.
 
 ## Project and setlist editing
 

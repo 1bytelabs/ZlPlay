@@ -1,6 +1,21 @@
 # ZLPlay Mobile — Android
 
-The Android distribution now follows the desktop release number: **ZLPlay Mobile 2.8.3**, versionCode **27**. The application ID remains `com.onebytelabs.zlplay.mobile`; release builds require the permanent distribution certificate. Debug builds remain separate and must not be published. Local playback, project/setlist authoring and the LAN remote controller share one application. See [Mobile 2.8.3](../docs/releases/MOBILE-2.8.3.md) for current editing features and validation limits. The development sections below record earlier implementation milestones; their old scope descriptions are historical.
+The Android distribution now follows the desktop release number: **ZLPlay Mobile 2.8.3**, versionCode **28**. The application ID remains `com.onebytelabs.zlplay.mobile`; release builds require the permanent distribution certificate. Debug builds remain separate and must not be published. Local playback, project/setlist authoring and the LAN remote controller share one application. See [Mobile 2.8.3](../docs/releases/MOBILE-2.8.3.md) for current editing features and validation limits. The development sections below record earlier implementation milestones; their old scope descriptions are historical.
+
+## Audio continuity diagnostics
+
+The AudioTrack producer checks source readiness before mixing a quantum. When a new pitch generation or a standalone pad cache is not ready, it retries outside the mixer monitor instead of appending silent PCM and freezing the musical clock. Already queued audio can cover short preparation gaps. This does not guarantee continuity if source preparation exceeds the device's existing output queue; the output buffer size and pitch quality settings are unchanged. Standalone click and stopped-pad fade-out are not held up by a pending pad cache.
+
+Pitch JNI processing reuses a native interleaving buffer and scopes subnormal handling to the DSP worker. The worker pool remains bounded to two workers; the Apple Accelerate backend and iOS thread-pool implementation are not used on Android.
+
+Build/install the debug app and instrumentation APK, then run the following against the matching development package:
+
+```sh
+adb shell am instrument -w -e mode audio-performance com.onebytelabs.zlplay.dev.test/com.onebytelabs.zlplay.PadSmokeTest
+adb shell am instrument -w -e mode audio-performance -e padOnly true -e seconds 90 com.onebytelabs.zlplay.dev.test/com.onebytelabs.zlplay.PadSmokeTest
+```
+
+The synthetic fixture opens a real AudioTrack and separately reports pad, click, two/ten streamed stems, live pitch changes and pitch changes while paused. Measurements include delivered frames, source/pad starvation, queue occupancy, output underruns, render/monitor/write timings and preparation waits. The longer pad run includes file loops and a note change. A diagnostic report is not proof of physical audibility, absence of host-emulator glitches or performance on every Android device. Run without other ZLPlay instances playing or simultaneous compilation. The core suite includes deterministic cache-readiness/clock/pause/pad tests without Android output timing dependencies.
 
 ## Build
 
@@ -211,7 +226,7 @@ Sounds shows a larger pad card with twelve read-only note status tiles, based on
 
 ## Signed APK distribution
 
-The installable distribution is **ZLPlay Mobile**, application ID `com.onebytelabs.zlplay.mobile`, version `2.8.3` / versionCode `27`. Visible version numbers follow the desktop release series; Android versionCode increases independently for each new Android build. Debug retains `com.onebytelabs.zlplay.dev`; debug and distribution apps do not share private imported pads, document grants or preferences.
+The installable distribution is **ZLPlay Mobile**, application ID `com.onebytelabs.zlplay.mobile`, version `2.8.3` / versionCode `28`. Visible version numbers follow the desktop release series; Android versionCode increases independently for each new Android build. Debug retains `com.onebytelabs.zlplay.dev`; debug and distribution apps do not share private imported pads, document grants or preferences.
 
 Release builds require a permanent private signing key and fail before packaging if credentials are missing. They never fall back to the Android debug key. The certificate is self-signed RSA-4096/SHA256withRSA with 10,000-day validity. APK v2/v3 signatures are verified for the supported Android 8+ devices; v1 is not required at this minimum SDK. The public certificate SHA-256 identifies the signing key; it is distinct from the APK file checksum.
 
